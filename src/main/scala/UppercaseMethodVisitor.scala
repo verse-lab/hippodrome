@@ -1,14 +1,13 @@
-import com.racerdfix.antlr.Java8BaseListener
-import com.racerdfix.antlr.Java8Parser
-import org.antlr.v4.runtime.tree.TerminalNode
 import java.util
-import java.util.{ArrayList, Collections, List}
+import java.util.Collections
+
+import com.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
 
 
-class UppercaseMethodListener extends Java8BaseListener {
+class UppercaseMethodVisitor extends Java8BaseVisitor[Unit] {
   private val errors = new util.ArrayList[String]
 
-  override def enterMethodDeclarator(ctx: Java8Parser.MethodDeclaratorContext): Unit = {
+  override def visitMethodDeclarator(ctx: Java8Parser.MethodDeclaratorContext): Unit = {
     val node = ctx.Identifier
     val methodName = node.getText
 
