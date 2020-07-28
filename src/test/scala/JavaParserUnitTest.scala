@@ -6,6 +6,7 @@ import org.junit.Test
 import org.hamcrest.CoreMatchers.is
 import org.hamcrest.MatcherAssert.assertThat
 import com.racerdfix.antlr._
+import com.racerdfix._
 
 
 class JavaParserUnitTest {
