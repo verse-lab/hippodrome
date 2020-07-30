@@ -1,6 +1,6 @@
 package com.racerdfix
 
-class RacerDAPI {
+object RacerDAPI {
 
   /* P<0>{(this:B*).myA2} ==> B */
   def getLock2ClassName_def(lock: String): String = {
@@ -62,6 +62,24 @@ class RacerDAPI {
     val result = getLock2Var_def(lock)
     if (false) {
       println("inp1: " + lock)
+      println("out:  " + result)
+    }
+    result
+  }
+
+  /* P<0>{(this:B*).myA2} ==> myA2*/
+  def getResource2Var_def(resource: String): String = {
+    val pattern = "(?<=->)[^)]+".r
+    pattern.findFirstMatchIn(resource) match {
+      case Some(resource) => resource.toString().replace("->",".")
+      case None => resource
+    }
+  }
+
+  def getResource2Var(resource: String): String = {
+    val result = getResource2Var_def(resource)
+    if (false) {
+      println("inp1: " + resource)
       println("out:  " + result)
     }
     result
