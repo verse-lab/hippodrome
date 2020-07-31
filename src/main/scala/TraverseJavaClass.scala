@@ -2,17 +2,39 @@ package com.racerdfix
 
 import com.racerdfix.antlr.{Java8Lexer, Java8Parser}
 import com.racerdfix.fixdsl.{CSumm, Insert, Read, Update, Write}
-import org.antlr.v4.runtime.{CharStreams, CommonTokenStream, Token, TokenStreamRewriter}
+import org.antlr.v4.runtime.{CharStreams, CommonTokenStream, Token, TokenStream, TokenStreamRewriter}
 
 import scala.io.Source
 import scala.io.StdIn.readLine
+import scala.collection.mutable.HashMap
 
-class PatchResult(val patch: String, var rewriter: TokenStreamRewriter,var start: Token, var stop: Token) {
-
+class PatchResult(val patch: String, val start: Token, val stop: Token, val description: String) {
   override def toString() : String = {
     patch
   }
 }
+
+/* maps patch ID -> individual code modifications */
+class GroupByIdPatchResult(var map : HashMap[Int, List[PatchResult]]) {
+
+  def update(id: Int, pr: PatchResult): Unit = {
+    try {
+      this.map(id) = pr :: this.map(id)
+    } catch {
+      case e => { this.map(id) = List(pr) }
+    }
+  }
+
+  def getText(): String = {
+    map.foldLeft("")((acc, x) => acc + (
+      "\n" +
+        "==========================" +
+        "\n" +
+        "Patch ID: " + x._1 +
+        (x._2.foldLeft("")((acc, y) => acc + "\n" + y.description))))
+  }
+}
+
 
 object TraverseJavaClass  {
 
@@ -36,24 +58,25 @@ object TraverseJavaClass  {
   /* ************************************************ */
   /*                       UPDATE                     */
   /* ************************************************ */
-  def generateUpdatePatch(filename: String, update: Update, id: Int,
-                          rewriter: TokenStreamRewriter,
+  def generateUpdatePatch(update: Update,
+                          tokens: TokenStream,
                           tree: Java8Parser.CompilationUnitContext): Option[PatchResult] ={
-    val syncVisitor   = new SynchronizedVisitor
-    val rewriter_temp = new TokenStreamRewriter(rewriter.getTokenStream)
+    val syncVisitor = new SynchronizedVisitor
+    val rewriter    = new TokenStreamRewriter(tokens)
     syncVisitor.setFix(update)
     syncVisitor.visit(tree)
     val sblock = syncVisitor.getSynchronizedBlock
     sblock match {
       case Some(sblock) =>
-        val (oldcode,patch) = syncVisitor.updateSynchronizedStatement(rewriter_temp,sblock,update)
-        println("Patch ID: " + id)
-        println("Replace lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine))
-        println("-: " + oldcode)
-        println("+: " + patch)
-        Some(new PatchResult(patch, rewriter, sblock.start, sblock.stop))
+        val (oldcode,patch) = syncVisitor.updateSynchronizedStatement(rewriter,sblock,update)
+//        println("Patch ID: " + id)
+        val description = (
+        "Replace (UPDATE) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
+        + ("\n" + "-: " + oldcode)
+        + ("\n" + "+: " + patch) )
+        Some(new PatchResult(patch, sblock.start, sblock.stop, description))
       case None =>
-        println("No patch could be generated for attempt ID: " + id)
+        println("No patch could be generated for attempt ID: " )
         None
     }
   }
@@ -61,35 +84,35 @@ object TraverseJavaClass  {
   /* ************************************************ */
   /*                       INSERT                     */
   /* ************************************************ */
-  def generateInsertPatch_def(filename: String, insert: Insert, id: Int,
-                              rewriter: TokenStreamRewriter,
+  def generateInsertPatch_def(insert: Insert,
+                              tokens: TokenStream,
                               tree: Java8Parser.CompilationUnitContext): Option[PatchResult] = {
-    val syncVisitor   = new SynchronizedVisitor
-    val rewriter_temp = new TokenStreamRewriter(rewriter.getTokenStream)
+    val syncVisitor = new SynchronizedVisitor
+    val rewriter    = new TokenStreamRewriter(tokens)
     syncVisitor.setFix(insert)
     syncVisitor.visit(tree)
     val sblock = syncVisitor.getResourceStatement
     sblock match {
       case Some(sblock) =>
-        val (oldcode,patch) = syncVisitor.insertSynchronizedStatement(rewriter_temp,sblock,insert)
-        println("Patch ID: " + id)
-        println("Replace lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine))
-        println("+: " + patch)
-        Some(new PatchResult(patch, rewriter, sblock.start, sblock.stop))
+        val (oldcode,patch) = syncVisitor.insertSynchronizedStatement(rewriter,sblock,insert)
+        val description = (
+        "Replace (INSERT) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
+          + ("\n" + "-: " + oldcode)
+          + ("\n" + "+: " + patch) )
+        Some(new PatchResult(patch, sblock.start, sblock.stop, description))
       case None =>
-        println("No patch could be generated for attempt ID: " + id)
+        println("No patch could be generated for attempt ID " )
         None
     }
   }
 
   /* debugger */
-  def generateInsertPatch(filename: String, insert: Insert, id: Int,
-                          rewriter: TokenStreamRewriter,
+  def generateInsertPatch(insert: Insert,
+                          tokens: TokenStream,
                           tree: Java8Parser.CompilationUnitContext): Option[PatchResult] = {
-    val res = generateInsertPatch_def(filename,insert,id,rewriter,tree)
+    val res = generateInsertPatch_def(insert, tokens, tree)
     if(false) {
       println(insert)
-      println("id:  " + id)
       println("out: " + Globals.getTextOpt[PatchResult](res))
     }
     res
@@ -100,28 +123,37 @@ object TraverseJavaClass  {
   /* ************************************************ */
   def applyPatch_def(filename: String,
                  patch_id: Int,
-                 patches: List[(Int,Option[PatchResult])]): Unit = {
-    val patch = patches.foldLeft(None: Option[PatchResult])((acc: Option[PatchResult],
-                                                             ptc: (Int, Option[PatchResult])) => {
-      if (ptc._1 == patch_id) ptc._2
-      else acc
-    })
-    patch match {
-      case None => println("Invalid patch ID")
-      case Some(patch: PatchResult) =>
-        val rewriter = patch.rewriter
-        rewriter.replace(patch.start, patch.stop, patch.patch)
-
-        /* write to file (keep the original one in `filename.orig` and the fix in `filename` */
-        val fm = new FileManipulation
-        fm.cloneOriginalFile(filename)
-        fm.overwriteOriginalFile(filename, rewriter.getText)
-    }
+                 patches: GroupByIdPatchResult): Unit = {
+//    val patches0 = patches.foldLeft(List.empty[PatchResult])((acc: List[PatchResult],
+//                                                             ptc: GroupPatchResult) => {
+//      if (ptc.id == patch_id) ptc.patches
+//      else acc
+//    })
+//    patches0 match {
+//      case List.empty => println("Invalid patch ID")
+//      case _          => {
+//        def onePatchAtATime(patch: PatchResult, rewriter: TokenStreamRewriter): TokenStreamRewriter = {
+//          val rewriter = patch.rewriter
+//          rewriter.replace(patch.start, patch.stop, patch.patch)
+//          rewriter
+//        }
+//      }
+//    }
+//      case None => println("Invalid patch ID")
+//      case Some(patch: PatchResult) =>
+//        val rewriter = patch.rewriter
+//        rewriter.replace(patch.start, patch.stop, patch.patch)
+//
+//        /* write to file (keep the original one in `filename.orig` and the fix in `filename` */
+//        val fm = new FileManipulation
+//        fm.cloneOriginalFile(filename)
+//        fm.overwriteOriginalFile(filename, rewriter.getText)
+//    }
   }
 
   def applyPatch_helper(filename: String,
                      patch_id_str: String,
-                     patches: List[(Int,Option[PatchResult])]): Unit = {
+                     patches: GroupByIdPatchResult): Unit = {
     try {
       val patch_id = patch_id_str.toInt
       applyPatch_def(filename,patch_id,patches)
@@ -135,7 +167,7 @@ object TraverseJavaClass  {
   /* debugger */
   def applyPatch(filename: String,
                  patch_id_str: String,
-                 patches: List[(Int,Option[PatchResult])]): Unit = {
+                 patches: GroupByIdPatchResult): Unit = {
     if (false){
       println("Patch id: " + patch_id_str)
       println("Patches: "  + patches)
@@ -178,13 +210,13 @@ object TraverseJavaClass  {
   /* Generates a list of patches corresponding to the list of UPDATE objects (updates) */
   def generateUpdatePatches(filename: String,
                             updates: List[Update],
-                            rewriter: TokenStreamRewriter,
+                            tokens: TokenStream,
                             tree: Java8Parser.CompilationUnitContext): List[(Int, Option[PatchResult])] = {
       if(updates.length > 0) {
         val patchIDInterval = patchIDGenerator(updates.length)
         val updates_id = updates.zip(List.range(patchIDInterval._1, patchIDInterval._2))
         updates_id.foldLeft(List[(Int,Option[PatchResult])]())((acc,update) => {
-          val res = generateUpdatePatch(filename, update._1,update._2,rewriter,tree)
+          val res = generateUpdatePatch(update._1,tokens,tree)
           (update._2,res)::acc
         })
       } else List.empty
@@ -193,13 +225,13 @@ object TraverseJavaClass  {
   /* Generates a list of patches corresponding to the list of INSERT objects (inserts) */
   def generateInsertPatches(filename: String,
                             inserts: List[Insert],
-                            rewriter: TokenStreamRewriter,
+                            tokens: TokenStream,
                             tree: Java8Parser.CompilationUnitContext): List[(Int, Option[PatchResult])] = {
     if(inserts.length > 0) {
       val patchIDInterval = patchIDGenerator(inserts.length)
       val inserts_id = inserts.zip(List.range(patchIDInterval._1,patchIDInterval._2))
       inserts_id.foldLeft(List[(Int,Option[PatchResult])]())((acc,insert) => {
-        val res = generateInsertPatch(filename, insert._1,insert._2,rewriter,tree)
+        val res = generateInsertPatch(insert._1,tokens,tree)
         (insert._2,res)::acc
       })
     } else List.empty
@@ -219,11 +251,11 @@ object TraverseJavaClass  {
     /* currently they are manually crafted as below */
     /* {elem= Access: Read of this->myA Thread: AnyThread Lock: true Acquisitions: { P<0>{(this:B*)->myA2} } Pre: OwnedIf{ 0 }; loc= line 30; trace= { }},*/
     /* {elem= Access: Write to this->myA Thread: AnyThread Lock: true Acquisitions: { P<0>{(this:B*)->myA1} } Pre: OwnedIf{ 0 }; loc= line 24; trace= { }} },*/
-//    val csumm1 = new CSumm("this->myA->f", Read, List("P<0>{(this:B*).myA2}"), 30 )
-//    val csumm2 = new CSumm("this->myA", Write, List("P<0>{(this:B*).myA1}"), 24 )
+    val csumm1 = new CSumm("this->myA->f", Read, List("P<0>{(this:B*).myA2}"), 30 )
+    val csumm2 = new CSumm("this->myA", Write, List("P<0>{(this:B*).myA1}"), 24 )
 
-    val csumm1 = new CSumm("this->myA->f", Read, List(), 30 )
-    val csumm2 = new CSumm("this->myA", Write, List(), 24 )
+//    val csumm1 = new CSumm("this->myA->f", Read, List(), 30 )
+//    val csumm2 = new CSumm("this->myA", Write, List(), 24 )
 
     if ( true /*csumm1.resource == csumm2.resource*/) {
       val commun_locks = csumm1.lock intersect csumm2.lock
@@ -242,7 +274,7 @@ object TraverseJavaClass  {
         val updates    = updates1 ++ updates2
 
         /* generate update patches */
-        val update_patches = generateUpdatePatches(filename, updates, rewriter, tree)
+        val update_patches = generateUpdatePatches(filename, updates, tokens, tree)
 
         /* ************** INSERTS ***************** */
         /* generate insert objects */
@@ -251,7 +283,7 @@ object TraverseJavaClass  {
         val inserts = inserts1 ++ inserts2
 
         /* generate inserts patches */
-        val insert_patches = generateInsertPatches(filename, inserts, rewriter, tree)
+        val insert_patches = generateInsertPatches(filename, inserts, tokens, tree)
 
         update_patches ++ insert_patches
       } else List.empty
@@ -266,7 +298,7 @@ object TraverseJavaClass  {
         val inserts = generateInsertObjects(csumm2,csumm1)
 
         /* generate insert patches */
-        generateInsertPatches(filename,inserts,rewriter,tree)
+        generateInsertPatches(filename, inserts, tokens, tree)
       } else List.empty
 
       /* The resource in `csumm2` is not synchronized but that in `csumm1` is ==>
@@ -279,36 +311,59 @@ object TraverseJavaClass  {
         val inserts = generateInsertObjects(csumm1,csumm2)
 
         /* generate insert patches */
-        generateInsertPatches(filename,inserts,rewriter,tree)
+        generateInsertPatches(filename, inserts, tokens, tree)
       }  else List.empty
 
       val patches = patches1 ++ patches2 ++ patches3
 
-      if(patches.length >0 ) {
+      var empty_map = new GroupByIdPatchResult(HashMap.empty[Int, List[PatchResult]])
+      val grouped_patches = patches.foldLeft(empty_map)((acc: GroupByIdPatchResult, ptch) =>
+        ptch._2 match {
+          case None => acc
+          case Some(pr) => {
+            acc.update(ptch._1, pr)
+            acc
+          }
+        }
+      )
 
-        println("Choose a patch <enter patch id>")
-        val patch_id_str = readLine()
+      println(grouped_patches.getText())
 
-        println("************* GENERATE FIX *************")
-        applyPatch(filename, patch_id_str, patches)
-      } else {
+      println("Choose a patch <enter patch id>")
+      val patch_id_str = readLine()
 
-        /* Both of the resources `csumm1` and `csumm2` are not synchronized ==>
-       * INSERT a new synchronization using a lock on the common resource  */
+      println("************* GENERATE FIX *************")
+      applyPatch(filename, patch_id_str, grouped_patches)
+    } else {
 
-        val patches4 = if (csumm1.lock.length == 0 && csumm2.lock.length == 0) {
-          /* ************** INSERTS ***************** */
-          /* generate insert objects */
-          val inserts = generateInsertObjectOnCommonResource(csumm1, csumm2)
+      /* Both of the resources `csumm1` and `csumm2` are not synchronized ==>
+       * INSERT new synchronization using a lock on the common resource  */
 
-          /* generate insert patches */
-          generateInsertPatches(filename, inserts, rewriter, tree)
-        } else List.empty
+      val patches4 = if (csumm1.lock.length == 0 && csumm2.lock.length == 0) {
+        /* ************** INSERTS ***************** */
+        /* generate insert objects */
+        val inserts = generateInsertObjectOnCommonResource(csumm1, csumm2)
 
+        /* generate insert patches */
+        generateInsertPatches(filename, inserts, tokens, tree)
+      } else List.empty
 
-        println("************* GENERATE FIX *************")
-        patches4.foreach(elem=> applyPatch_def(filename, elem._1, List(elem)))
-      }
+      var empty_map = new GroupByIdPatchResult(HashMap.empty[Int, List[PatchResult]])
+      val patch_id = patchIDGenerator(patches4.length)
+      val grouped_patches = patches4.foldLeft(empty_map)((acc: GroupByIdPatchResult, ptch) =>
+        ptch._2 match {
+          case None => acc
+          case Some(pr) => {
+            acc.update(patch_id._2, pr)
+            acc
+          }
+        }
+      )
+
+      println(grouped_patches.getText())
+
+      println("************* GENERATE FIX *************")
+      //        grouped_patches.foreach(elem=> applyPatch_def(filename, elem.id, elem.patches))
     }
   }
 
@@ -322,3 +377,10 @@ object TraverseJavaClass  {
 //    val res =  generateInsertPatch("/Users/andrea/git/racerdfix/src/test/java/RacyFalseNeg.java", insert,1)
   }
 }
+
+/**
+ * TODO make it work for multiple files and multiple classes
+ * TODO implement the cost function and choose a patch accordingly
+ * TODO work on the JSON interface with Infer
+ * TODO check how to avoid insertion of new lines with rewriter
+ * */
