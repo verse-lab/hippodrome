@@ -1,7 +1,7 @@
-package com.racerdfix
+package org.racerdfix
 
-import com.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
-import com.racerdfix.fixdsl._
+import org.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
+import org.racerdfix.fixdsl._
 import org.antlr.v4.runtime.{CommonTokenStream, TokenStreamRewriter}
 import org.antlr.v4.runtime.misc.Interval
 

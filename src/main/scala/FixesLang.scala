@@ -1,6 +1,6 @@
-package com.racerdfix.fixdsl
+package org.racerdfix.fixdsl
 
-import com.racerdfix.antlr.Java8Parser
+import org.racerdfix.antlr.Java8Parser
 import org.antlr.v4.runtime.{Token, TokenStream, TokenStreamRewriter}
 
 /* FIXES */

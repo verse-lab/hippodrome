@@ -1,7 +1,7 @@
-package com.racerdfix
+package org.racerdfix
 
-import com.racerdfix.antlr.{Java8Lexer, Java8Parser}
-import com.racerdfix.fixdsl.{CSumm, FileModif, Insert, PatchBlock, Read, Summ, Update, Write}
+import org.racerdfix.antlr.{Java8Lexer, Java8Parser}
+import org.racerdfix.fixdsl.{CSumm, FileModif, Insert, PatchBlock, Read, Summ, Update, Write}
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream, Token, TokenStream, TokenStreamRewriter}
 
 import scala.collection.mutable
@@ -407,28 +407,10 @@ object TraverseJavaClass  {
       applyPatch_def(patch_id,grouped_patches)
     }
   }
-
-  def main(args: Array[String]) = {
-    val filename = "src/test/java/RacyFalseNeg.java"
-    /* retrieve summary bug (e.g. two conflicting summaries) */
-    /* TODO: read the summary bugs from a JSON file */
-    /* currently they are manually crafted as below */
-    /* {elem= Access: Read of this->myA Thread: AnyThread Lock: true Acquisitions: { P<0>{(this:B*)->myA2} } Pre: OwnedIf{ 0 }; loc= line 30; trace= { }},*/
-    /* {elem= Access: Write to this->myA Thread: AnyThread Lock: true Acquisitions: { P<0>{(this:B*)->myA1} } Pre: OwnedIf{ 0 }; loc= line 24; trace= { }} },*/
-    val csumm1 = new CSumm(filename,"B","this->myA->f", Read, List("P<0>{(this:B*).myA2}"), 30 )
-    val csumm2 = new CSumm(filename,"B","this->myA", Write, List("P<0>{(this:B*).myA1}"), 24 )
-//
-//    val csumm1 = new CSumm(filename, "B","this->myA->f", Read, List(), 30 )
-//    val csumm2 = new CSumm(filename,"B","this->myA", Write, List(), 24 )
-    mainAlgo(csumm1, csumm2)
-
-//    val racerdapi = new RacerDAPI()
-//    val insert = Insert("B", 24, racerdapi.getResource2Var("this->myA"), racerdapi.getLock2Var("P<0>{(this:B*).myA4444}"))
-//    val res =  generateInsertPatch("/Users/andrea/git/racerdfix/src/test/java/RacyFalseNeg.java", insert,1)
-  }
 }
 
 /**
+ * TODO create an argument to switch from interactive mode to automated patch- and fix-generation
  * TODO implement the cost function and choose a patch accordingly
  * TODO work on the JSON interface with Infer
  * TODO check how to avoid insertion of new lines with rewriter

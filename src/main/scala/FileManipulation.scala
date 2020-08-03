@@ -1,4 +1,4 @@
-package com.racerdfix
+package org.racerdfix
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.file.{Files, Paths, StandardCopyOption}

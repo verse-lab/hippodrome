@@ -1,4 +1,4 @@
-package com.racerdfix
+package org.racerdfix
 
 object RacerDAPI {
 
