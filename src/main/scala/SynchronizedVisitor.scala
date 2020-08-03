@@ -71,12 +71,11 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
     rewriter.insertBefore(ctx.start, "synchronized(" + fix.lock + ") {")
     rewriter.insertAfter(ctx.stop, "}")
-
     val rinterval = new Interval(ctx.getSourceInterval.a,ctx.getSourceInterval.b+1)
 
-//    println("ctx: " + ctx.start.getInputStream.getText(interval)
+//    println("ctx: " + ctx.start.getInputStream.getText(interval)  + "#####")
 //    println("rewriter:" + rewriter.getText())
-//    println("rewriter:" + rewriter.getText(interv))
+//    println("rewriter:" + rewriter.getText(rinterval) + "#####")
 
     (ctx.start.getInputStream.getText(interval),rewriter.getText(rinterval))
   }

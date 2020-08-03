@@ -15,7 +15,7 @@ class FileManipulation {
   }
 
   def cloneOriginalFile(filename: String): Unit = {
-    copyRenameFile(filename, filename + ".orig")
+    copyRenameFile(filename, filename + ".orig.java")
   }
 
   def overwriteOriginalFile(filename: String, text: String): Unit ={
