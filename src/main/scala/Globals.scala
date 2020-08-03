@@ -1,5 +1,7 @@
 package org.racerdfix
 
+import org.racerdfix.fixdsl.PatchCost
+
 object Globals {
 
   /**
@@ -10,4 +12,12 @@ object Globals {
   def getRealLineNo(lineno: Int) = lineno - 1
   def getAntlrLineNo(lineno: Int)= lineno + 1
   def getTextOpt[A](par: Option[A]): String = par.toString
+
+  val defCostValue = 0
+  val defUnitValue = 0
+  val maxCostValue = Int.MaxValue
+  val maxCost      = new PatchCost(maxCostValue)
+  val defCost      = new PatchCost(defCostValue)
+  val unitCost     = new PatchCost(defUnitValue)
+
 }

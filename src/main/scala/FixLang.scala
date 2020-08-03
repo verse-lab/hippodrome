@@ -10,7 +10,12 @@ case object NoFix extends FixKind
 case class Update(cls: String, line: Int, lock_old: String, lock_new: String) extends FixKind
 case class Insert(cls: String, line: Int, resource: String, lock: String) extends FixKind
 
-class PatchBlock(val patch: String, val start: Token, val stop: Token, val description: String) {
+class PatchCost(val cost: Int) extends Ordered[PatchCost] {
+  def compare(that: PatchCost) = this.cost - that.cost
+  def add(that: PatchCost) = new PatchCost(this.cost + that.cost)
+}
+
+class PatchBlock(val patch: String, val start: Token, val stop: Token, val description: String, val cost: PatchCost) {
   override def toString() : String = {
     patch
   }

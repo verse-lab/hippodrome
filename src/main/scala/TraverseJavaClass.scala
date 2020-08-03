@@ -1,7 +1,7 @@
 package org.racerdfix
 
 import org.racerdfix.antlr.{Java8Lexer, Java8Parser}
-import org.racerdfix.fixdsl.{CSumm, FileModif, Insert, PatchBlock, Read, Summ, Update, Write}
+import org.racerdfix.fixdsl.{CSumm, FileModif, Insert, PatchBlock, PatchCost, Read, Summ, Update, Write}
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream, Token, TokenStream, TokenStreamRewriter}
 
 import scala.collection.mutable
@@ -10,7 +10,7 @@ import scala.io.StdIn.readLine
 import scala.collection.mutable.HashMap
 
 
-class GroupByRewriterPatchResult(var map : HashMap[FileModif, List[PatchBlock]]) {
+class GroupByRewriterPatch(var map : HashMap[FileModif, List[PatchBlock]]) {
 
   def update(fm: FileModif, pb: PatchBlock): Unit = {
     try {
@@ -26,17 +26,24 @@ class GroupByRewriterPatchResult(var map : HashMap[FileModif, List[PatchBlock]])
     map.foldLeft("")((acc, x) => acc + (
         (x._2.foldLeft("")((acc, y) => acc + "\n" + y.description))))
   }
+
+  /* returns the cost of all the patches stored in this.map */
+  def getTotalCost(): PatchCost = {
+    this.map.foldLeft(Globals.unitCost)((acc,patches) => {
+      val cost = patches._2.foldLeft(Globals.unitCost)((acc,pb) => acc.add(pb.cost))
+      acc.add(cost)})
+  }
 }
 
 /* maps patch ID -> list of individual code modifications */
-class GroupByIdPatchResult(var map : HashMap[Int, GroupByRewriterPatchResult]) {
+class GroupByIdPatchOptions(var map : HashMap[Int, GroupByRewriterPatch]) {
 
   def update(id: Int, fm: FileModif, pb: PatchBlock): Unit = {
     try {
       this.map(id).update(fm,pb)
     } catch {
       case e => {
-        this.map(id) = new GroupByRewriterPatchResult(HashMap(fm -> List(pb)))
+        this.map(id) = new GroupByRewriterPatch(HashMap(fm -> List(pb)))
       }
     }
   }
@@ -49,6 +56,10 @@ class GroupByIdPatchResult(var map : HashMap[Int, GroupByRewriterPatchResult]) {
         "Patch ID: " + x._1 + x._2.getText()))
   }
 
+  /* returns the cost of the patch with id `patchID` */
+  def getCost(patchID: Int) = {
+    this.map(patchID).getTotalCost()
+  }
 }
 
 
@@ -104,7 +115,7 @@ object TraverseJavaClass  {
         "Replace (UPDATE) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
         + ("\n" + "-: " + oldcode)
         + ("\n" + "+: " + patch) )
-        Some(new PatchBlock(patch, sblock.start, sblock.stop, description))
+        Some(new PatchBlock(patch, sblock.start, sblock.stop, description, Globals.defCost))
       case None =>
         println("No patch could be generated for attempt ID: " )
         None
@@ -151,7 +162,7 @@ object TraverseJavaClass  {
         "Replace (INSERT) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
           + ("\n" + "-: " + oldcode)
           + ("\n" + "+: " + patch) )
-        Some(new PatchBlock(patch, sblock.start, sblock.stop, description))
+        Some(new PatchBlock(patch, sblock.start, sblock.stop, description, Globals.defCost))
       case None =>
         println("No patch could be generated for attempt ID " )
         None
@@ -176,7 +187,8 @@ object TraverseJavaClass  {
 
   def applyPatch_def(
                  patch_id: Int,
-                 patches: GroupByIdPatchResult): Unit = {
+                 patches: GroupByIdPatchOptions,
+                 config: FixConfig): Unit = {
     try {
       val patches0 = patches.map(patch_id)
       patches0.map.foreach( x => {
@@ -187,9 +199,13 @@ object TraverseJavaClass  {
 
         /* write to file (keep the original one in `filename.orig` and the fix in `filename` */
         val fm = new FileManipulation
-        fm.cloneOriginalFile(filename)
-        fm.overwriteOriginalFile(filename, rewriter.getText)
-      })
+        if (!config.testing) {
+          fm.cloneOriginalFileToFix(filename)
+          fm.overwriteFile(filename, rewriter.getText)
+        } else {
+          val fixFile = fm.cloneOriginalFileToFix(filename)
+          fm.overwriteFile(fixFile, rewriter.getText)
+      }})
     } catch {
       case _ => println("Invalid patch ID")
     }
@@ -197,10 +213,11 @@ object TraverseJavaClass  {
 
   def applyPatch_helper(
                      patch_id_str: String,
-                     patches: GroupByIdPatchResult): Unit = {
+                     patches: GroupByIdPatchOptions,
+                     config: FixConfig): Unit = {
     try {
       val patch_id = patch_id_str.toInt
-      applyPatch_def(patch_id,patches)
+      applyPatch_def(patch_id, patches, config)
     } catch {
       case _: Exception => {println("Invalid patch ID")
         None
@@ -209,14 +226,14 @@ object TraverseJavaClass  {
   }
 
   /* debugger */
-  def applyPatch(
-                 patch_id_str: String,
-                 patches: GroupByIdPatchResult): Unit = {
+  def applyPatch( patch_id_str: String,
+                  patches: GroupByIdPatchOptions,
+                  config: FixConfig): Unit = {
     if (false){
       println("Patch id: " + patch_id_str)
       println("Patches: "  + patches)
     }
-    applyPatch_helper(patch_id_str,patches)
+    applyPatch_helper(patch_id_str, patches, config)
   }
 
   /* Generates a list of patches corresponding to the list of UPDATE objects (updates) */
@@ -265,10 +282,10 @@ object TraverseJavaClass  {
     } else List.empty
   }
 
-  def generateGroupPatches(groupByIdPatchResult: GroupByIdPatchResult,
+  def generateGroupPatches(groupByIdPatchOptions: GroupByIdPatchOptions,
                            patches: List[(Int, Option[PatchBlock])], summ: Summ) = {
 //    var empty_map = new GroupByIdPatchResult(HashMap.empty[Int, GroupByRewriterPatchResult])
-    patches.foldLeft(groupByIdPatchResult)((acc: GroupByIdPatchResult, ptch) =>
+    patches.foldLeft(groupByIdPatchOptions)((acc: GroupByIdPatchOptions, ptch) =>
       ptch._2 match {
         case None => acc
         case Some(pb) => {
@@ -277,6 +294,16 @@ object TraverseJavaClass  {
         }
       }
     )
+  }
+
+  def leastCostlyPatch(groupByIdPatchResult: GroupByIdPatchOptions) = {
+    val patch_id = groupByIdPatchResult.map.foldLeft((None:Option[Int],Globals.maxCost))((acc:(Option[Int],PatchCost),map) => {
+      val leastCostlySoFar   = acc._2
+      val costOfCurrentPatch = map._2.getTotalCost()
+      if (leastCostlySoFar.compare(costOfCurrentPatch) <= 0) acc
+      else (Some(map._1),costOfCurrentPatch)
+    })
+    patch_id._1
   }
 
   def translateRawSnapshotsToSnapshots(csumm1: CSumm, csumm2: CSumm): (Summ, Summ) = {
@@ -298,14 +325,14 @@ object TraverseJavaClass  {
     }
   }
 
-  def mainAlgo(csumm1: CSumm, csumm2: CSumm): Unit = {
+  def mainAlgo(csumm1: CSumm, csumm2: CSumm, config: FixConfig): Unit = {
     /* ******** */
     /*   PARSE  */
     val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1,csumm2)
 
     println("************* GENERATE PATCH *************")
 //    if ( true /*csumm1.resource == csumm2.resource*/) {
-    var empty_map = new GroupByIdPatchResult(HashMap.empty[Int, GroupByRewriterPatchResult])
+    var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
     if ((csumm1.lock concat csumm2.lock).length > 0) {
       val common_locks = csumm1.lock intersect csumm2.lock
 
@@ -324,9 +351,6 @@ object TraverseJavaClass  {
         /* generate update patches */
         val update_patches1 = generateUpdatePatches(summ1.csumm.filename, updates1, summ1.tokens, summ1.tree)
         val update_patches2 = generateUpdatePatches(summ2.csumm.filename, updates2, summ2.tokens, summ2.tree)
-
-        println("patches1" + update_patches1)
-        println("patches2" + update_patches2)
 
         /* ************** INSERTS ***************** */
         /* generate insert objects */
@@ -371,21 +395,31 @@ object TraverseJavaClass  {
       }  else patches2
 
       val grouped_patches = patches3
-      println(grouped_patches.getText())
 
-      println("Choose a patch <enter patch id>")
-      val patch_id_str = readLine()
+      if (config.interactive) {
+        /* when working in interactive mode allow the user to choose the patch */
+        println(grouped_patches.getText())
 
-      println("************* GENERATE FIX *************")
-      applyPatch(patch_id_str, grouped_patches)
+        println("Choose a patch <enter patch id>")
+        val patch_id_str = readLine()
 
+        println("************* GENERATE FIX *************")
+        applyPatch(patch_id_str, grouped_patches, config)
+      } else {
+        /* apply the patch with the least cost */
+        val patch_id = leastCostlyPatch(grouped_patches)
+        patch_id match{
+          case None     =>
+          case Some(id) => applyPatch_def(id, grouped_patches, config)
+        }
+      }
     } else {
 
       /* Both of the resources `csumm1` and `csumm2` are not synchronized ==>
        * INSERT new synchronization using a lock on the common resource  */
 
       val patch_id  = patchIDGenerator(0)._2
-      var empty_map = new GroupByIdPatchResult(HashMap.empty[Int, GroupByRewriterPatchResult])
+      var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
       val grouped_patches = if (csumm1.lock.length == 0 && csumm2.lock.length == 0) {
         /* ************** INSERTS ***************** */
         /* generate insert objects */
@@ -400,11 +434,10 @@ object TraverseJavaClass  {
         grouped_patches2
       } else empty_map
 
+        println(grouped_patches.getText())
 
-      println(grouped_patches.getText())
-
-      println("************* GENERATE FIX *************")
-      applyPatch_def(patch_id,grouped_patches)
+        println("************* GENERATE FIX *************")
+        applyPatch_def(patch_id, grouped_patches, config)
     }
   }
 }
