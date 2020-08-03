@@ -279,10 +279,8 @@ object TraverseJavaClass  {
     )
   }
 
-  def mainAlgo(csumm1: CSumm, csumm2: CSumm): Unit = {
-    /* ******** */
-    /*   PARSE  */
-    val (summ1,summ2) = if (csumm1.filename == csumm2.filename) {
+  def translateRawSnapshotsToSnapshots(csumm1: CSumm, csumm2: CSumm): (Summ, Summ) = {
+    if (csumm1.filename == csumm2.filename) {
       val javaFile = csumm1.filename
       val (tokens, tree, rewriter) = parseContent(javaFile)
       val fm = new FileModif(javaFile,rewriter)
@@ -298,6 +296,12 @@ object TraverseJavaClass  {
       val summ2 = new Summ(fm2, tree2, tokens2, csumm2)
       (summ1,summ2)
     }
+  }
+
+  def mainAlgo(csumm1: CSumm, csumm2: CSumm): Unit = {
+    /* ******** */
+    /*   PARSE  */
+    val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1,csumm2)
 
     println("************* GENERATE PATCH *************")
 //    if ( true /*csumm1.resource == csumm2.resource*/) {
@@ -320,6 +324,9 @@ object TraverseJavaClass  {
         /* generate update patches */
         val update_patches1 = generateUpdatePatches(summ1.csumm.filename, updates1, summ1.tokens, summ1.tree)
         val update_patches2 = generateUpdatePatches(summ2.csumm.filename, updates2, summ2.tokens, summ2.tree)
+
+        println("patches1" + update_patches1)
+        println("patches2" + update_patches2)
 
         /* ************** INSERTS ***************** */
         /* generate insert objects */
@@ -387,6 +394,7 @@ object TraverseJavaClass  {
         /* generate insert patches */
         val patches1 = generateInsertPatches(summ1.csumm.filename, inserts1, summ1.tokens, summ1.tree, Some(patch_id))
         val patches2 = generateInsertPatches(summ2.csumm.filename, inserts2, summ2.tokens, summ2.tree, Some(patch_id))
+
         val grouped_patches1 = generateGroupPatches(empty_map, patches1, summ1)
         val grouped_patches2 = generateGroupPatches(grouped_patches1, patches2, summ2)
         grouped_patches2
@@ -401,7 +409,7 @@ object TraverseJavaClass  {
   }
 
   def main(args: Array[String]) = {
-    val filename = "/Users/andrea/git/racerdfix/src/test/java/RacyFalseNeg.java"
+    val filename = "src/test/java/RacyFalseNeg.java"
     /* retrieve summary bug (e.g. two conflicting summaries) */
     /* TODO: read the summary bugs from a JSON file */
     /* currently they are manually crafted as below */
@@ -409,7 +417,7 @@ object TraverseJavaClass  {
     /* {elem= Access: Write to this->myA Thread: AnyThread Lock: true Acquisitions: { P<0>{(this:B*)->myA1} } Pre: OwnedIf{ 0 }; loc= line 24; trace= { }} },*/
     val csumm1 = new CSumm(filename,"B","this->myA->f", Read, List("P<0>{(this:B*).myA2}"), 30 )
     val csumm2 = new CSumm(filename,"B","this->myA", Write, List("P<0>{(this:B*).myA1}"), 24 )
-
+//
 //    val csumm1 = new CSumm(filename, "B","this->myA->f", Read, List(), 30 )
 //    val csumm2 = new CSumm(filename,"B","this->myA", Write, List(), 24 )
     mainAlgo(csumm1, csumm2)
