@@ -3,6 +3,8 @@ package org.racerdfix
 import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.file.{Files, Paths, StandardCopyOption}
 
+import scala.io.Source
+
 class FileManipulation {
 
   def copyRenameFile(source: String, destination: String) = {
@@ -29,5 +31,9 @@ class FileManipulation {
     val bw = new BufferedWriter(new FileWriter(file))
     bw.write(text)
     bw.close()
+  }
+
+  def fileToString(filename: String) = {
+    Source.fromFile(filename).getLines.foldLeft("") { (str, line) => str + " \n " + line.toString }
   }
 }

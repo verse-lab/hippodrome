@@ -4,7 +4,6 @@ import org.racerdfix.antlr.{Java8Lexer, Java8Parser}
 import org.racerdfix.fixdsl.{CSumm, FileModif, Insert, PatchBlock, PatchCost, Read, Summ, Update, Write}
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream, Token, TokenStream, TokenStreamRewriter}
 
-import scala.collection.mutable
 import scala.io.Source
 import scala.io.StdIn.readLine
 import scala.collection.mutable.HashMap
@@ -443,7 +442,6 @@ object TraverseJavaClass  {
 }
 
 /**
- * TODO create an argument to switch from interactive mode to automated patch- and fix-generation
  * TODO implement the cost function and choose a patch accordingly
  * TODO work on the JSON interface with Infer
  * TODO check how to avoid insertion of new lines with rewriter

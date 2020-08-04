@@ -49,6 +49,8 @@ object RacerDFix {
     val newConfig = RunConfig(FixConfig(), defaultPath)
     parser.parse(args, newConfig) match {
       case Some(RunConfig(fixConfig, file)) =>
+        val ij = new InterpretJson()
+        println("json: " + ij.testJson())
         runPatchAndFix(fixConfig)
       case None =>
         System.err.println("Bad argument format.")

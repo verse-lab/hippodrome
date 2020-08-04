@@ -5,7 +5,9 @@ import org.racerdfix.language.PrettyPrinting
 case class FixConfig(
        // Modus Operandi params
        interactive: Boolean      = false,
-       testing:     Boolean      = false
+       testing:     Boolean      = false,
+       // Files
+       json_bugs:   String       =
 
   ) extends PrettyPrinting {
 

@@ -13,11 +13,24 @@ object Globals {
   def getAntlrLineNo(lineno: Int)= lineno + 1
   def getTextOpt[A](par: Option[A]): String = par.toString
 
+  /* Cost related values */
   val defCostValue = 0
   val defUnitValue = 0
   val maxCostValue = Int.MaxValue
   val maxCost      = new PatchCost(maxCostValue)
   val defCost      = new PatchCost(defCostValue)
   val unitCost     = new PatchCost(defUnitValue)
+
+  /* default files and paths */
+  val json_files_path           = "src/test/JSON/"
+  val json_bugs_filename        = "report.json"
+  val json_summaries_filename   = "racerdfix_summaries.json"
+  val json_patches_filename     =  "racerdfix_patches.json"
+  val json_bugs_file   = json_files_path + json_bugs_filename
+  val json_summaries   = json_files_path + json_summaries_filename
+  val json_patches     = json_files_path + json_patches_filename
+  val def_src_path     = "src/test/java/"
+  val def_src_filename = "RacyFalseNeg.java"
+  val def_src_file     = def_src_path + def_src_file
 
 }
