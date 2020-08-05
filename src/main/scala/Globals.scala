@@ -31,6 +31,7 @@ object Globals {
   val json_patches     = json_files_path + json_patches_filename
   val def_src_path     = "src/test/java/"
   val def_src_filename = "RacyFalseNeg.java"
-  val def_src_file     = def_src_path + def_src_file
+  val def_src_file     = def_src_path + def_src_filename
+
 
 }

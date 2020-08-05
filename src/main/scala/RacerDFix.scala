@@ -33,6 +33,18 @@ object RacerDFix {
       rc.copy(fixConfig = rc.fixConfig.copy(testing = b))
     }.text("runs RacerDFix in testing mode - generated fixes do not overwrite the original file")
 
+    opt[String]('b', "json_bugs").action { (b, rc) =>
+      rc.copy(fixConfig = rc.fixConfig.copy(json_bugs = b))
+    }.text("sets the file which provides the bug details. The default one is " + Globals.json_bugs_file)
+
+    opt[String]('b', "json_summaries").action { (b, rc) =>
+      rc.copy(fixConfig = rc.fixConfig.copy(json_bugs = b))
+    }.text("sets the file which provides the methods' summaries. The default one is " + Globals.json_summaries)
+
+    opt[String]('b', "json_patches").action { (b, rc) =>
+      rc.copy(fixConfig = rc.fixConfig.copy(json_bugs = b))
+    }.text("sets the file where the generated patches will be stored. The default one is " + Globals.json_patches)
+
     help("help").text("prints this usage text")
 
   }
@@ -49,8 +61,9 @@ object RacerDFix {
     val newConfig = RunConfig(FixConfig(), defaultPath)
     parser.parse(args, newConfig) match {
       case Some(RunConfig(fixConfig, file)) =>
+        /* TODO read the JSONS and store them in data structures */
         val ij = new InterpretJson()
-        println("json: " + ij.testJson())
+        println("json: " + ij.testJson(newConfig.fixConfig))
         runPatchAndFix(fixConfig)
       case None =>
         System.err.println("Bad argument format.")
