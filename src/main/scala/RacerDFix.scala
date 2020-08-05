@@ -62,8 +62,9 @@ object RacerDFix {
     parser.parse(args, newConfig) match {
       case Some(RunConfig(fixConfig, file)) =>
         /* TODO read the JSONS and store them in data structures */
-        val ij = new InterpretJson()
-        println("json: " + ij.testJson(newConfig.fixConfig))
+//        val ij = new InterpretJson()
+//        println("json bugs: " + ij.testJsonBugs(newConfig.fixConfig))
+//        println("json summaries: " + ij.testJsonSummary(newConfig.fixConfig))
         runPatchAndFix(fixConfig)
       case None =>
         System.err.println("Bad argument format.")
