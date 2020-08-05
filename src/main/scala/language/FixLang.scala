@@ -1,7 +1,7 @@
-package org.racerdfix.fixdsl
+package org.racerdfix.language
 
-import org.racerdfix.antlr.Java8Parser
 import org.antlr.v4.runtime.{Token, TokenStream, TokenStreamRewriter}
+import org.racerdfix.antlr.Java8Parser
 
 /* FIXES */
 
@@ -36,4 +36,4 @@ class FileModif(val filename: String, val rewriter: TokenStreamRewriter)
 class CSumm(val filename: String, val cls: String, val resource: String, val access: AccessKind, val lock: List[String], val line: Int)
 /* snapshot */
 class Summ(val fm:FileModif, val tree: Java8Parser.CompilationUnitContext, val tokens: TokenStream, val csumm: CSumm)
-class Bug(val class1: String, val statement1: CSumm, val class2: String, val statement2: CSumm)
+//class Bug(val class1: String, val statement1: CSumm, val class2: String, val statement2: CSumm)

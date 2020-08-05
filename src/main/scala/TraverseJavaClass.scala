@@ -1,8 +1,10 @@
 package org.racerdfix
 
+import org.racerdfix.language.{CSumm, FileModif, Insert, PatchBlock, PatchCost, Summ, Update}
+import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.antlr.{Java8Lexer, Java8Parser}
-import org.racerdfix.fixdsl.{CSumm, FileModif, Insert, PatchBlock, PatchCost, Read, Summ, Update, Write}
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream, Token, TokenStream, TokenStreamRewriter}
+import utils.FileManipulation
 
 import scala.io.Source
 import scala.io.StdIn.readLine

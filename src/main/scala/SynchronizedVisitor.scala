@@ -1,9 +1,9 @@
 package org.racerdfix
 
 import org.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
-import org.racerdfix.fixdsl._
 import org.antlr.v4.runtime.{CommonTokenStream, TokenStreamRewriter}
 import org.antlr.v4.runtime.misc.Interval
+import org.racerdfix.language.{FixKind, Insert, NoFix, Update}
 
 class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var fix: FixKind = NoFix

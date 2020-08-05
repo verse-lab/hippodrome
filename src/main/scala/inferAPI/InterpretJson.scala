@@ -1,7 +1,9 @@
-package org.racerdfix
+package org.racerdfix.inferAPI
 
-import org.racerdfix.language.{Access, AccessElem, Bug, Elem, Summary, TraceElem}
+import org.racerdfix.language._
+import org.racerdfix.FixConfig
 import spray.json._
+import org.racerdfix.utils.FileManipulation
 
 case class BugsResult[T](val results: List[T])
 case class TraceResult[T](val trace: List[T])
@@ -221,7 +223,7 @@ object SummaryProtocol extends DefaultJsonProtocol {
     def read(value: JsValue) = {
       value match {
         case JsArray(vector) => new SummaryResult[Summary](vector.map(value => jsonToSummary(value)).toList)
-        case _ => throw new DeserializationException("Array of BugShort expected")
+        case _ => throw new DeserializationException("Array of Summary expected")
       }
     }
   }
@@ -234,23 +236,21 @@ class InterpretJson {
   val jsonAst = source.parseJson
   val json    = jsonAst.prettyPrint
 
-  def testJsonBugs(config: FixConfig) = {
+  def getJsonBugs(config: FixConfig) = {
     import BugProtocol._
     val fm  = new FileManipulation
     val src = fm.fileToString(config.json_bugs)
     val jsonAst = src.parseJson
-    val json    = jsonAst.prettyPrint
     val bugsDS  = jsonAst.convertTo[BugsResult[Bug]]
-    json
+    bugsDS
   }
 
-  def testJsonSummary(config: FixConfig) = {
+  def getJsonSummary(config: FixConfig) = {
     import SummaryProtocol._
     val fm  = new FileManipulation
     val src = fm.fileToString(config.json_summaries)
     val jsonAst = src.parseJson
-    val json    = jsonAst.prettyPrint
-    val bugsDS  = jsonAst.convertTo[SummaryResult[Summary]]
-    json
+    val summaryDS  = jsonAst.convertTo[SummaryResult[Summary]]
+    summaryDS
   }
 }

@@ -1,5 +1,5 @@
+import org.racerdfix.language.{CSumm, Insert, PatchBlock, Read, Write}
 import org.racerdfix.TraverseJavaClass.{generateInsertObjectOnCommonResource, generateInsertObjects, generateInsertPatches, generateUpdateObjects, generateUpdatePatches, patchIDGenerator, translateRawSnapshotsToSnapshots}
-import org.racerdfix.fixdsl.{CSumm, Insert, PatchBlock, Read, Write}
 import org.hamcrest.CoreMatchers.is
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test

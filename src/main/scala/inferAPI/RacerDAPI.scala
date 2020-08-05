@@ -1,4 +1,4 @@
-package org.racerdfix
+package org.racerdfix.inferAPI
 
 object RacerDAPI {
 

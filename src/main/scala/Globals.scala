@@ -1,6 +1,6 @@
 package org.racerdfix
 
-import org.racerdfix.fixdsl.PatchCost
+import language.PatchCost
 
 object Globals {
 

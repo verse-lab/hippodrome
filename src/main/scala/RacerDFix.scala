@@ -1,7 +1,8 @@
 package org.racerdfix
 
+import language.{CSumm, Read, Write}
 import org.racerdfix.TraverseJavaClass.mainAlgo
-import org.racerdfix.fixdsl.{CSumm, Read, Write}
+import org.racerdfix.language.CSumm
 
 
 object RacerDFix {
@@ -73,6 +74,7 @@ object RacerDFix {
 
 
   def runPatchAndFix(config: FixConfig) = {
+//    val bugs =
     val filename = "src/test/java/RacyFalseNeg.java"
     /* retrieve summary bug (e.g. two conflicting summaries) */
     /* TODO: read the summary bugs from a JSON file */
