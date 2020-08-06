@@ -38,8 +38,9 @@ case class  NonEmptyTrace(val trace:List[String]) extends Trace
 
 class Lock(val obj: String, val cls: String, val resource: String)
 
-/* raw snapshot */
-class CSumm(val filename: String, val cls: String, val resource: String, val access: AccessKind, val locks: List[Lock], val line: Int, val trace: Trace)
-/* snapshot */
-class Summ(val fm:FileModif, val tree: Java8Parser.CompilationUnitContext, val tokens: TokenStream, val csumm: CSumm)
-//class Bug(val class1: String, val statement1: CSumm, val class2: String, val statement2: CSumm)
+/* raw racerdfix snapshot */
+class RFSumm(val filename: String, val cls: String, val resource: String, val access: AccessKind, val locks: List[Lock], val line: Int, val trace: Trace, val hash: String)
+/* racerdfix snapshot */
+class FSumm(val fm: FileModif, val tree: Java8Parser.CompilationUnitContext, val tokens: TokenStream, val csumm: RFSumm)
+/* racerdfix bug */
+class FBug(val statement1: List[RFSumm], val statement2: List[RFSumm], val hash: String)

@@ -38,7 +38,7 @@ object BugProtocol extends DefaultJsonProtocol {
     }
   }
 
-  def bugToJson(bug: Bug) = {
+  def bugToJson(bug: FBug) = {
     val snapshot2 = bug.snapshot2 match {
       case None       => ""
       case Some (snp) => snp
@@ -95,7 +95,7 @@ object BugProtocol extends DefaultJsonProtocol {
       JsString(snapshot1),
       JsString(snapshot2)) =>
         val trace = vector.map(e => jsonToTraceElem(e)).toList
-        new Bug(bug_type, qualifier,severity,line.toInt,column.toInt,proc,proc_start.toInt,file,trace,key,hash,bug_type_hum, access,snapshot1,Some(snapshot2))
+        new FBug(bug_type, qualifier,severity,line.toInt,column.toInt,proc,proc_start.toInt,file,trace,key,hash,bug_type_hum, access,snapshot1,Some(snapshot2))
       case Seq(
       JsString(bug_type),
       JsString(qualifier),
@@ -112,20 +112,20 @@ object BugProtocol extends DefaultJsonProtocol {
       JsString(bug_type_hum),
       JsString(snapshot1)) =>
         val trace = vector.map(e => jsonToTraceElem(e)).toList
-        new Bug(bug_type, qualifier,severity,line.toInt,column.toInt,proc,proc_start.toInt,file,trace,key,hash,bug_type_hum, access,snapshot1,None)
+        new FBug(bug_type, qualifier,severity,line.toInt,column.toInt,proc,proc_start.toInt,file,trace,key,hash,bug_type_hum, access,snapshot1,None)
       case _ => throw new DeserializationException("BugShort expected")
     }
   }
 
-  implicit object BugJsonFormat extends RootJsonFormat[BugsResult[Bug]] {
-    def write(c: BugsResult[Bug]) : JsValue  = JsArray(
+  implicit object BugJsonFormat extends RootJsonFormat[BugsResult[FBug]] {
+    def write(c: BugsResult[FBug]) : JsValue  = JsArray(
       c.results.map(c => bugToJson(c)).toVector
     )
 
     def read(value: JsValue) = {
       println("VALUE: " + value)
       value match {
-        case JsArray(vector) => new BugsResult[Bug](vector.map(value => jsonToBug(value)).toList)
+        case JsArray(vector) => new BugsResult[FBug](vector.map(value => jsonToBug(value)).toList)
         case _ => throw new DeserializationException("Array of BugShort expected")
       }
     }
@@ -253,12 +253,12 @@ object SummaryProtocol extends DefaultJsonProtocol {
 
 class InterpretJson(val config: FixConfig) {
 
-  def getJsonBugs(): BugsResult[Bug] = {
+  def getJsonBugs(): BugsResult[FBug] = {
     import BugProtocol._
     val fm  = new FileManipulation
     val src = fm.fileToString(config.json_bugs)
     val jsonAst = src.parseJson
-    val bugsDS  = jsonAst.convertTo[BugsResult[Bug]]
+    val bugsDS  = jsonAst.convertTo[BugsResult[FBug]]
     bugsDS
   }
 

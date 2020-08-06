@@ -1,6 +1,6 @@
 package org.racerdfix
 
-import org.racerdfix.language.{CSumm, FileModif, Insert, PatchBlock, PatchCost, Summ, Update}
+import org.racerdfix.language.{RFSumm, FileModif, Insert, PatchBlock, PatchCost, FSumm, Update}
 import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.antlr.{Java8Lexer, Java8Parser}
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream, Token, TokenStream, TokenStreamRewriter}
@@ -91,7 +91,7 @@ object TraverseJavaClass  {
 
   /* Generates a list of UPDATE objects meant to update the locks in
   * `form_summ` with locks in `to_summ` */
-  def generateUpdateObjects(from_summ: CSumm, to_summ: CSumm): List[Update] = {
+  def generateUpdateObjects(from_summ: RFSumm, to_summ: RFSumm): List[Update] = {
     from_summ.locks.foldLeft(List[Update]())((acc, lock) => {
       val lck  = lock.resource
       val locks = to_summ.locks.foldLeft(acc)((acc2, lock2) => Update(from_summ.cls,from_summ.line,lck,lock2.resource)::acc2)
@@ -129,7 +129,7 @@ object TraverseJavaClass  {
 
   /* Generates a list of INSERT objects for the resource in `resource_summ`
    based on the locks available in summary `locks_summ` */
-  def generateInsertObjects(locks_summ: CSumm, resource_summ: CSumm): List[Insert] = {
+  def generateInsertObjects(locks_summ: RFSumm, resource_summ: RFSumm): List[Insert] = {
     locks_summ.locks.foldLeft(List[Insert]())((acc, lock) => {
       val lck    = lock.resource
       val insert = Insert(resource_summ.cls,resource_summ.line,RacerDAPI.getResource2Var(resource_summ.resource),lck)
@@ -139,7 +139,7 @@ object TraverseJavaClass  {
 
   /* Generates a list of INSERT objects for the resource in `resource_summ`
      based on the locks available in summary `locks_summ` */
-  def generateInsertObjectOnCommonResource(summ1: CSumm, summ2: CSumm): (List[Insert], List[Insert]) = {
+  def generateInsertObjectOnCommonResource(summ1: RFSumm, summ2: RFSumm): (List[Insert], List[Insert]) = {
     /* TODO  need to check which is that common resouce, e.g. myA or myA.f?
     *   should be the outer most one, e.g. myA*/
     val lck    = RacerDAPI.getResource2Var(summ1.resource)
@@ -284,7 +284,7 @@ object TraverseJavaClass  {
   }
 
   def generateGroupPatches(groupByIdPatchOptions: GroupByIdPatchOptions,
-                           patches: List[(Int, Option[PatchBlock])], summ: Summ) = {
+                           patches: List[(Int, Option[PatchBlock])], summ: FSumm) = {
 //    var empty_map = new GroupByIdPatchResult(HashMap.empty[Int, GroupByRewriterPatchResult])
     patches.foldLeft(groupByIdPatchOptions)((acc: GroupByIdPatchOptions, ptch) =>
       ptch._2 match {
@@ -307,26 +307,26 @@ object TraverseJavaClass  {
     patch_id._1
   }
 
-  def translateRawSnapshotsToSnapshots(csumm1: CSumm, csumm2: CSumm): (Summ, Summ) = {
+  def translateRawSnapshotsToSnapshots(csumm1: RFSumm, csumm2: RFSumm): (FSumm, FSumm) = {
     if (csumm1.filename == csumm2.filename) {
       val javaFile = csumm1.filename
       val (tokens, tree, rewriter) = parseContent(javaFile)
       val fm = new FileModif(javaFile,rewriter)
-      val summ1 = new Summ(fm, tree, tokens, csumm1)
-      val summ2 = new Summ(fm, tree, tokens, csumm2)
+      val summ1 = new FSumm(fm, tree, tokens, csumm1)
+      val summ2 = new FSumm(fm, tree, tokens, csumm2)
       (summ1,summ2)
     } else {
       val (tokens1, tree1, rewriter1) = parseContent(csumm1.filename)
       val (tokens2, tree2, rewriter2) = parseContent(csumm2.filename)
       val fm1 = new FileModif(csumm1.filename,rewriter1)
       val fm2 = new FileModif(csumm2.filename,rewriter2)
-      val summ1 = new Summ(fm1, tree1, tokens1, csumm1)
-      val summ2 = new Summ(fm2, tree2, tokens2, csumm2)
+      val summ1 = new FSumm(fm1, tree1, tokens1, csumm1)
+      val summ2 = new FSumm(fm2, tree2, tokens2, csumm2)
       (summ1,summ2)
     }
   }
 
-  def mainAlgo(csumm1: CSumm, csumm2: CSumm, config: FixConfig): Unit = {
+  def mainAlgo(csumm1: RFSumm, csumm2: RFSumm, config: FixConfig): Unit = {
     /* ******** */
     /*   PARSE  */
     val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1,csumm2)

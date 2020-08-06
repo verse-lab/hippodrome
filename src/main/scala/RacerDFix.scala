@@ -1,6 +1,6 @@
 package org.racerdfix
 
-import language.{AccessElem, CSumm, EmptyTrace, Lock, Read, Summary, Write}
+import language.{AccessElem, RFSumm, EmptyTrace, Lock, Read, Summary, Write}
 import org.racerdfix.TraverseJavaClass.mainAlgo
 import org.racerdfix.inferAPI.{InterpretJson, RacerDAPI}
 
@@ -114,11 +114,11 @@ object RacerDFix {
     /* {elem= Access: Write to this->myA Thread: AnyThread Lock: true Acquisitions: { P<0>{(this:B*)->myA1} } Pre: OwnedIf{ 0 }; loc= line 24; trace= { }} },*/
     val lock1 = RacerDAPI.lockOfString("P<0>{(this:B*).myA2}")
     val lock2 = RacerDAPI.lockOfString("P<0>{(this:B*).myA1}")
-    val csumm1 = new CSumm(filename,"B","this->myA->f", Read, List(lock1), 30, EmptyTrace)
-    val csumm2 = new CSumm(filename,"B","this->myA", Write, List(lock2), 24, EmptyTrace )
+    val csumm1 = new RFSumm(filename,"B","this->myA->f", Read, List(lock1), 30, EmptyTrace, "")
+    val csumm2 = new RFSumm(filename,"B","this->myA", Write, List(lock2), 24, EmptyTrace, "")
     //
-    //    val csumm1 = new CSumm(filename, "B","this->myA->f", Read, List(), 30 )
-    //    val csumm2 = new CSumm(filename,"B","this->myA", Write, List(), 24 )
+    //    val csumm1 = new CSumm(filename, "B","this->myA->f", Read, List(), 30, EmptyTrace, "")
+    //    val csumm2 = new CSumm(filename,"B","this->myA", Write, List(), 24, EmptyTrace, "")
     mainAlgo(csumm1, csumm2, config)
 
   }
