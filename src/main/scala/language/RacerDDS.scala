@@ -23,16 +23,14 @@ class Summary(val file: String, val procedure: String, var accesses: List[Access
   def updateAccesses(accesses: List[AccessElem]) = {
     this.accesses = accesses
   }
-
-  /* class CSumm(val filename: String, val cls: String, val resource: String, val access: AccessKind, val lock: List[String], val line: Int, val trace: Trace)
- */
+  
   def racerDToRacerDFix(hash: String): List[CSumm] = {
     this.accesses.foldLeft(List.empty[CSumm])((acc2, ae) => {
       if (ae.hash == hash) {
-        val cls = RacerDAPI.method2ClassName(procedure)
+        val cls = RacerDAPI.classNameOfMethodString(procedure)
         val resource = RacerDAPI.getResource2Var(ae.elem.access.exp)
         val access = RacerDAPI.accessKindOfString(ae.elem.access.kind)
-        val locks = ae.elem.locks
+        val locks = ae.elem.locks.map(l => RacerDAPI.lockOfString(l))
         val line = ae.loc
         val trace = RacerDAPI.traceOfListOfStrings(ae.trace)
         (new CSumm(file, cls, resource, access, locks, line, trace)) :: acc2

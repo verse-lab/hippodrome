@@ -3,6 +3,7 @@ import org.racerdfix.TraverseJavaClass.{generateInsertObjectOnCommonResource, ge
 import org.hamcrest.CoreMatchers.is
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
+import org.racerdfix.inferAPI.RacerDAPI
 
 
 class PatchCreationUnitTest {
@@ -10,8 +11,10 @@ class PatchCreationUnitTest {
     @throws[Exception]
     def whenDifferentResources(): Unit = {
         val filename = "src/test/java/RacyFalseNeg.java"
-        val csumm1 = new CSumm(filename,"B","this->myA->f", Read, List("P<0>{(this:B*).myA2}"), 30, EmptyTrace )
-        val csumm2 = new CSumm(filename,"B","this->myA", Write, List("P<0>{(this:B*).myA1}"), 24, EmptyTrace )
+        val lock1 = RacerDAPI.lockOfString("P<0>{(this:B*).myA2}")
+        val lock2 = RacerDAPI.lockOfString("P<0>{(this:B*).myA1}")
+        val csumm1 = new CSumm(filename,"B","this->myA->f", Read, List(lock1), 30, EmptyTrace )
+        val csumm2 = new CSumm(filename,"B","this->myA", Write, List(lock2), 24, EmptyTrace )
 
         val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1,csumm2)
 

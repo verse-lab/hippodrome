@@ -93,8 +93,8 @@ object TraverseJavaClass  {
   * `form_summ` with locks in `to_summ` */
   def generateUpdateObjects(from_summ: CSumm, to_summ: CSumm): List[Update] = {
     from_summ.locks.foldLeft(List[Update]())((acc, lock) => {
-      val lck  = RacerDAPI.getLock2Var(lock)
-      val locks = to_summ.locks.foldLeft(acc)((acc2, lock2) => Update(from_summ.cls,from_summ.line,lck,RacerDAPI.getLock2Var(lock2))::acc2)
+      val lck  = lock.resource
+      val locks = to_summ.locks.foldLeft(acc)((acc2, lock2) => Update(from_summ.cls,from_summ.line,lck,lock2.resource)::acc2)
       acc ++ locks
     }
     )
@@ -131,7 +131,7 @@ object TraverseJavaClass  {
    based on the locks available in summary `locks_summ` */
   def generateInsertObjects(locks_summ: CSumm, resource_summ: CSumm): List[Insert] = {
     locks_summ.locks.foldLeft(List[Insert]())((acc, lock) => {
-      val lck    = RacerDAPI.getLock2Var(lock)
+      val lck    = lock.resource
       val insert = Insert(resource_summ.cls,resource_summ.line,RacerDAPI.getResource2Var(resource_summ.resource),lck)
       insert::acc }
     )

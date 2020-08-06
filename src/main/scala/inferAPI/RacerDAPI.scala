@@ -1,11 +1,11 @@
 package org.racerdfix.inferAPI
 
-import org.racerdfix.language.{EmptyTrace, NonEmptyTrace, Read, Write}
+import org.racerdfix.language.{EmptyTrace, Lock, NonEmptyTrace, Read, Write}
 
 object RacerDAPI {
 
   /* P<0>{(this:B*).myA2} ==> B */
-  def getLock2ClassName_def(lock: String): String = {
+  def classNameOfLockString_def(lock: String): String = {
     val pattern = "(?<=\\()[^)]+(?=\\))".r
     pattern.findFirstMatchIn(lock) match {
       case Some(cls_reg) =>
@@ -24,8 +24,8 @@ object RacerDAPI {
     }
   }
 
-  def getLock2ClassName(lock: String): String = {
-    val result = getLock2ClassName_def(lock)
+  def classNameOfLockString(lock: String): String = {
+    val result = classNameOfLockString_def(lock)
     if (false) {
       println("inp1: " + lock)
       println("out:  " + result)
@@ -34,7 +34,7 @@ object RacerDAPI {
   }
 
   /* P<0>{(this:B*).myA2} ==> this */
-  def getLock2Object_def(lock: String): String = {
+  def objectOfLockString_def(lock: String): String = {
     val pattern = "(?<=\\()[^)]+(?=:)".r
     pattern.findFirstMatchIn(lock) match {
       case Some(obj_reg) => obj_reg.toString()
@@ -42,8 +42,8 @@ object RacerDAPI {
     }
   }
 
-  def getLock2Object(lock: String): String = {
-    val result = getLock2Object_def(lock)
+  def objectOfLockString(lock: String): String = {
+    val result = objectOfLockString_def(lock)
     if (false) {
       println("inp1: " + lock)
       println("out:  " + result)
@@ -52,22 +52,31 @@ object RacerDAPI {
   }
 
   /* P<0>{(this:B*).myA2} ==> myA2*/
-  def getLock2Var_def(lock: String): String = {
+  def resourceVarOfLockString_def(lock: String): String = {
     val pattern = "(?<=\\).)[^)]+(?=\\})".r
     pattern.findFirstMatchIn(lock) match {
       case Some(resource) => resource.toString()
-      case None => getLock2Object(lock)
+      case None => objectOfLockString(lock)
     }
   }
 
-  def getLock2Var(lock: String): String = {
-    val result = getLock2Var_def(lock)
+  def resourceVarOfLockString(lock: String): String = {
+    val result = resourceVarOfLockString_def(lock)
     if (false) {
       println("inp1: " + lock)
       println("out:  " + result)
     }
     result
   }
+
+  /* P<0>{(this:B*).myA2} ==> B */
+  def lockOfString(str: String): Lock = {
+    val cls      = classNameOfLockString_def(str)
+    val obj      = objectOfLockString_def(str)
+    val resource = resourceVarOfLockString_def(str)
+    new Lock(obj, cls, resource)
+  }
+
 
   /* this->myA2 ==> myA2*/
   def getResource2Var_def(resource: String): String = {
@@ -88,7 +97,7 @@ object RacerDAPI {
   }
 
   /* "B.<init>()" */
-  def method2ClassName_def(method: String): String ={
+  def classNameOfMethodString_def(method: String): String ={
     val pattern = "[^)]+(?=\\.)".r
     pattern.findFirstMatchIn(method) match {
       case Some(resource) => resource.toString()
@@ -96,8 +105,8 @@ object RacerDAPI {
     }
   }
 
-  def method2ClassName(method: String): String = {
-    val result = method2ClassName_def(method)
+  def classNameOfMethodString(method: String): String = {
+    val result = classNameOfMethodString_def(method)
     if (false) {
       println("inp1: " + method)
       println("out:  " + result)
