@@ -1,4 +1,4 @@
-import org.racerdfix.language.{CSumm, Insert, PatchBlock, Read, Write}
+import org.racerdfix.language.{CSumm, EmptyTrace, Insert, PatchBlock, Read, Write}
 import org.racerdfix.TraverseJavaClass.{generateInsertObjectOnCommonResource, generateInsertObjects, generateInsertPatches, generateUpdateObjects, generateUpdatePatches, patchIDGenerator, translateRawSnapshotsToSnapshots}
 import org.hamcrest.CoreMatchers.is
 import org.hamcrest.MatcherAssert.assertThat
@@ -10,8 +10,8 @@ class PatchCreationUnitTest {
     @throws[Exception]
     def whenDifferentResources(): Unit = {
         val filename = "src/test/java/RacyFalseNeg.java"
-        val csumm1 = new CSumm(filename,"B","this->myA->f", Read, List("P<0>{(this:B*).myA2}"), 30 )
-        val csumm2 = new CSumm(filename,"B","this->myA", Write, List("P<0>{(this:B*).myA1}"), 24 )
+        val csumm1 = new CSumm(filename,"B","this->myA->f", Read, List("P<0>{(this:B*).myA2}"), 30, EmptyTrace )
+        val csumm2 = new CSumm(filename,"B","this->myA", Write, List("P<0>{(this:B*).myA1}"), 24, EmptyTrace )
 
         val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1,csumm2)
 
@@ -53,8 +53,8 @@ class PatchCreationUnitTest {
     @throws[Exception]
     def whenSameResources(): Unit = {
         val filename = "src/test/java/RacyFalseNeg.java"
-        val csumm1 = new CSumm(filename, "B","this->myA->f", Read, List(), 30 )
-        val csumm2 = new CSumm(filename,"B","this->myA", Write, List(), 24 )
+        val csumm1 = new CSumm(filename, "B","this->myA->f", Read, List(), 30, EmptyTrace )
+        val csumm2 = new CSumm(filename,"B","this->myA", Write, List(), 24, EmptyTrace )
 
         val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1,csumm2)
 

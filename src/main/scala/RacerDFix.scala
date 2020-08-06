@@ -1,8 +1,8 @@
 package org.racerdfix
 
-import language.{CSumm, Read, Write}
+import language.{AccessElem, CSumm, EmptyTrace, Read, Summary, Write}
 import org.racerdfix.TraverseJavaClass.mainAlgo
-import org.racerdfix.language.CSumm
+import org.racerdfix.inferAPI.InterpretJson
 
 
 object RacerDFix {
@@ -74,15 +74,46 @@ object RacerDFix {
 
 
   def runPatchAndFix(config: FixConfig) = {
-//    val bugs =
+    val jsonTranslator = new InterpretJson(config)
+    val bugs = jsonTranslator.getJsonBugs()
+    val summaries = jsonTranslator.getJsonSummaries()
+    /* for each bug in `bugs` find a patch and possibly generate a fix */
+    bugs.results.foreach(bug => {
+      val snapshot1_hash = bug.snapshot1
+      val snapshot2_hash = bug.snapshot2
+      /* there could be multiple snapshots with the same hash if they refer to the same problematic resource operation. */
+//      val snapshot1_lst = summaries.snapshots.foldLeft(List.empty[Summary])((acc, summ) => {
+//          val x = summ.accesses.foldLeft(List.empty[AccessElem])((acc2,ae) => {
+//          if (ae.hash == snapshot1_hash) ae::acc2
+//          else acc2
+//        })
+//        if (x.length > 0) summ.updateAccesses(x) ::acc
+//        else acc
+//      })
+//      snapshot2_hash match {
+//        case None => {
+//            /* unprotected write */
+//            /* generate an insert for the inner most statement */
+//            val snapshot1 = snapshot1_lst.foldLeft(None)((acc,summ) =>{
+//              acc match {
+//                case None => acc
+//                case Some(snp) => if(snp.)
+//              }
+//            })
+//        }
+//        case Some(snapshot2_hash) =>
+//      }
+
+    }
+    )
     val filename = "src/test/java/RacyFalseNeg.java"
     /* retrieve summary bug (e.g. two conflicting summaries) */
     /* TODO: read the summary bugs from a JSON file */
     /* currently they are manually crafted as below */
     /* {elem= Access: Read of this->myA Thread: AnyThread Lock: true Acquisitions: { P<0>{(this:B*)->myA2} } Pre: OwnedIf{ 0 }; loc= line 30; trace= { }},*/
     /* {elem= Access: Write to this->myA Thread: AnyThread Lock: true Acquisitions: { P<0>{(this:B*)->myA1} } Pre: OwnedIf{ 0 }; loc= line 24; trace= { }} },*/
-    val csumm1 = new CSumm(filename,"B","this->myA->f", Read, List("P<0>{(this:B*).myA2}"), 30 )
-    val csumm2 = new CSumm(filename,"B","this->myA", Write, List("P<0>{(this:B*).myA1}"), 24 )
+    val csumm1 = new CSumm(filename,"B","this->myA->f", Read, List("P<0>{(this:B*).myA2}"), 30, EmptyTrace)
+    val csumm2 = new CSumm(filename,"B","this->myA", Write, List("P<0>{(this:B*).myA1}"), 24, EmptyTrace )
     //
     //    val csumm1 = new CSumm(filename, "B","this->myA->f", Read, List(), 30 )
     //    val csumm2 = new CSumm(filename,"B","this->myA", Write, List(), 24 )

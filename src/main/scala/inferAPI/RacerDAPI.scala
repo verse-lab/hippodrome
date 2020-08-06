@@ -1,5 +1,7 @@
 package org.racerdfix.inferAPI
 
+import org.racerdfix.language.{EmptyTrace, NonEmptyTrace, Read, Write}
+
 object RacerDAPI {
 
   /* P<0>{(this:B*).myA2} ==> B */
@@ -67,7 +69,7 @@ object RacerDAPI {
     result
   }
 
-  /* P<0>{(this:B*).myA2} ==> myA2*/
+  /* this->myA2 ==> myA2*/
   def getResource2Var_def(resource: String): String = {
     val pattern = "(?<=->)[^)]+".r
     pattern.findFirstMatchIn(resource) match {
@@ -83,5 +85,36 @@ object RacerDAPI {
       println("out:  " + result)
     }
     result
+  }
+
+  /* "B.<init>()" */
+  def method2ClassName_def(method: String): String ={
+    val pattern = "[^)]+(?=\\.)".r
+    pattern.findFirstMatchIn(method) match {
+      case Some(resource) => resource.toString()
+      case None => method
+    }
+  }
+
+  def method2ClassName(method: String): String = {
+    val result = method2ClassName_def(method)
+    if (false) {
+      println("inp1: " + method)
+      println("out:  " + result)
+    }
+    result
+  }
+
+  def accessKindOfString(str: String) = {
+    if (str == "Read") Read
+    else if (str == "Write") Write
+    else throw new Exception("BugShort expected")
+  }
+
+  def traceOfListOfStrings(trace: List[String]) = {
+    trace match {
+      case Nil => EmptyTrace
+      case _  => new NonEmptyTrace(trace)
+    }
   }
 }

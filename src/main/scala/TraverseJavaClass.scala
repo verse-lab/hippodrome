@@ -92,9 +92,9 @@ object TraverseJavaClass  {
   /* Generates a list of UPDATE objects meant to update the locks in
   * `form_summ` with locks in `to_summ` */
   def generateUpdateObjects(from_summ: CSumm, to_summ: CSumm): List[Update] = {
-    from_summ.lock.foldLeft(List[Update]())((acc, lock) => {
+    from_summ.locks.foldLeft(List[Update]())((acc, lock) => {
       val lck  = RacerDAPI.getLock2Var(lock)
-      val locks = to_summ.lock.foldLeft(acc)((acc2, lock2) => Update(from_summ.cls,from_summ.line,lck,RacerDAPI.getLock2Var(lock2))::acc2)
+      val locks = to_summ.locks.foldLeft(acc)((acc2, lock2) => Update(from_summ.cls,from_summ.line,lck,RacerDAPI.getLock2Var(lock2))::acc2)
       acc ++ locks
     }
     )
@@ -130,7 +130,7 @@ object TraverseJavaClass  {
   /* Generates a list of INSERT objects for the resource in `resource_summ`
    based on the locks available in summary `locks_summ` */
   def generateInsertObjects(locks_summ: CSumm, resource_summ: CSumm): List[Insert] = {
-    locks_summ.lock.foldLeft(List[Insert]())((acc, lock) => {
+    locks_summ.locks.foldLeft(List[Insert]())((acc, lock) => {
       val lck    = RacerDAPI.getLock2Var(lock)
       val insert = Insert(resource_summ.cls,resource_summ.line,RacerDAPI.getResource2Var(resource_summ.resource),lck)
       insert::acc }
@@ -334,14 +334,14 @@ object TraverseJavaClass  {
     println("************* GENERATE PATCH *************")
 //    if ( true /*csumm1.resource == csumm2.resource*/) {
     var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
-    if ((csumm1.lock concat csumm2.lock).length > 0) {
-      val common_locks = csumm1.lock intersect csumm2.lock
+    if ((csumm1.locks concat csumm2.locks).length > 0) {
+      val common_locks = csumm1.locks intersect csumm2.locks
 
       /* Both statements are synchronized but there is no common lock ==>
         *  1. UPDATE one of the locks with a lock from the peer statement
         *  2. INSERT a new synchronization over one of the two statements  */
 
-      val patches1 = if (csumm1.lock.length > 0 && csumm2.lock.length > 0 && common_locks.length ==0) {
+      val patches1 = if (csumm1.locks.length > 0 && csumm2.locks.length > 0 && common_locks.length ==0) {
         /* ************** UPDATES ***************** */
         /* generate update objects */
         /* TODO need to check which locks suit to be changed (e.g. they don't protect other resources) */
@@ -371,7 +371,7 @@ object TraverseJavaClass  {
        * INSERT a new synchronization using locks from `summ2` to protect the
        * statement manipulating the resource in `csumm1`  */
 
-      val patches2 = if (summ1.csumm.lock.length == 0 && summ2.csumm.lock.length > 0) {
+      val patches2 = if (summ1.csumm.locks.length == 0 && summ2.csumm.locks.length > 0) {
         /* ************** INSERTS ***************** */
         /* generate insert objects */
         val inserts = generateInsertObjects(summ2.csumm,summ1.csumm)
@@ -385,7 +385,7 @@ object TraverseJavaClass  {
        * INSERT a new synchronization using locks from `csumm` to protect the
        * statement manipulating the resource in `csumm2`  */
 
-      val patches3 = if (csumm1.lock.length > 0 && csumm2.lock.length == 0) {
+      val patches3 = if (csumm1.locks.length > 0 && csumm2.locks.length == 0) {
         /* ************** INSERTS ***************** */
         /* generate insert objects */
         val inserts = generateInsertObjects(summ1.csumm,summ2.csumm)
@@ -421,7 +421,7 @@ object TraverseJavaClass  {
 
       val patch_id  = patchIDGenerator(0)._2
       var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
-      val grouped_patches = if (csumm1.lock.length == 0 && csumm2.lock.length == 0) {
+      val grouped_patches = if (csumm1.locks.length == 0 && csumm2.locks.length == 0) {
         /* ************** INSERTS ***************** */
         /* generate insert objects */
         val (inserts1, inserts2) = generateInsertObjectOnCommonResource(csumm1, csumm2)

@@ -32,8 +32,14 @@ case object Write extends AccessKind
 
 class FileModif(val filename: String, val rewriter: TokenStreamRewriter)
 
+sealed trait Trace
+case object EmptyTrace extends Trace
+case class  NonEmptyTrace(val trace:List[String]) extends Trace
+
+class Lock(val obj: String, val cls: String, val resource: String)
+
 /* raw snapshot */
-class CSumm(val filename: String, val cls: String, val resource: String, val access: AccessKind, val lock: List[String], val line: Int)
+class CSumm(val filename: String, val cls: String, val resource: String, val access: AccessKind, val locks: List[String], val line: Int, val trace: Trace)
 /* snapshot */
 class Summ(val fm:FileModif, val tree: Java8Parser.CompilationUnitContext, val tokens: TokenStream, val csumm: CSumm)
 //class Bug(val class1: String, val statement1: CSumm, val class2: String, val statement2: CSumm)
