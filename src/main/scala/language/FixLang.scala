@@ -32,15 +32,24 @@ case object Write extends AccessKind
 
 class FileModif(val filename: String, val rewriter: TokenStreamRewriter)
 
-sealed trait Trace
+sealed trait Trace {
+  def length() = {
+    this match {
+      case EmptyTrace => 0
+      case NonEmptyTrace(trace) => trace.length
+    }
+  }
+}
 case object EmptyTrace extends Trace
 case class  NonEmptyTrace(val trace:List[String]) extends Trace
 
 class Lock(val obj: String, val cls: String, val resource: String)
 
 /* raw racerdfix snapshot */
-class RFSumm(val filename: String, val cls: String, val resource: String, val access: AccessKind, val locks: List[Lock], val line: Int, val trace: Trace, val hash: String)
+class RFSumm(val filename: String, val cls: String, val resource: String, val access: AccessKind, val locks: List[Lock], val line: Int, val trace: Trace, val hash: String){
+  def getCost(cost: RFSumm => Int ) = cost(this)
+}
 /* racerdfix snapshot */
 class FSumm(val fm: FileModif, val tree: Java8Parser.CompilationUnitContext, val tokens: TokenStream, val csumm: RFSumm)
 /* racerdfix bug */
-class FBug(val statement1: List[RFSumm], val statement2: List[RFSumm], val hash: String)
+class FBug(val snapshot1: List[RFSumm], val snapshot2: List[RFSumm], val hash: String)

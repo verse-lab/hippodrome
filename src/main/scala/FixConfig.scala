@@ -9,7 +9,8 @@ case class FixConfig(
        // Files
        json_bugs:   String       = Globals.json_bugs_file,
        json_summaries: String    = Globals.json_summaries,
-       json_patches: String      = Globals.json_patches
+       json_patches: String      = Globals.json_patches,
+       java_sources_path: String = Globals.def_src_path
 
   ) extends PrettyPrinting {
 

@@ -1,8 +1,10 @@
-import org.racerdfix.language.{CSumm, EmptyTrace, Insert, PatchBlock, Read, Write}
+import org.racerdfix.language.{EmptyTrace, Insert, PatchBlock, RFSumm, Read, Write}
 import org.racerdfix.TraverseJavaClass.{generateInsertObjectOnCommonResource, generateInsertObjects, generateInsertPatches, generateUpdateObjects, generateUpdatePatches, patchIDGenerator, translateRawSnapshotsToSnapshots}
 import org.hamcrest.CoreMatchers.is
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
+import org.racerdfix.{FixConfig, Globals}
+import org.racerdfix.RacerDFix.RunConfig
 import org.racerdfix.inferAPI.RacerDAPI
 
 
@@ -13,8 +15,8 @@ class PatchCreationUnitTest {
         val filename = "src/test/java/RacyFalseNeg.java"
         val lock1 = RacerDAPI.lockOfString("P<0>{(this:B*).myA2}")
         val lock2 = RacerDAPI.lockOfString("P<0>{(this:B*).myA1}")
-        val csumm1 = new CSumm(filename,"B","this->myA->f", Read, List(lock1), 30, EmptyTrace )
-        val csumm2 = new CSumm(filename,"B","this->myA", Write, List(lock2), 24, EmptyTrace )
+        val csumm1 = new RFSumm(filename,"B","this->myA->f", Read, List(lock1), 30, EmptyTrace,"" )
+        val csumm2 = new RFSumm(filename,"B","this->myA", Write, List(lock2), 24, EmptyTrace,"" )
 
         val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1,csumm2)
 
@@ -56,8 +58,8 @@ class PatchCreationUnitTest {
     @throws[Exception]
     def whenSameResources(): Unit = {
         val filename = "src/test/java/RacyFalseNeg.java"
-        val csumm1 = new CSumm(filename, "B","this->myA->f", Read, List(), 30, EmptyTrace )
-        val csumm2 = new CSumm(filename,"B","this->myA", Write, List(), 24, EmptyTrace )
+        val csumm1 = new RFSumm(filename, "B","this->myA->f", Read, List(), 30, EmptyTrace, "" )
+        val csumm2 = new RFSumm(filename,"B","this->myA", Write, List(), 24, EmptyTrace, "" )
 
         val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1,csumm2)
 
@@ -76,5 +78,11 @@ class PatchCreationUnitTest {
             is(("Some(synchronized(myA.f){myA.f = x;})".replaceAll("[\\n\\t ]", ""))))
         assertThat(patches2.head._2.toString.replaceAll("[\\n\\t ]", ""),
             is(("Some(synchronized(myA.f){myA = a;})".replaceAll("[\\n\\t ]", ""))))
+    }
+
+    @Test
+    @throws[Exception]
+    def runMainAlgo(): Unit = {
+         val newConfig = RunConfig(FixConfig(), Globals.def_src_path)
     }
 }

@@ -1,6 +1,6 @@
 package org.racerdfix
 
-import language.{AccessElem, RFSumm, EmptyTrace, Lock, Read, Summary, Write}
+import language.{AccessElem, RFSumm, EmptyTrace, Lock, Read, SummaryIn, Write}
 import org.racerdfix.TraverseJavaClass.mainAlgo
 import org.racerdfix.inferAPI.{InterpretJson, RacerDAPI}
 
@@ -9,7 +9,6 @@ object RacerDFix {
 
   case class RunConfig(fixConfig: FixConfig, fileName: String)
 
-  private val defaultPath = "src/test/java/"
   private val TOOLNAME = "RacerDFix"
   private val SCRIPTNAME = "racerdfix"
   private val VERSION = "0.1"
@@ -38,20 +37,25 @@ object RacerDFix {
       rc.copy(fixConfig = rc.fixConfig.copy(json_bugs = b))
     }.text("sets the file which provides the bug details. The default one is " + Globals.json_bugs_file)
 
-    opt[String]('b', "json_summaries").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(json_bugs = b))
+    opt[String]('s', "json_summaries").action { (b, rc) =>
+      rc.copy(fixConfig = rc.fixConfig.copy(json_summaries = b))
     }.text("sets the file which provides the methods' summaries. The default one is " + Globals.json_summaries)
 
-    opt[String]('b', "json_patches").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(json_bugs = b))
+    opt[String]('p', "json_patches").action { (b, rc) =>
+      rc.copy(fixConfig = rc.fixConfig.copy(json_patches = b))
     }.text("sets the file where the generated patches will be stored. The default one is " + Globals.json_patches)
+
+    opt[String]('j', "java_sources_path").action { (b, rc) =>
+      rc.copy(fixConfig = rc.fixConfig.copy(java_sources_path = b))
+    }.text("teh path to teh source files. The default one is " + Globals.def_src_path)
+
 
     help("help").text("prints this usage text")
 
   }
 
   def parseParams(paramString: Array[String], params: FixConfig): FixConfig = {
-    val newConfig = RunConfig(params, defaultPath)
+    val newConfig = RunConfig(params, Globals.def_src_path)
     parser.parse(paramString, newConfig) match {
       case Some(RunConfig(fixConfig, _)) => fixConfig
       case None => throw RacerDFixException("Bad argument format.")
@@ -59,56 +63,49 @@ object RacerDFix {
   }
 
   private def handleInput(args: Array[String]): Unit = {
-    val newConfig = RunConfig(FixConfig(), defaultPath)
+    val newConfig = RunConfig(FixConfig(), Globals.def_src_path)
     parser.parse(args, newConfig) match {
       case Some(RunConfig(fixConfig, file)) =>
-        /* TODO read the JSONS and store them in data structures */
-//        val ij = new InterpretJson()
-//        println("json bugs: " + ij.testJsonBugs(newConfig.fixConfig))
-//        println("json summaries: " + ij.testJsonSummary(newConfig.fixConfig))
         runPatchAndFix(fixConfig)
       case None =>
         System.err.println("Bad argument format.")
     }
   }
 
+  def costSumm(summ: RFSumm) = {
+    summ.trace.length()
+  }
+
+  def cost( val1: Int, val2: Int) = val1 <= val2
 
   def runPatchAndFix(config: FixConfig) = {
     val jsonTranslator = new InterpretJson(config)
-    val bugs = jsonTranslator.getJsonBugs()
-    val summaries = jsonTranslator.getJsonSummaries()
+    val summariesIn = jsonTranslator.getJsonSummaries()
+    val norm_and_translate = ((s:SummaryIn) => s.updatePathReturn(config.java_sources_path)).andThen((s:SummaryIn) => s.racerDToRacerDFix())
+    val summaries   = summariesIn.results.flatMap(norm_and_translate)
+    val bugsIn      = jsonTranslator.getJsonBugs()
+    val bugs        = bugsIn.results.map(b => b.racerDToRacerDFix(summaries))
     /* for each bug in `bugs` find a patch and possibly generate a fix */
-    bugs.results.foreach(bug => {
-      val snapshot1_hash = bug.snapshot1
-      val snapshot2_hash = bug.snapshot2
-      /* there could be multiple snapshots with the same hash if they refer to the same problematic resource operation. */
-//      val snapshot1_lst = summaries.snapshots.foldLeft(List.empty[Summary])((acc, summ) => {
-//          val x = summ.accesses.foldLeft(List.empty[AccessElem])((acc2,ae) => {
-//          if (ae.hash == snapshot1_hash) ae::acc2
-//          else acc2
-//        })
-//        if (x.length > 0) summ.updateAccesses(x) ::acc
-//        else acc
-//      })
-//      snapshot2_hash match {
-//        case None => {
-//            /* unprotected write */
-//            /* generate an insert for the inner most statement */
-//            val snapshot1 = snapshot1_lst.foldLeft(None)((acc,summ) =>{
-//              acc match {
-//                case None => acc
-//                case Some(snp) => if(snp.)
-//              }
-//            })
-//        }
-//        case Some(snapshot2_hash) =>
-//      }
+    bugs.foreach(bug => {
+      bug.snapshot2 match {
+        case Nil => /* possibly Unprotected write */
+        case _   => {
+          /* assumes that snapshot1 is non-empty*/
+          val summ1 = bug.snapshot1.foldLeft(bug.snapshot1.head)((acc,summ) => {
+            if (cost(summ.getCost(costSumm), acc.getCost(costSumm ))) summ
+            else acc
+          } )
+          val summ2 = bug.snapshot2.foldLeft(bug.snapshot2.head)((acc,summ) => {
+            if (cost(summ.getCost(costSumm), acc.getCost(costSumm ))) summ
+            else acc
+          } )
+          mainAlgo(summ1, summ2, config)
+        }
+      }
+    })
 
-    }
-    )
+
     val filename = "src/test/java/RacyFalseNeg.java"
-    /* retrieve summary bug (e.g. two conflicting summaries) */
-    /* TODO: read the summary bugs from a JSON file */
     /* currently they are manually crafted as below */
     /* {elem= Access: Read of this->myA Thread: AnyThread Lock: true Acquisitions: { P<0>{(this:B*)->myA2} } Pre: OwnedIf{ 0 }; loc= line 30; trace= { }},*/
     /* {elem= Access: Write to this->myA Thread: AnyThread Lock: true Acquisitions: { P<0>{(this:B*)->myA1} } Pre: OwnedIf{ 0 }; loc= line 24; trace= { }} },*/

@@ -5,9 +5,7 @@ import org.racerdfix.FixConfig
 import spray.json._
 import org.racerdfix.utils.FileManipulation
 
-case class BugsResult[T](val results: List[T])
-case class TraceResult[T](val trace: List[T])
-case class SummaryResult[T](val snapshots: List[T])
+case class TranslationResult[T](val results: List[T])
 
 
 object BugProtocol extends DefaultJsonProtocol {
@@ -38,8 +36,8 @@ object BugProtocol extends DefaultJsonProtocol {
     }
   }
 
-  def bugToJson(bug: FBug) = {
-    val snapshot2 = bug.snapshot2 match {
+  def bugToJson(bug: BugIn) = {
+    val snapshot2 = bug.snapshot2_hash match {
       case None       => ""
       case Some (snp) => snp
     }
@@ -57,7 +55,7 @@ object BugProtocol extends DefaultJsonProtocol {
       "hash" -> JsString(bug.hash),
       "bug_type_hum" -> JsString(bug.bug_type_hum),
       "access" -> JsString(bug.access),
-      "snapshot1"  -> JsString(bug.snapshot1),
+      "snapshot1"  -> JsString(bug.snapshot1_hash),
       "snapshot2"  -> JsString(snapshot2)
     )
   }
@@ -95,7 +93,7 @@ object BugProtocol extends DefaultJsonProtocol {
       JsString(snapshot1),
       JsString(snapshot2)) =>
         val trace = vector.map(e => jsonToTraceElem(e)).toList
-        new FBug(bug_type, qualifier,severity,line.toInt,column.toInt,proc,proc_start.toInt,file,trace,key,hash,bug_type_hum, access,snapshot1,Some(snapshot2))
+        new BugIn(bug_type, qualifier,severity,line.toInt,column.toInt,proc,proc_start.toInt,file,trace,key,hash,bug_type_hum, access,snapshot1,Some(snapshot2))
       case Seq(
       JsString(bug_type),
       JsString(qualifier),
@@ -112,20 +110,20 @@ object BugProtocol extends DefaultJsonProtocol {
       JsString(bug_type_hum),
       JsString(snapshot1)) =>
         val trace = vector.map(e => jsonToTraceElem(e)).toList
-        new FBug(bug_type, qualifier,severity,line.toInt,column.toInt,proc,proc_start.toInt,file,trace,key,hash,bug_type_hum, access,snapshot1,None)
+        new BugIn(bug_type, qualifier,severity,line.toInt,column.toInt,proc,proc_start.toInt,file,trace,key,hash,bug_type_hum, access,snapshot1,None)
       case _ => throw new DeserializationException("BugShort expected")
     }
   }
 
-  implicit object BugJsonFormat extends RootJsonFormat[BugsResult[FBug]] {
-    def write(c: BugsResult[FBug]) : JsValue  = JsArray(
+  implicit object BugJsonFormat extends RootJsonFormat[TranslationResult[BugIn]] {
+    def write(c: TranslationResult[BugIn]) : JsValue  = JsArray(
       c.results.map(c => bugToJson(c)).toVector
     )
 
     def read(value: JsValue) = {
       println("VALUE: " + value)
       value match {
-        case JsArray(vector) => new BugsResult[FBug](vector.map(value => jsonToBug(value)).toList)
+        case JsArray(vector) => new TranslationResult[BugIn](vector.map(value => jsonToBug(value)).toList)
         case _ => throw new DeserializationException("Array of BugShort expected")
       }
     }
@@ -160,7 +158,7 @@ object SummaryProtocol extends DefaultJsonProtocol {
   }
 
   /* case class Summary(val file: String, val procedure: String, val accesses: List[AccessElem]) */
-  def summaryToJson(sum: Summary) = {
+  def summaryToJson(sum: SummaryIn) = {
     JsObject(
       "file"       -> JsString(sum.file),
       "procedure"  -> JsString(sum.procedure),
@@ -221,7 +219,7 @@ object SummaryProtocol extends DefaultJsonProtocol {
     }
   }
 
-  def jsonToSummary(value: JsValue): Summary ={
+  def jsonToSummary(value: JsValue): SummaryIn ={
     value.asJsObject.getFields(
       "file",
       "procedure",
@@ -231,19 +229,19 @@ object SummaryProtocol extends DefaultJsonProtocol {
       JsString(file),
       JsString(procedure),
       JsArray(accesses))
-      => new Summary(file,procedure,accesses.map(e=>jsonToAccessElem(e)).toList)
+      => new SummaryIn(file,procedure,accesses.map(e=>jsonToAccessElem(e)).toList)
       case _ => throw new DeserializationException("Summary expected")
     }
   }
 
-  implicit object SummaryJsonFormat extends RootJsonFormat[SummaryResult[Summary]] {
-    def write(c: SummaryResult[Summary]) : JsValue  = JsArray(
-      c.snapshots.map(c => summaryToJson(c)).toVector
+  implicit object SummaryJsonFormat extends RootJsonFormat[TranslationResult[SummaryIn]] {
+    def write(c: TranslationResult[SummaryIn]) : JsValue  = JsArray(
+      c.results.map(c => summaryToJson(c)).toVector
     )
 
-    def read(value: JsValue): SummaryResult[Summary] = {
+    def read(value: JsValue): TranslationResult[SummaryIn] = {
       value match {
-        case JsArray(vector) => new SummaryResult[Summary](vector.map(value => jsonToSummary(value)).toList)
+        case JsArray(vector) => new TranslationResult[SummaryIn](vector.map(value => jsonToSummary(value)).toList)
         case _ => throw new DeserializationException("Array of Summary expected")
       }
     }
@@ -253,21 +251,21 @@ object SummaryProtocol extends DefaultJsonProtocol {
 
 class InterpretJson(val config: FixConfig) {
 
-  def getJsonBugs(): BugsResult[FBug] = {
+  def getJsonBugs(): TranslationResult[BugIn] = {
     import BugProtocol._
     val fm  = new FileManipulation
     val src = fm.fileToString(config.json_bugs)
     val jsonAst = src.parseJson
-    val bugsDS  = jsonAst.convertTo[BugsResult[FBug]]
+    val bugsDS  = jsonAst.convertTo[TranslationResult[BugIn]]
     bugsDS
   }
 
-  def getJsonSummaries(): SummaryResult[Summary] = {
+  def getJsonSummaries(): TranslationResult[SummaryIn] = {
     import SummaryProtocol._
     val fm  = new FileManipulation
     val src = fm.fileToString(config.json_summaries)
     val jsonAst = src.parseJson
-    val summariesDS = jsonAst.convertTo[SummaryResult[Summary]]
+    val summariesDS = jsonAst.convertTo[TranslationResult[SummaryIn]]
     summariesDS
   }
 }
