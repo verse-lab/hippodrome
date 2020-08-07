@@ -126,15 +126,4 @@ object RacerDAPI {
       case _  => new NonEmptyTrace(trace)
     }
   }
-
-  def refToListOfRef(sp: String) = {
-    val lst   = sp.split(Array('.')).toList
-    val vars  = lst.foldLeft((Nil:List[String],""))((acc:(List[String],String),str) => {
-      val vr = acc._2 match {
-        case "" => str
-        case _  => acc._2 + "." + str
-      }
-      (acc._1 ++ List(vr), vr)})
-    vars._1
-  }
 }

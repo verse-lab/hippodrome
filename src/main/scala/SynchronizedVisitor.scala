@@ -3,7 +3,6 @@ package org.racerdfix
 import org.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
 import org.antlr.v4.runtime.{CommonTokenStream, TokenStreamRewriter}
 import org.antlr.v4.runtime.misc.Interval
-import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.language.{FixKind, Insert, NoFix, Update}
 
 class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
@@ -35,12 +34,13 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     super.visitChildren(ctx)
   }
 
+  /* TODO: need to check more granular on the var names (myA.f is not recognized as a child of myA) */
   override def visitExpressionName(ctx: Java8Parser.ExpressionNameContext): Unit = {
     fix match {
       case Insert(cls, line, unprotected_resource, lock_new) => {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
-          val vars = RacerDAPI.refToListOfRef(ctx.getText)
-          if (vars.contains(unprotected_resource)){
+          val ctxStr = ctx.getText
+          if (unprotected_resource == ctxStr){
             resource = Some(ctx)
           }
         }
