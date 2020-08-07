@@ -22,7 +22,8 @@ object Globals {
   val unitCost     = new PatchCost(defUnitValue)
 
   /* default files and paths */
-  val json_files_path           = "src/test/JSON/"
+  val results_out_dir           = "src/main/misc/infer-out/"
+  val json_files_path           = "src/main/misc/infer-out/"
   val json_bugs_filename        = "report.json"
   val json_summaries_filename   = "racerdfix_summaries.json"
   val json_patches_filename     =  "racerdfix_patches.json"

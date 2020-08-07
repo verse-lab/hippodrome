@@ -148,6 +148,17 @@ object TraverseJavaClass  {
     (List(insert1),List(insert2))
   }
 
+  /* Generates a list of INSERT objects for the resource in `resource_summ`
+   based on the locks available in summary `locks_summ` */
+  def generateInsertObjectOnUnprotectedResource(summ: RFSumm): (List[Insert]) = {
+    /* TODO  need to check which is that common resouce, e.g. myA or myA.f?
+    *   should be the outer most one, e.g. myA*/
+    val lck    = RacerDAPI.getResource2Var(summ.resource)
+    val insert1 = Insert(summ.cls,summ.line,RacerDAPI.getResource2Var(summ.resource),lck)
+    (List(insert1))
+  }
+
+
   def generateInsertPatch_def(insert: Insert,
                               tokens: TokenStream,
                               tree: Java8Parser.CompilationUnitContext): Option[PatchBlock] = {
@@ -307,26 +318,37 @@ object TraverseJavaClass  {
     patch_id._1
   }
 
-  def translateRawSnapshotsToSnapshots(csumm1: RFSumm, csumm2: RFSumm): (FSumm, FSumm) = {
-    if (csumm1.filename == csumm2.filename) {
-      val javaFile = csumm1.filename
-      val (tokens, tree, rewriter) = parseContent(javaFile)
-      val fm = new FileModif(javaFile,rewriter)
-      val summ1 = new FSumm(fm, tree, tokens, csumm1)
-      val summ2 = new FSumm(fm, tree, tokens, csumm2)
-      (summ1,summ2)
-    } else {
-      val (tokens1, tree1, rewriter1) = parseContent(csumm1.filename)
-      val (tokens2, tree2, rewriter2) = parseContent(csumm2.filename)
-      val fm1 = new FileModif(csumm1.filename,rewriter1)
-      val fm2 = new FileModif(csumm2.filename,rewriter2)
-      val summ1 = new FSumm(fm1, tree1, tokens1, csumm1)
-      val summ2 = new FSumm(fm2, tree2, tokens2, csumm2)
-      (summ1,summ2)
+  def translateRawSnapshotsToSnapshots(csumm1: RFSumm, csumm2: Option[RFSumm]): (FSumm, Option[FSumm]) = {
+    csumm2 match {
+      case None => {
+        val javaFile = csumm1.filename
+        val (tokens, tree, rewriter) = parseContent(javaFile)
+        val fm = new FileModif(javaFile, rewriter)
+        val summ1 = new FSumm(fm, tree, tokens, csumm1)
+        (summ1, None)
+      }
+      case Some(csumm2) => {
+        if (csumm1.filename == csumm2.filename) {
+          val javaFile = csumm1.filename
+          val (tokens, tree, rewriter) = parseContent(javaFile)
+          val fm = new FileModif(javaFile, rewriter)
+          val summ1 = new FSumm(fm, tree, tokens, csumm1)
+          val summ2 = new FSumm(fm, tree, tokens, csumm2)
+          (summ1, Some(summ2))
+        } else {
+          val (tokens1, tree1, rewriter1) = parseContent(csumm1.filename)
+          val (tokens2, tree2, rewriter2) = parseContent(csumm2.filename)
+          val fm1 = new FileModif(csumm1.filename, rewriter1)
+          val fm2 = new FileModif(csumm2.filename, rewriter2)
+          val summ1 = new FSumm(fm1, tree1, tokens1, csumm1)
+          val summ2 = new FSumm(fm2, tree2, tokens2, csumm2)
+          (summ1, Some(summ2))
+        }
+      }
     }
   }
 
-  def mainAlgo(csumm1: RFSumm, csumm2: RFSumm, config: FixConfig): Unit = {
+  def mainAlgo(csumm1: RFSumm, csumm2: Option[RFSumm], config: FixConfig): Unit = {
     /* ******** */
     /*   PARSE  */
     val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1,csumm2)
@@ -334,111 +356,138 @@ object TraverseJavaClass  {
     println("************* GENERATE PATCH *************")
 //    if ( true /*csumm1.resource == csumm2.resource*/) {
     var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
-    if ((csumm1.locks concat csumm2.locks).length > 0) {
-      val common_locks = csumm1.locks intersect csumm2.locks
+    summ2 match {
+      case None => {
+        /* `csumm1` is not synchronized ==>
+         * INSERT new synchronization using a lock on the resource in `csumm1` */
 
-      /* Both statements are synchronized but there is no common lock ==>
-        *  1. UPDATE one of the locks with a lock from the peer statement
-        *  2. INSERT a new synchronization over one of the two statements  */
+        val patch_id = patchIDGenerator(0)._2
+        var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
+        val grouped_patches = if (summ1.csumm.locks.length == 0) {
+          /* ************** INSERTS ***************** */
+          /* generate insert objects */
+          val (inserts1) = generateInsertObjectOnUnprotectedResource(summ1.csumm)
 
-      val patches1 = if (csumm1.locks.length > 0 && csumm2.locks.length > 0 && common_locks.length ==0) {
-        /* ************** UPDATES ***************** */
-        /* generate update objects */
-        /* TODO need to check which locks suit to be changed (e.g. they don't protect other resources) */
-        /* currently just generate blindly all possibilities */
-        val updates1 = generateUpdateObjects(summ1.csumm,summ2.csumm)
-        val updates2 = generateUpdateObjects(summ2.csumm,summ1.csumm)
+          /* generate insert patches */
+          val patches1 = generateInsertPatches(summ1.csumm.filename, inserts1, summ1.tokens, summ1.tree, Some(patch_id))
 
-        /* generate update patches */
-        val update_patches1 = generateUpdatePatches(summ1.csumm.filename, updates1, summ1.tokens, summ1.tree)
-        val update_patches2 = generateUpdatePatches(summ2.csumm.filename, updates2, summ2.tokens, summ2.tree)
-
-        /* ************** INSERTS ***************** */
-        /* generate insert objects */
-        val inserts1 = generateInsertObjects(summ1.csumm,summ2.csumm)
-        val inserts2 = generateInsertObjects(summ2.csumm,summ1.csumm)
-
-        /* generate inserts patches */
-        val insert_patches1 = generateInsertPatches(summ1.csumm.filename, inserts1, summ1.tokens, summ1.tree)
-        val insert_patches2 = generateInsertPatches(summ2.csumm.filename, inserts2, summ2.tokens, summ2.tree)
-
-        val patches1 = generateGroupPatches(empty_map,update_patches1 ++ insert_patches1,summ1)
-        val patches2 = generateGroupPatches(patches1, update_patches2 ++ insert_patches2,summ2)
-        patches2
-      } else empty_map
-
-      /* The resource in `summ1` is not synchronized but that in `csumm1` is ==>
-       * INSERT a new synchronization using locks from `summ2` to protect the
-       * statement manipulating the resource in `csumm1`  */
-
-      val patches2 = if (summ1.csumm.locks.length == 0 && summ2.csumm.locks.length > 0) {
-        /* ************** INSERTS ***************** */
-        /* generate insert objects */
-        val inserts = generateInsertObjects(summ2.csumm,summ1.csumm)
-
-        /* generate insert patches */
-        val patches = generateInsertPatches(summ1.csumm.filename, inserts, summ1.tokens, summ1.tree)
-        generateGroupPatches(patches1, patches,summ1)
-      } else patches1
-
-      /* The resource in `csumm2` is not synchronized but that in `csumm1` is ==>
-       * INSERT a new synchronization using locks from `csumm` to protect the
-       * statement manipulating the resource in `csumm2`  */
-
-      val patches3 = if (csumm1.locks.length > 0 && csumm2.locks.length == 0) {
-        /* ************** INSERTS ***************** */
-        /* generate insert objects */
-        val inserts = generateInsertObjects(summ1.csumm,summ2.csumm)
-
-        /* generate insert patches */
-        val patches = generateInsertPatches(summ2.csumm.filename, inserts, summ2.tokens, summ2.tree)
-        generateGroupPatches(patches2, patches,summ2)
-      }  else patches2
-
-      val grouped_patches = patches3
-
-      if (config.interactive) {
-        /* when working in interactive mode allow the user to choose the patch */
-        println(grouped_patches.getText())
-
-        println("Choose a patch <enter patch id>")
-        val patch_id_str = readLine()
-
-        println("************* GENERATE FIX *************")
-        applyPatch(patch_id_str, grouped_patches, config)
-      } else {
-        /* apply the patch with the least cost */
-        val patch_id = leastCostlyPatch(grouped_patches)
-        patch_id match{
-          case None     =>
-          case Some(id) => applyPatch_def(id, grouped_patches, config)
-        }
-      }
-    } else {
-
-      /* Both of the resources `csumm1` and `csumm2` are not synchronized ==>
-       * INSERT new synchronization using a lock on the common resource  */
-
-      val patch_id  = patchIDGenerator(0)._2
-      var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
-      val grouped_patches = if (csumm1.locks.length == 0 && csumm2.locks.length == 0) {
-        /* ************** INSERTS ***************** */
-        /* generate insert objects */
-        val (inserts1, inserts2) = generateInsertObjectOnCommonResource(csumm1, csumm2)
-
-        /* generate insert patches */
-        val patches1 = generateInsertPatches(summ1.csumm.filename, inserts1, summ1.tokens, summ1.tree, Some(patch_id))
-        val patches2 = generateInsertPatches(summ2.csumm.filename, inserts2, summ2.tokens, summ2.tree, Some(patch_id))
-
-        val grouped_patches1 = generateGroupPatches(empty_map, patches1, summ1)
-        val grouped_patches2 = generateGroupPatches(grouped_patches1, patches2, summ2)
-        grouped_patches2
-      } else empty_map
+          val grouped_patches1 = generateGroupPatches(empty_map, patches1, summ1)
+          grouped_patches1
+        } else empty_map
 
         println(grouped_patches.getText())
 
         println("************* GENERATE FIX *************")
         applyPatch_def(patch_id, grouped_patches, config)
+      }
+      case Some(summ2) => {
+        if ((summ1.csumm.locks concat summ2.csumm.locks).length > 0) {
+          val common_locks = summ1.csumm.locks intersect summ2.csumm.locks
+
+          /* Both statements are synchronized but there is no common lock ==>
+        *  1. UPDATE one of the locks with a lock from the peer statement
+        *  2. INSERT a new synchronization over one of the two statements  */
+
+          val patches1 = if (summ1.csumm.locks.length > 0 && summ2.csumm.locks.length > 0 && common_locks.length == 0) {
+            /* ************** UPDATES ***************** */
+            /* generate update objects */
+            /* TODO need to check which locks suit to be changed (e.g. they don't protect other resources) */
+            /* currently just generate blindly all possibilities */
+            val updates1 = generateUpdateObjects(summ1.csumm, summ2.csumm)
+            val updates2 = generateUpdateObjects(summ2.csumm, summ1.csumm)
+
+            /* generate update patches */
+            val update_patches1 = generateUpdatePatches(summ1.csumm.filename, updates1, summ1.tokens, summ1.tree)
+            val update_patches2 = generateUpdatePatches(summ2.csumm.filename, updates2, summ2.tokens, summ2.tree)
+
+            /* ************** INSERTS ***************** */
+            /* generate insert objects */
+            val inserts1 = generateInsertObjects(summ1.csumm, summ2.csumm)
+            val inserts2 = generateInsertObjects(summ2.csumm, summ1.csumm)
+
+            /* generate inserts patches */
+            val insert_patches1 = generateInsertPatches(summ1.csumm.filename, inserts1, summ1.tokens, summ1.tree)
+            val insert_patches2 = generateInsertPatches(summ2.csumm.filename, inserts2, summ2.tokens, summ2.tree)
+
+            val patches1 = generateGroupPatches(empty_map, update_patches1 ++ insert_patches1, summ1)
+            val patches2 = generateGroupPatches(patches1, update_patches2 ++ insert_patches2, summ2)
+            patches2
+          } else empty_map
+
+          /* The resource in `summ1` is not synchronized but that in `csumm1` is ==>
+       * INSERT a new synchronization using locks from `summ2` to protect the
+       * statement manipulating the resource in `csumm1`  */
+
+          val patches2 = if (summ1.csumm.locks.length == 0 && summ2.csumm.locks.length > 0) {
+            /* ************** INSERTS ***************** */
+            /* generate insert objects */
+            val inserts = generateInsertObjects(summ2.csumm, summ1.csumm)
+
+            /* generate insert patches */
+            val patches = generateInsertPatches(summ1.csumm.filename, inserts, summ1.tokens, summ1.tree)
+            generateGroupPatches(patches1, patches, summ1)
+          } else patches1
+
+          /* The resource in `csumm2` is not synchronized but that in `csumm1` is ==>
+       * INSERT a new synchronization using locks from `csumm` to protect the
+       * statement manipulating the resource in `csumm2`  */
+
+          val patches3 = if (summ1.csumm.locks.length > 0 && summ2.csumm.locks.length == 0) {
+            /* ************** INSERTS ***************** */
+            /* generate insert objects */
+            val inserts = generateInsertObjects(summ1.csumm, summ2.csumm)
+
+            /* generate insert patches */
+            val patches = generateInsertPatches(summ2.csumm.filename, inserts, summ2.tokens, summ2.tree)
+            generateGroupPatches(patches2, patches, summ2)
+          } else patches2
+
+          val grouped_patches = patches3
+
+          if (config.interactive) {
+            /* when working in interactive mode allow the user to choose the patch */
+            println(grouped_patches.getText())
+
+            println("Choose a patch <enter patch id>")
+            val patch_id_str = readLine()
+
+            println("************* GENERATE FIX *************")
+            applyPatch(patch_id_str, grouped_patches, config)
+          } else {
+            /* apply the patch with the least cost */
+            val patch_id = leastCostlyPatch(grouped_patches)
+            patch_id match {
+              case None =>
+              case Some(id) => applyPatch_def(id, grouped_patches, config)
+            }
+          }
+        } else {
+
+          /* Both of the resources `csumm1` and `csumm2` are not synchronized ==>
+       * INSERT new synchronization using a lock on the common resource  */
+
+          val patch_id = patchIDGenerator(0)._2
+          var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
+          val grouped_patches = if (summ1.csumm.locks.length == 0 && summ2.csumm.locks.length == 0) {
+            /* ************** INSERTS ***************** */
+            /* generate insert objects */
+            val (inserts1, inserts2) = generateInsertObjectOnCommonResource(summ1.csumm, summ2.csumm)
+
+            /* generate insert patches */
+            val patches1 = generateInsertPatches(summ1.csumm.filename, inserts1, summ1.tokens, summ1.tree, Some(patch_id))
+            val patches2 = generateInsertPatches(summ2.csumm.filename, inserts2, summ2.tokens, summ2.tree, Some(patch_id))
+
+            val grouped_patches1 = generateGroupPatches(empty_map, patches1, summ1)
+            val grouped_patches2 = generateGroupPatches(grouped_patches1, patches2, summ2)
+            grouped_patches2
+          } else empty_map
+
+          println(grouped_patches.getText())
+
+          println("************* GENERATE FIX *************")
+          applyPatch_def(patch_id, grouped_patches, config)
+        }
+      }
     }
   }
 }
