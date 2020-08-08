@@ -153,6 +153,8 @@ object TraverseJavaClass  {
   def generateInsertObjectOnUnprotectedResource(summ: RFSumm): (List[Insert]) = {
     /* TODO  need to check which is that common resouce, e.g. myA or myA.f?
     *   should be the outer most one, e.g. myA*/
+    /* TODO need to recheck what is the resource we create lock for. myA.f is not the right type, it should be
+    *   a reference type. */
     val lck    = RacerDAPI.getResource2Var(summ.resource)
     val insert1 = Insert(summ.cls,summ.line,RacerDAPI.getResource2Var(summ.resource),lck)
     (List(insert1))
@@ -212,7 +214,7 @@ object TraverseJavaClass  {
         /* write to file (keep the original one in `filename.orig` and the fix in `filename` */
         val fm = new FileManipulation
         if (!config.testing) {
-          fm.cloneOriginalFileToFix(filename)
+          fm.cloneOriginalFile(filename)
           fm.overwriteFile(filename, rewriter.getText)
         } else {
           val fixFile = fm.cloneOriginalFileToFix(filename)
@@ -494,7 +496,6 @@ object TraverseJavaClass  {
 
 /**
  * TODO implement the cost function and choose a patch accordingly
- * TODO work on the JSON interface with Infer
  * TODO check how to avoid insertion of new lines with rewriter
  * TODO create a set of variables for all possible combinations: {this.A, A} ... what about the fields access?
  * */

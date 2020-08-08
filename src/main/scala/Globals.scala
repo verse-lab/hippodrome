@@ -23,16 +23,22 @@ object Globals {
 
   /* default files and paths */
   val results_out_dir           = "src/main/misc/infer-out/"
-  val json_files_path           = "src/main/misc/infer-out/"
   val json_bugs_filename        = "report.json"
   val json_summaries_filename   = "racerdfix_summaries.json"
   val json_patches_filename     =  "racerdfix_patches.json"
-  val json_bugs_file   = json_files_path + json_bugs_filename
-  val json_summaries   = json_files_path + json_summaries_filename
-  val json_patches     = json_files_path + json_patches_filename
+  val json_bugs_file   = results_out_dir + json_bugs_filename
+  val json_summaries   = results_out_dir + json_summaries_filename
+  val json_patches     = results_out_dir + json_patches_filename
   val def_src_path     = "src/test/java/"
   val def_src_filename = "RacyFalseNeg.java"
   val def_src_file     = def_src_path + def_src_filename
 
+  /* tackled bugs type (see infer's documentation for a full list of bug types) */
+  val tackled_bug_kinds = List("THREAD_SAFETY_VIOLATION_2")
+
+  /* infer config */
+  val def_infer     = "infer"
+  val def_infer_options = Seq("--racerdfix-only", "--starvation", "--results-dir", results_out_dir)
+  val def_target_files  = Seq("--", "javac", def_src_file)
 
 }

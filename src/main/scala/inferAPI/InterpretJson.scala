@@ -121,7 +121,6 @@ object BugProtocol extends DefaultJsonProtocol {
     )
 
     def read(value: JsValue) = {
-      println("VALUE: " + value)
       value match {
         case JsArray(vector) => new TranslationResult[BugIn](vector.map(value => jsonToBug(value)).toList)
         case _ => throw new DeserializationException("Array of BugShort expected")
