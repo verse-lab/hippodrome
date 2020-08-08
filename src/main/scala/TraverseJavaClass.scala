@@ -395,13 +395,14 @@ object TraverseJavaClass  {
             /* generate update objects */
             /* TODO need to check which locks suit to be changed (e.g. they don't protect other resources) */
             /* currently just generate blindly all possibilities */
-            val updates1 = generateUpdateObjects(summ1.csumm, summ2.csumm)
-            val updates2 = generateUpdateObjects(summ2.csumm, summ1.csumm)
+            if(false) { // TODO avoid updates for now
+              val updates1 = generateUpdateObjects(summ1.csumm, summ2.csumm)
+              val updates2 = generateUpdateObjects(summ2.csumm, summ1.csumm)
 
-            /* generate update patches */
-            val update_patches1 = generateUpdatePatches(summ1.csumm.filename, updates1, summ1.tokens, summ1.tree)
-            val update_patches2 = generateUpdatePatches(summ2.csumm.filename, updates2, summ2.tokens, summ2.tree)
-
+              /* generate update patches */
+              val update_patches1 = generateUpdatePatches(summ1.csumm.filename, updates1, summ1.tokens, summ1.tree)
+              val update_patches2 = generateUpdatePatches(summ2.csumm.filename, updates2, summ2.tokens, summ2.tree)
+            }
             /* ************** INSERTS ***************** */
             /* generate insert objects */
             val inserts1 = generateInsertObjects(summ1.csumm, summ2.csumm)
@@ -411,8 +412,10 @@ object TraverseJavaClass  {
             val insert_patches1 = generateInsertPatches(summ1.csumm.filename, inserts1, summ1.tokens, summ1.tree)
             val insert_patches2 = generateInsertPatches(summ2.csumm.filename, inserts2, summ2.tokens, summ2.tree)
 
-            val patches1 = generateGroupPatches(empty_map, update_patches1 ++ insert_patches1, summ1)
-            val patches2 = generateGroupPatches(patches1, update_patches2 ++ insert_patches2, summ2)
+//            val patches1 = generateGroupPatches(empty_map, update_patches1 ++ insert_patches1, summ1)
+//            val patches2 = generateGroupPatches(patches1, update_patches2 ++ insert_patches2, summ2)
+            val patches1 = generateGroupPatches(empty_map, insert_patches1, summ1)
+            val patches2 = generateGroupPatches(patches1, insert_patches2, summ2)
             patches2
           } else empty_map
 
