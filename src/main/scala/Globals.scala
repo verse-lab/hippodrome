@@ -41,4 +41,6 @@ object Globals {
   val def_infer_options = Seq("--racerdfix-only", "--starvation", "--results-dir", results_out_dir)
   val def_target_files  = Seq("--", "javac", def_src_file)
 
+  val config_file  = "CONFIG.json"
+
 }

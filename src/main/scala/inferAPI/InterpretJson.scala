@@ -1,12 +1,54 @@
 package org.racerdfix.inferAPI
 
 import org.racerdfix.language._
-import org.racerdfix.FixConfig
+import org.racerdfix.{Config, FixConfig}
 import spray.json._
 import org.racerdfix.utils.FileManipulation
 
 case class TranslationResult[T](val results: List[T])
 
+
+object ConfigProtocol extends DefaultJsonProtocol {
+
+  def configToJson(configInfer: Config) ={
+    JsObject(
+      "infer"          -> JsString(configInfer.infer),
+      "options"        -> JsArray(configInfer.infer_opt.map(f => JsString(f)).toVector),
+      "json_path"       -> JsString(configInfer.json_path),
+      "target_options" -> JsArray(configInfer.infer_target_files.map(f => JsString(f)).toVector)
+    )
+  }
+
+  def jsonToString(e: JsValue) = {
+    e match {
+      case JsString(str) => str
+      case _ => throw new DeserializationException("String expected")
+    }
+  }
+
+  def jsonToConfig(value: JsValue) = {
+    value.asJsObject.getFields(  "level",
+      "infer",
+      "options",
+      "json_path",
+      "target_options") match {
+      case Seq( JsString(infer),
+      JsArray(infer_opt),
+      JsString(json_path),
+      JsArray(infer_target_files)) =>
+        new Config(infer,infer_opt.map(v => jsonToString(v)).toList,json_path,infer_target_files.map(v => jsonToString(v)).toList)
+      case _ => throw new DeserializationException("Config expected")
+    }
+  }
+
+  implicit object ConfigJsonFormat extends RootJsonFormat[Config] {
+    def write(c: Config) : JsValue  = configToJson(c)
+
+    def read(value: JsValue) = {
+      jsonToConfig(value)
+    }
+  }
+}
 
 object BugProtocol extends DefaultJsonProtocol {
 
@@ -253,7 +295,7 @@ class InterpretJson(val config: FixConfig) {
   def getJsonBugs(): TranslationResult[BugIn] = {
     import BugProtocol._
     val fm  = new FileManipulation
-    val src = fm.fileToString(config.json_bugs)
+    val src = fm.fileToString(config.getJsonBugs)
     val jsonAst = src.parseJson
     val bugsDS  = jsonAst.convertTo[TranslationResult[BugIn]]
     bugsDS
@@ -262,9 +304,18 @@ class InterpretJson(val config: FixConfig) {
   def getJsonSummaries(): TranslationResult[SummaryIn] = {
     import SummaryProtocol._
     val fm  = new FileManipulation
-    val src = fm.fileToString(config.json_summaries)
+    val src = fm.fileToString(config.getJsonSummaries)
     val jsonAst = src.parseJson
     val summariesDS = jsonAst.convertTo[TranslationResult[SummaryIn]]
     summariesDS
+  }
+
+  def getJsonConfig() = {
+    import ConfigProtocol._
+    val fm  = new FileManipulation
+    val src = fm.fileToString(config.config_file)
+    val jsonAst = src.parseJson
+    val configObj  = jsonAst.convertTo[Config]
+    configObj
   }
 }
