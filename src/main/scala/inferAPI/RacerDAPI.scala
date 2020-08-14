@@ -79,7 +79,7 @@ object RacerDAPI {
 
 
   /* this->myA2 ==> myA2*/
-  def getResource2Var_def(resource: String): String = {
+  def varOfResource_def(resource: String): String = {
     val pattern = "(?<=->)[^)]+".r
     pattern.findFirstMatchIn(resource) match {
       case Some(resource) => resource.toString().replace("->",".")
@@ -87,14 +87,32 @@ object RacerDAPI {
     }
   }
 
-  def getResource2Var(resource: String): String = {
-    val result = getResource2Var_def(resource)
+  def varOfResource(resource: String): String = {
+    val result = varOfResource_def(resource)
     if (false) {
       println("inp1: " + resource)
       println("out:  " + result)
     }
     result
   }
+
+  /* this->myA2 ==> myA2*/
+//  def getResource2Var_def(resource: String): String = {
+//    val pattern = "(?<=->)[^)]+".r
+//    pattern.findFirstMatchIn(resource) match {
+//      case Some(resource) => resource.toString().replace("->",".")
+//      case None => resource
+//    }
+//  }
+//
+//  def getResource2Var(resource: String): String = {
+//    val result = getResource2Var_def(resource)
+//    if (false) {
+//      println("inp1: " + resource)
+//      println("out:  " + result)
+//    }
+//    result
+//  }
 
   /* "B.<init>()" */
   def classNameOfMethodString_def(method: String): String ={
