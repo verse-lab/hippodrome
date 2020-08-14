@@ -6,6 +6,7 @@ import org.junit.Test
 import org.racerdfix.{FixConfig, Globals, RacerDFix}
 import org.racerdfix.RacerDFix.RunConfig
 import org.racerdfix.inferAPI.RacerDAPI
+import org.racerdfix.utils.ASTManipulation
 
 
 class PatchCreationUnitTest {
@@ -17,8 +18,9 @@ class PatchCreationUnitTest {
         val lock2 = RacerDAPI.lockOfString("P<0>{(this:B*).myA1}")
         val csumm1 = new RFSumm(filename, "B", "this->myA->f", Read, List(lock1), 30, EmptyTrace, "")
         val csumm2 = new RFSumm(filename, "B", "this->myA", Write, List(lock2), 24, EmptyTrace, "")
+        val ast = new ASTManipulation
 
-        val (summ1, summ2) = translateRawSnapshotsToSnapshots(csumm1, Some(csumm2))
+        val (summ1, summ2) = translateRawSnapshotsToSnapshots(csumm1, Some(csumm2), ast)
 
         summ2 match {
             case None =>
@@ -65,8 +67,8 @@ class PatchCreationUnitTest {
         val filename = "src/test/java/RacyFalseNeg.java"
         val csumm1 = new RFSumm(filename, "B","this->myA->f", Read, List(), 30, EmptyTrace, "" )
         val csumm2 = new RFSumm(filename,"B","this->myA", Write, List(), 24, EmptyTrace, "" )
-
-        val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1,Some(csumm2))
+        val ast = new ASTManipulation
+        val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1,Some(csumm2),ast)
 
         summ2 match {
             case None =>

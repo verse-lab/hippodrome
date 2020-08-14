@@ -2,6 +2,7 @@ package org.racerdfix.language
 
 import org.antlr.v4.runtime.{Token, TokenStream, TokenStreamRewriter}
 import org.racerdfix.antlr.Java8Parser
+import org.racerdfix.utils.FileModif
 
 /* FIXES */
 
@@ -75,8 +76,6 @@ class Fix(file: String, cls: String, line_start: Int, lines_top: Int, code: Stri
 sealed trait AccessKind
 case object Read extends AccessKind
 case object Write extends AccessKind
-
-class FileModif(val filename: String, val rewriter: TokenStreamRewriter)
 
 sealed trait Trace {
   def length() = {

@@ -3,6 +3,7 @@ package org.racerdfix
 import org.racerdfix.language.{BugIn, RFSumm, SummaryIn}
 import org.racerdfix.TraverseJavaClass.mainAlgo
 import org.racerdfix.inferAPI.{InterpretJson, TranslationResult}
+import org.racerdfix.utils.ASTManipulation
 import spray.json.DeserializationException
 
 import scala.io.StdIn.readLine
@@ -122,18 +123,21 @@ object RacerDFix {
     val bugs        = bugsIn.results.map(b => b.racerDToRacerDFix(summaries))
 
     /* for each bug in `bugs` find a patch and possibly generate a fix */
+    val ast = new ASTManipulation
     bugs.foreach(bug => {
       bug.snapshot2 match {
         case Nil => {/* possibly Unprotected write */
           /* assumes that snapshot1 is non-empty*/
+          println("Unprotected Write")
           val summ1 = bug.snapshot1.foldLeft(bug.snapshot1.head)((acc,summ) => {
             if (cost(summ.getCost(costSumm), acc.getCost(costSumm ))) summ
             else acc
           } )
-          mainAlgo(summ1, None, config)
+          mainAlgo(summ1, None, config, ast)
           }
         case _   => {/* Read/Write */
           /* assumes that snapshot1 is non-empty*/
+          println("Read/Write Race")
           val summ1 = bug.snapshot1.foldLeft(bug.snapshot1.head)((acc,summ) => {
             if (cost(summ.getCost(costSumm), acc.getCost(costSumm ))) summ
             else acc
@@ -142,10 +146,12 @@ object RacerDFix {
             if (cost(summ.getCost(costSumm), acc.getCost(costSumm ))) summ
             else acc
           } )
-          mainAlgo(summ1, Some(summ2), config)
+          mainAlgo(summ1, Some(summ2), config, ast)
         }
       }
     })
+
+    ast.dumpAll(config)
 
     /* VALIDATON */
     val val_res = infer_process.!

@@ -1,10 +1,10 @@
 package org.racerdfix
 
-import org.racerdfix.language.{And, FSumm, FileModif, FixKind, Insert, NoFix, Or, PatchBlock, PatchCost, RFSumm, Update}
+import org.racerdfix.language.{And, FSumm, FixKind, Insert, NoFix, Or, PatchBlock, PatchCost, RFSumm, Update}
 import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.antlr.{Java8Lexer, Java8Parser}
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream, Token, TokenStream, TokenStreamRewriter}
-import utils.FileManipulation
+import utils.{ASTManipulation, FileManipulation, FileModif}
 
 import scala.io.Source
 import scala.io.StdIn.readLine
@@ -79,16 +79,6 @@ object TraverseJavaClass  {
     val patchID_stop  = patchID_ref + len + 1
     patchID_ref = patchID_stop + 1
     (patchID_start, patchID_stop)
-  }
-
-  def parseContent(filename: String) = {
-    val javaClassContent = Source.fromFile(filename).getLines.foldLeft("") { (str, line) => str + " \n " + line.toString }
-    val java8Lexer = new Java8Lexer(CharStreams.fromString(javaClassContent))
-    val tokens = new CommonTokenStream(java8Lexer)
-    val java8Parser = new Java8Parser(tokens)
-    val tree = java8Parser.compilationUnit
-    val rewriter = new TokenStreamRewriter(tokens)
-    (tokens, tree, rewriter)
   }
 
   /* ************************************************ */
@@ -216,16 +206,7 @@ object TraverseJavaClass  {
         val filename = x._1.filename
         val patches  = x._2
         patches.foreach( pb => rewriter.replace(pb.start, pb.stop, pb.patch))
-
-        /* write to file (keep the original one in `filename.orig` and the fix in `filename` */
-        val fm = new FileManipulation
-        if (!config.testing) {
-          fm.cloneOriginalFile(filename)
-          fm.overwriteFile(filename, rewriter.getText)
-        } else {
-          val fixFile = fm.cloneOriginalFileToFix(filename)
-          fm.overwriteFile(fixFile, rewriter.getText)
-      }})
+      })
     } catch {
       case _ => println("Invalid patch ID")
     }
@@ -285,8 +266,7 @@ object TraverseJavaClass  {
      List((patchID,res))
   }
 
-  def generatePatches(
-                       fixobj: FixKind,
+  def generatePatches( fixobj: FixKind,
                        tokens: TokenStream,
                        tree: Java8Parser.CompilationUnitContext,
                        id: Option[Int] = None): List[(Int, Option[PatchBlock])] = {
@@ -300,6 +280,7 @@ object TraverseJavaClass  {
   }
 
 
+  /* group patches by ID */
   def generateGroupPatches(groupByIdPatchOptions: GroupByIdPatchOptions,
                            patches: List[(Int, Option[PatchBlock])], summ: FSumm) = {
 //    var empty_map = new GroupByIdPatchResult(HashMap.empty[Int, GroupByRewriterPatchResult])
@@ -324,40 +305,31 @@ object TraverseJavaClass  {
     patch_id._1
   }
 
-  def translateRawSnapshotsToSnapshots(csumm1: RFSumm, csumm2: Option[RFSumm]): (FSumm, Option[FSumm]) = {
+  def translateRawSnapshotsToSnapshots(csumm1: RFSumm, csumm2: Option[RFSumm], ast: ASTManipulation): (FSumm, Option[FSumm]) = {
     csumm2 match {
       case None => {
         val javaFile = csumm1.filename
-        val (tokens, tree, rewriter) = parseContent(javaFile)
-        val fm = new FileModif(javaFile, rewriter)
-        val summ1 = new FSumm(fm, tree, tokens, csumm1)
+        val astElem = ast.retrieveAST(javaFile)
+        val fm = new FileModif(javaFile, astElem.rewriter)
+        val summ1 = new FSumm(fm, astElem.tree, astElem.tokens, csumm1)
         (summ1, None)
       }
       case Some(csumm2) => {
-        if (csumm1.filename == csumm2.filename) {
-          val javaFile = csumm1.filename
-          val (tokens, tree, rewriter) = parseContent(javaFile)
-          val fm = new FileModif(javaFile, rewriter)
-          val summ1 = new FSumm(fm, tree, tokens, csumm1)
-          val summ2 = new FSumm(fm, tree, tokens, csumm2)
+          val astElem1 = ast.retrieveAST(csumm1.filename)
+          val astElem2 = ast.retrieveAST(csumm2.filename)
+          val fm1 = new FileModif(csumm1.filename, astElem1.rewriter)
+          val fm2 = new FileModif(csumm2.filename, astElem2.rewriter)
+          val summ1 = new FSumm(fm1, astElem1.tree, astElem1.tokens, csumm1)
+          val summ2 = new FSumm(fm2, astElem2.tree, astElem2.tokens, csumm2)
           (summ1, Some(summ2))
-        } else {
-          val (tokens1, tree1, rewriter1) = parseContent(csumm1.filename)
-          val (tokens2, tree2, rewriter2) = parseContent(csumm2.filename)
-          val fm1 = new FileModif(csumm1.filename, rewriter1)
-          val fm2 = new FileModif(csumm2.filename, rewriter2)
-          val summ1 = new FSumm(fm1, tree1, tokens1, csumm1)
-          val summ2 = new FSumm(fm2, tree2, tokens2, csumm2)
-          (summ1, Some(summ2))
-        }
       }
     }
   }
 
-  def mainAlgo(csumm1: RFSumm, csumm2: Option[RFSumm], config: FixConfig): Unit = {
+  def mainAlgo(csumm1: RFSumm, csumm2: Option[RFSumm], config: FixConfig, ast: ASTManipulation): Unit = {
     /* ******** */
     /*   PARSE  */
-    val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1,csumm2)
+    val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1, csumm2, ast)
 
     println("************* GENERATE PATCH *************")
 //    if ( true /*csumm1.resource == csumm2.resource*/) {
