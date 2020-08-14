@@ -46,7 +46,7 @@ class SummaryIn(var file: String, val procedure: String, var accesses: List[Acce
   def racerDToRacerDFix(): List[RFSumm] = {
     this.accesses.foldLeft(List.empty[RFSumm])((acc2, ae) => {
         val cls = RacerDAPI.classNameOfMethodString(procedure)
-        val resource = RacerDAPI.getResource2Var(ae.elem.access.exp)
+        val resource = RacerDAPI.varOfResource(ae.elem.access.exp)
         val access = RacerDAPI.accessKindOfString(ae.elem.access.kind)
         val locks = ae.elem.locks.map(l => RacerDAPI.lockOfString(l))
         val line = ae.loc

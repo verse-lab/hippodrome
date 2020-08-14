@@ -1,5 +1,5 @@
-import org.racerdfix.language.{EmptyTrace, Insert, PatchBlock, RFSumm, Read, Write}
-import org.racerdfix.TraverseJavaClass.{generateInsertObjectOnCommonResource, generateInsertObjects, generateInsertPatches, generateUpdateObjects, generateUpdatePatches, patchIDGenerator, translateRawSnapshotsToSnapshots}
+import org.racerdfix.language.{EmptyTrace, Insert, NoFix, Or, PatchBlock, RFSumm, Read, Write}
+import org.racerdfix.TraverseJavaClass.{generateInsertObjectOnCommonResource, generateInsertObjects, generatePatches, generateUpdateObjects, patchIDGeneratorRange, translateRawSnapshotsToSnapshots}
 import org.hamcrest.CoreMatchers.is
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
@@ -25,12 +25,12 @@ class PatchCreationUnitTest {
             case Some(summ2) => {
                 /* ************** UPDATES ***************** */
                 /* generate update objects */
-                val updates1 = generateUpdateObjects(summ1.csumm, summ2.csumm)
-                val updates2 = generateUpdateObjects(summ2.csumm, summ1.csumm)
+                val updates1 = new Or(NoFix, NoFix).mkOr(generateUpdateObjects(summ1.csumm, summ2.csumm))
+                val updates2 = new Or(NoFix, NoFix).mkOr(generateUpdateObjects(summ2.csumm, summ1.csumm))
 
                 /* generate update patches */
-                val update_patches1: List[(Int, Option[PatchBlock])] = generateUpdatePatches(summ1.csumm.filename, updates1, summ1.tokens, summ1.tree)
-                val update_patches2: List[(Int, Option[PatchBlock])] = generateUpdatePatches(summ2.csumm.filename, updates2, summ2.tokens, summ2.tree)
+                val update_patches1: List[(Int, Option[PatchBlock])] = generatePatches(updates1, summ1.tokens, summ1.tree)
+                val update_patches2: List[(Int, Option[PatchBlock])] = generatePatches(updates2, summ2.tokens, summ2.tree)
 
                 assertThat(update_patches1.size, is(1))
                 assertThat(update_patches2.size, is(1))
@@ -41,12 +41,12 @@ class PatchCreationUnitTest {
 
                 /* ************** INSERTS (1)***************** */
                 /* generate insert objects */
-                val inserts1 = generateInsertObjects(summ1.csumm, summ2.csumm)
-                val inserts2 = generateInsertObjects(summ2.csumm, summ1.csumm)
+                val inserts1 = new Or(NoFix, NoFix).mkOr(generateInsertObjects(summ1.csumm, summ2.csumm))
+                val inserts2 = new Or(NoFix, NoFix).mkOr(generateInsertObjects(summ2.csumm, summ1.csumm))
 
                 /* generate inserts patches */
-                val insert_patches1 = generateInsertPatches(summ1.csumm.filename, inserts1, summ1.tokens, summ1.tree)
-                val insert_patches2 = generateInsertPatches(summ2.csumm.filename, inserts2, summ2.tokens, summ2.tree)
+                val insert_patches1 = generatePatches( inserts1, summ1.tokens, summ1.tree)
+                val insert_patches2 = generatePatches( inserts2, summ2.tokens, summ2.tree)
 
 
                 assertThat(insert_patches1.size, is(1))
@@ -74,11 +74,13 @@ class PatchCreationUnitTest {
                 /* ************** INSERTS (2) ***************** */
                 /* generate insert objects */
                 val (inserts1: List[Insert], inserts2: List[Insert]) = generateInsertObjectOnCommonResource(csumm1, csumm2)
+                val ins1 = new Or(NoFix, NoFix).mkOr(inserts1)
+                val ins2 = new Or(NoFix, NoFix).mkOr(inserts2)
 
                 /* generate insert patches */
-                val patch_id = patchIDGenerator(0)._2
-                val patches1 = generateInsertPatches(summ1.csumm.filename, inserts1, summ1.tokens, summ1.tree, Some(patch_id))
-                val patches2 = generateInsertPatches(summ2.csumm.filename, inserts2, summ2.tokens, summ2.tree, Some(patch_id))
+                val patch_id = patchIDGeneratorRange(0)._2
+                val patches1 = generatePatches(ins1, summ1.tokens, summ1.tree, Some(patch_id))
+                val patches2 = generatePatches(ins2, summ2.tokens, summ2.tree, Some(patch_id))
 
                 assertThat(patches1.size, is(1))
                 assertThat(patches2.size, is(1))

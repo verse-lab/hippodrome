@@ -1,6 +1,6 @@
 package org.racerdfix
 
-import org.racerdfix.language.{RFSumm, FileModif, Insert, PatchBlock, PatchCost, FSumm, Update}
+import org.racerdfix.language.{And, FSumm, FileModif, FixKind, Insert, NoFix, Or, PatchBlock, PatchCost, RFSumm, Update}
 import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.antlr.{Java8Lexer, Java8Parser}
 import org.antlr.v4.runtime.{CharStreams, CommonTokenStream, Token, TokenStream, TokenStreamRewriter}
@@ -68,7 +68,13 @@ object TraverseJavaClass  {
 
   var patchID_ref = 1
 
-  def patchIDGenerator(len: Int): (Int, Int) = {
+  def patchIDGenerator(): Int = {
+    val patchID = patchID_ref
+    patchID_ref = patchID+ 1
+    patchID
+  }
+
+  def patchIDGeneratorRange(len: Int): (Int, Int) = {
     val patchID_start = patchID_ref
     val patchID_stop  = patchID_ref + len + 1
     patchID_ref = patchID_stop + 1
@@ -132,7 +138,7 @@ object TraverseJavaClass  {
   def generateInsertObjects(locks_summ: RFSumm, resource_summ: RFSumm): List[Insert] = {
     locks_summ.locks.foldLeft(List[Insert]())((acc, lock) => {
       val lck    = lock.resource
-      val insert = Insert(resource_summ.cls,resource_summ.line,RacerDAPI.getResource2Var(resource_summ.resource),lck)
+      val insert = Insert(resource_summ.cls,resource_summ.line,RacerDAPI.varOfResource(resource_summ.resource),lck)
       insert::acc }
     )
   }
@@ -142,22 +148,22 @@ object TraverseJavaClass  {
   def generateInsertObjectOnCommonResource(summ1: RFSumm, summ2: RFSumm): (List[Insert], List[Insert]) = {
     /* TODO  need to check which is that common resouce, e.g. myA or myA.f?
     *   should be the outer most one, e.g. myA*/
-    val lck    = RacerDAPI.getResource2Var(summ1.resource)
-    val insert1 = Insert(summ1.cls,summ1.line,RacerDAPI.getResource2Var(summ1.resource),lck)
-    val insert2 = Insert(summ2.cls,summ2.line,RacerDAPI.getResource2Var(summ2.resource),lck)
+    val lck    = RacerDAPI.varOfResource(summ1.resource)
+    val insert1 = Insert(summ1.cls,summ1.line,RacerDAPI.varOfResource(summ1.resource),lck)
+    val insert2 = Insert(summ2.cls,summ2.line,RacerDAPI.varOfResource(summ2.resource),lck)
     (List(insert1),List(insert2))
   }
 
   /* Generates a list of INSERT objects for the resource in `resource_summ`
    based on the locks available in summary `locks_summ` */
-  def generateInsertObjectOnUnprotectedResource(summ: RFSumm): (List[Insert]) = {
+  def generateInsertObjectOnUnprotectedResource(summ: RFSumm) = {
     /* TODO  need to check which is that common resouce, e.g. myA or myA.f?
     *   should be the outer most one, e.g. myA*/
     /* TODO need to recheck what is the resource we create lock for. myA.f is not the right type, it should be
     *   a reference type. */
-    val lck    = RacerDAPI.getResource2Var(summ.resource)
-    val insert1 = Insert(summ.cls,summ.line,RacerDAPI.getResource2Var(summ.resource),lck)
-    (List(insert1))
+    val lck     = RacerDAPI.varOfResource(summ.resource)
+    val insert1 = Insert(summ.cls,summ.line,RacerDAPI.varOfResource(summ.resource),lck)
+    (insert1)
   }
 
 
@@ -251,50 +257,48 @@ object TraverseJavaClass  {
   }
 
   /* Generates a list of patches corresponding to the list of UPDATE objects (updates) */
-  def generateUpdatePatches(filename: String,
-                            updates: List[Update],
+  def generateUpdatePatch0(
+                            updates: Update,
                             tokens: TokenStream,
                             tree: Java8Parser.CompilationUnitContext,
                             id: Option[Int] = None): List[(Int, Option[PatchBlock])] = {
-    if(updates.length > 0) {
-      val ids =
-      id match {
-        case None => {
-          val patchIDInterval = patchIDGenerator(updates.length)
-          List.range(patchIDInterval._1, patchIDInterval._2)
-        }
-        case Some(id) => List.fill(updates.length)(id)
-      }
-      val updates_id = updates.zip(ids)
-      updates_id.foldLeft(List[(Int,Option[PatchBlock])]())((acc, update) => {
-        val res = generateUpdatePatch(update._1,tokens,tree)
-        (update._2,res)::acc
-      })
-    } else List.empty
+    val res     = generateUpdatePatch(updates,tokens,tree)
+    val patchID = id match {
+      case None => patchIDGenerator
+      case Some (id) => id
+    }
+    List((patchID,res))
   }
 
+
   /* Generates a list of patches corresponding to the list of INSERT objects (inserts) */
-  def generateInsertPatches(filename: String,
-                            inserts: List[Insert],
+  def generateInsertPatch0(
+                            inserts: Insert,
                             tokens: TokenStream,
                             tree: Java8Parser.CompilationUnitContext,
                             id: Option[Int] = None): List[(Int, Option[PatchBlock])] = {
-    if(inserts.length > 0) {
-      val ids =
-        id match {
-          case None => {
-            val patchIDInterval = patchIDGenerator(inserts.length)
-            List.range(patchIDInterval._1, patchIDInterval._2)
-          }
-          case Some(id) => List.fill(inserts.length)(id)
-        }
-      val inserts_id = inserts.zip(ids)
-      inserts_id.foldLeft(List[(Int,Option[PatchBlock])]())((acc, insert) => {
-        val res = generateInsertPatch(insert._1,tokens,tree)
-        (insert._2,res)::acc
-      })
-    } else List.empty
+     val res     = generateInsertPatch(inserts,tokens,tree)
+     val patchID = id match {
+       case None => patchIDGenerator
+       case Some (id) => id
+     }
+     List((patchID,res))
   }
+
+  def generatePatches(
+                       fixobj: FixKind,
+                       tokens: TokenStream,
+                       tree: Java8Parser.CompilationUnitContext,
+                       id: Option[Int] = None): List[(Int, Option[PatchBlock])] = {
+    fixobj match {
+      case NoFix => Nil
+      case Insert(_,_,_,_)  => generateInsertPatch0(fixobj.asInstanceOf[Insert],tokens,tree,id)
+      case Update(_,_,_,_)  => generateUpdatePatch0(fixobj.asInstanceOf[Update],tokens,tree,id)
+      case And(left, right) => generatePatches(left,tokens,tree,id) ++ generatePatches(right,tokens,tree,id)
+      case Or(left, right)  => generatePatches(left,tokens,tree,id) ++ generatePatches(right,tokens,tree,id)
+    }
+  }
+
 
   def generateGroupPatches(groupByIdPatchOptions: GroupByIdPatchOptions,
                            patches: List[(Int, Option[PatchBlock])], summ: FSumm) = {
@@ -363,15 +367,15 @@ object TraverseJavaClass  {
         /* `csumm1` is not synchronized ==>
          * INSERT new synchronization using a lock on the resource in `csumm1` */
 
-        val patch_id = patchIDGenerator(0)._2
+        val patch_id = patchIDGeneratorRange(0)._2
         var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
         val grouped_patches = if (summ1.csumm.locks.length == 0) {
           /* ************** INSERTS ***************** */
           /* generate insert objects */
-          val (inserts1) = generateInsertObjectOnUnprotectedResource(summ1.csumm)
+          val inserts1 = generateInsertObjectOnUnprotectedResource(summ1.csumm)
 
           /* generate insert patches */
-          val patches1 = generateInsertPatches(summ1.csumm.filename, inserts1, summ1.tokens, summ1.tree, Some(patch_id))
+          val patches1 = generatePatches(inserts1, summ1.tokens, summ1.tree, Some(patch_id))
 
           val grouped_patches1 = generateGroupPatches(empty_map, patches1, summ1)
           grouped_patches1
@@ -396,21 +400,21 @@ object TraverseJavaClass  {
             /* TODO need to check which locks suit to be changed (e.g. they don't protect other resources) */
             /* currently just generate blindly all possibilities */
             if(false) { // TODO avoid updates for now
-              val updates1 = generateUpdateObjects(summ1.csumm, summ2.csumm)
-              val updates2 = generateUpdateObjects(summ2.csumm, summ1.csumm)
+              val updates1 = new Or(NoFix, NoFix).mkOr(generateUpdateObjects(summ1.csumm, summ2.csumm))
+              val updates2 = new Or(NoFix, NoFix).mkOr(generateUpdateObjects(summ2.csumm, summ1.csumm))
 
               /* generate update patches */
-              val update_patches1 = generateUpdatePatches(summ1.csumm.filename, updates1, summ1.tokens, summ1.tree)
-              val update_patches2 = generateUpdatePatches(summ2.csumm.filename, updates2, summ2.tokens, summ2.tree)
-            }
+              val update_patches1 = generatePatches(updates1, summ1.tokens, summ1.tree)
+              val update_patches2 = generatePatches(updates2, summ2.tokens, summ2.tree)
+             }
             /* ************** INSERTS ***************** */
             /* generate insert objects */
-            val inserts1 = generateInsertObjects(summ1.csumm, summ2.csumm)
-            val inserts2 = generateInsertObjects(summ2.csumm, summ1.csumm)
+            val inserts1 = new Or(NoFix,NoFix).mkOr(generateInsertObjects(summ1.csumm, summ2.csumm))
+            val inserts2 = new Or(NoFix,NoFix).mkOr(generateInsertObjects(summ2.csumm, summ1.csumm))
 
             /* generate inserts patches */
-            val insert_patches1 = generateInsertPatches(summ1.csumm.filename, inserts1, summ1.tokens, summ1.tree)
-            val insert_patches2 = generateInsertPatches(summ2.csumm.filename, inserts2, summ2.tokens, summ2.tree)
+            val insert_patches1 = generatePatches(inserts1, summ1.tokens, summ1.tree)
+            val insert_patches2 = generatePatches(inserts2, summ2.tokens, summ2.tree)
 
 //            val patches1 = generateGroupPatches(empty_map, update_patches1 ++ insert_patches1, summ1)
 //            val patches2 = generateGroupPatches(patches1, update_patches2 ++ insert_patches2, summ2)
@@ -426,10 +430,10 @@ object TraverseJavaClass  {
           val patches2 = if (summ1.csumm.locks.length == 0 && summ2.csumm.locks.length > 0) {
             /* ************** INSERTS ***************** */
             /* generate insert objects */
-            val inserts = generateInsertObjects(summ2.csumm, summ1.csumm)
+            val inserts = new Or(NoFix,NoFix).mkOr(generateInsertObjects(summ2.csumm, summ1.csumm))
 
             /* generate insert patches */
-            val patches = generateInsertPatches(summ1.csumm.filename, inserts, summ1.tokens, summ1.tree)
+            val patches = generatePatches(inserts, summ1.tokens, summ1.tree)
             generateGroupPatches(patches1, patches, summ1)
           } else patches1
 
@@ -440,10 +444,10 @@ object TraverseJavaClass  {
           val patches3 = if (summ1.csumm.locks.length > 0 && summ2.csumm.locks.length == 0) {
             /* ************** INSERTS ***************** */
             /* generate insert objects */
-            val inserts = generateInsertObjects(summ1.csumm, summ2.csumm)
+            val inserts = new Or(NoFix,NoFix).mkOr(generateInsertObjects(summ1.csumm, summ2.csumm))
 
             /* generate insert patches */
-            val patches = generateInsertPatches(summ2.csumm.filename, inserts, summ2.tokens, summ2.tree)
+            val patches = generatePatches( inserts, summ2.tokens, summ2.tree)
             generateGroupPatches(patches2, patches, summ2)
           } else patches2
 
@@ -469,18 +473,21 @@ object TraverseJavaClass  {
         } else {
 
           /* Both of the resources `csumm1` and `csumm2` are not synchronized ==>
-       * INSERT new synchronization using a lock on the common resource  */
+           * INSERT new synchronization using a lock on the common resource  */
 
-          val patch_id = patchIDGenerator(0)._2
+          val patch_id = patchIDGeneratorRange(0)._2
           var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
           val grouped_patches = if (summ1.csumm.locks.length == 0 && summ2.csumm.locks.length == 0) {
             /* ************** INSERTS ***************** */
             /* generate insert objects */
             val (inserts1, inserts2) = generateInsertObjectOnCommonResource(summ1.csumm, summ2.csumm)
+            val ins1 = new Or(NoFix,NoFix).mkOr(inserts1)
+            val ins2 = new Or(NoFix,NoFix).mkOr(inserts2)
+
 
             /* generate insert patches */
-            val patches1 = generateInsertPatches(summ1.csumm.filename, inserts1, summ1.tokens, summ1.tree, Some(patch_id))
-            val patches2 = generateInsertPatches(summ2.csumm.filename, inserts2, summ2.tokens, summ2.tree, Some(patch_id))
+            val patches1 = generatePatches(ins1, summ1.tokens, summ1.tree, Some(patch_id))
+            val patches2 = generatePatches(ins2, summ2.tokens, summ2.tree, Some(patch_id))
 
             val grouped_patches1 = generateGroupPatches(empty_map, patches1, summ1)
             val grouped_patches2 = generateGroupPatches(grouped_patches1, patches2, summ2)
@@ -498,7 +505,10 @@ object TraverseJavaClass  {
 }
 
 /**
- * TODO implement the cost function and choose a patch accordingly
+ * TODO re-implement the cost function and choose a patch accordingly
  * TODO check how to avoid insertion of new lines with rewriter
  * TODO create a set of variables for all possible combinations: {this.A, A} ... what about the fields access?
+ * TODO slice the variable declaration for INSERT
+ * TODO add a logging mechanisms to keep track of what patches have been applied to which files
+ *
  * */

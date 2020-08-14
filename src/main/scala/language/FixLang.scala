@@ -9,6 +9,52 @@ sealed trait FixKind
 case object NoFix extends FixKind
 case class Update(cls: String, line: Int, lock_old: String, lock_new: String) extends FixKind
 case class Insert(cls: String, line: Int, resource: String, lock: String) extends FixKind
+case class And(left: FixKind, right: FixKind) extends FixKind {
+  def mkAnd(lst: List[FixKind]) = {
+    lst match {
+      case Nil     => NoFix
+      case x::Nil  => x
+      case _       => lst.dropRight(1).foldRight(lst.last)((fix,acc) => And(fix,acc))
+    }
+  }
+
+  def listOf(): List[FixKind] = {
+    val left_lst = left match {
+      case And(_,_) => left.asInstanceOf[And].listOf()
+      case _ => List(left)
+    }
+    val right_lst = right match {
+      case And(_,_) => right.asInstanceOf[And].listOf()
+      case _ => List(right)
+    }
+    left_lst ++ right_lst
+  }
+
+}
+
+case class Or(left: FixKind, right: FixKind) extends FixKind {
+  def mkOr(lst: List[FixKind]) = {
+    lst match {
+      case Nil     => NoFix
+      case x::Nil  => x
+      case _       => lst.dropRight(1).foldRight(lst.last)((fix,acc) => Or(fix,acc))
+    }
+  }
+
+  def listOf(): List[FixKind] = {
+     val left_lst = left match {
+      case Or(_,_) => left.asInstanceOf[Or].listOf()
+      case _ => List(left)
+    }
+    val right_lst = right match {
+      case Or(_,_) => right.asInstanceOf[Or].listOf()
+      case _ => List(right)
+    }
+    left_lst ++ right_lst
+  }
+
+}
+
 
 class PatchCost(val cost: Int) extends Ordered[PatchCost] {
   def compare(that: PatchCost) = this.cost - that.cost

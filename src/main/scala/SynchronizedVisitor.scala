@@ -32,10 +32,12 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
       case Insert(_, _, _, _) =>
       case NoFix =>
     }
-    super.visitChildren(ctx)
+    this.visitChildren(ctx)
   }
 
   override def visitExpressionName(ctx: Java8Parser.ExpressionNameContext): Unit = {
+//    println("VISIT EXPRESSION " + ctx.getText)
+//    println(ctx.children)
     fix match {
       case Insert(cls, line, unprotected_resource, lock_new) => {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
@@ -48,7 +50,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
       case Update(cls, line, lock_old, lock_new) =>
       case NoFix =>
     }
-    super.visitChildren(ctx)
+    this.visitChildren(ctx)
   }
 
   /* capture the inner most statement which contains the culprit resource */
@@ -61,6 +63,27 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
         resourceStatement = Some(ctx)
       }
     }
+  }
+
+
+  override def visitFieldAccess(ctx: Java8Parser.FieldAccessContext): Unit = {
+//    println("Field Access" + ctx.getText)
+    this.visitChildren(ctx)
+  }
+
+  override def visitFieldAccess_lfno_primary(ctx: Java8Parser.FieldAccess_lfno_primaryContext): Unit = {
+//    println("Field Access_lfno_primary" + ctx.getText)
+    this.visitChildren(ctx)
+  }
+
+  override def visitFieldAccess_lf_primary(ctx: Java8Parser.FieldAccess_lf_primaryContext): Unit = {
+//    println("Field Access_lf_primary" + ctx.getText)
+    this.visitChildren(ctx)
+  }
+
+  override def visitResource(ctx: Java8Parser.ResourceContext): Unit = {
+    this.visitChildren(ctx)
+//    println("Resource" + ctx.getText)
   }
 
   def insertSynchronizedStatement(rewriter: TokenStreamRewriter,
