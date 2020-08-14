@@ -90,7 +90,7 @@ object RacerDFix {
     val newConfig = RunConfig(FixConfig(), Globals.def_src_path)
     parser.parse(args, newConfig) match {
       case Some(RunConfig(fixConfig, file)) =>
-        runPatchAndFix(fixConfig)
+        runPatchAndFix(fixConfig,true)
       case None =>
         System.err.println("Bad argument format.")
     }
@@ -102,7 +102,7 @@ object RacerDFix {
 
   def cost( val1: Int, val2: Int) = val1 <= val2
 
-  def runPatchAndFix(config: FixConfig): Unit = {
+  def runPatchAndFix(config: FixConfig, initial_iteration: Boolean): Unit = {
 
     /* run infer */
     val infer   = config.infer
@@ -151,6 +151,7 @@ object RacerDFix {
       }
     })
 
+    /* Write the fixes to files */
     ast.dumpAll(config)
 
     /* VALIDATON */
@@ -163,7 +164,7 @@ object RacerDFix {
     if(diffBugsNo < newBugsInAll.results.length) {
       println("New bugs detected during validation phase. Rerun RacerDFix? (Y/n)")
       val patch_id_str = readLine()
-      if(patch_id_str == "Y") runPatchAndFix(config)
+      if(patch_id_str == "Y") runPatchAndFix(config,false)
       else if (patch_id_str != "n") println("Unrecognized answer.")
     }
 

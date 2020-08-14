@@ -28,7 +28,7 @@ class ASTManipulation {
     new ASTStoreElem(tokens, tree, rewriter)
   }
 
-  def dumpToFile(filename: String, config: FixConfig) = {
+  def dumpToFile(filename: String, config: FixConfig, copy_original: Boolean) = {
     val fm = new FileManipulation
     val astElem = map.get(filename)
     astElem match {
@@ -36,7 +36,7 @@ class ASTManipulation {
       case Some(astElem) =>
         if (!config.testing) {
           /* write to file (keep the original one in `filename` and the fix in `filename.fix` */
-          fm.cloneOriginalFile(filename)
+          if (copy_original) fm.cloneOriginalFile(filename)
           fm.overwriteFile(filename, astElem.rewriter.getText)
         } else {
           /* write to file (keep the original one in `filename.orig` and the fix in `filename` */
@@ -46,8 +46,8 @@ class ASTManipulation {
     }
   }
 
-  def dumpAll(config: FixConfig) = {
-    map.foreachEntry[Unit]((filename, _) => dumpToFile(filename, config))
+  def dumpAll(config: FixConfig, copy_original: Boolean) = {
+    map.foreachEntry[Unit]((filename, _) => dumpToFile(filename, config, copy_original))
   }
 
 }
