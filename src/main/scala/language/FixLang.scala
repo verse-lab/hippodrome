@@ -2,7 +2,7 @@ package org.racerdfix.language
 
 import org.antlr.v4.runtime.{Token, TokenStream, TokenStreamRewriter}
 import org.racerdfix.antlr.Java8Parser
-import org.racerdfix.utils.FileModif
+import org.racerdfix.utils.{ASTStoreElem, FileModif}
 
 /* FIXES */
 
@@ -62,7 +62,7 @@ class PatchCost(val cost: Int) extends Ordered[PatchCost] {
   def add(that: PatchCost) = new PatchCost(this.cost + that.cost)
 }
 
-class PatchBlock(val patch: String, val start: Token, val stop: Token, val description: String, val cost: PatchCost) {
+class PatchBlock(var rewriter: TokenStreamRewriter, val patch: String, val start: Token, val stop: Token, val description: String, val cost: PatchCost) {
   override def toString() : String = {
     patch
   }
@@ -95,6 +95,6 @@ class RFSumm(val filename: String, val cls: String, val resource: String, val ac
   def getCost(cost: RFSumm => Int ) = cost(this)
 }
 /* racerdfix snapshot */
-class FSumm(val fm: FileModif, val tree: Java8Parser.CompilationUnitContext, val tokens: TokenStream, val csumm: RFSumm)
+class FSumm(var ast: ASTStoreElem, val csumm: RFSumm)
 /* racerdfix bug */
 class FBug(val snapshot1: List[RFSumm], val snapshot2: List[RFSumm], val hash: String)

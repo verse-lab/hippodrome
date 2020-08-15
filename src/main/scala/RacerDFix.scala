@@ -152,7 +152,7 @@ object RacerDFix {
     })
 
     /* Write the fixes to files */
-    ast.dumpAll(config)
+    ast.dumpAll(config, initial_iteration)
 
     /* VALIDATON */
     val val_res = infer_process.!

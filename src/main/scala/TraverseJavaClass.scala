@@ -2,49 +2,48 @@ package org.racerdfix
 
 import org.racerdfix.language.{And, FSumm, FixKind, Insert, NoFix, Or, PatchBlock, PatchCost, RFSumm, Update}
 import org.racerdfix.inferAPI.RacerDAPI
-import org.racerdfix.antlr.{Java8Lexer, Java8Parser}
-import org.antlr.v4.runtime.{CharStreams, CommonTokenStream, Token, TokenStream, TokenStreamRewriter}
-import utils.{ASTManipulation, FileManipulation, FileModif}
+import org.racerdfix.antlr.Java8Parser
+import org.antlr.v4.runtime.{TokenStream, TokenStreamRewriter}
+import utils.{ASTManipulation, ASTStoreElem, FileModif}
 
-import scala.io.Source
 import scala.io.StdIn.readLine
 import scala.collection.mutable.HashMap
 
 
-class GroupByRewriterPatch(var map : HashMap[FileModif, List[PatchBlock]]) {
-
-  def update(fm: FileModif, pb: PatchBlock): Unit = {
-    try {
-      this.map(fm) = pb :: this.map(fm)
-    } catch {
-      case e => {
-        this.map(fm) = List(pb)
-      }
-    }
-  }
-
-  def getText(): String = {
-    map.foldLeft("")((acc, x) => acc + (
-        (x._2.foldLeft("")((acc, y) => acc + "\n" + y.description))))
-  }
-
-  /* returns the cost of all the patches stored in this.map */
-  def getTotalCost(): PatchCost = {
-    this.map.foldLeft(Globals.unitCost)((acc,patches) => {
-      val cost = patches._2.foldLeft(Globals.unitCost)((acc,pb) => acc.add(pb.cost))
-      acc.add(cost)})
-  }
-}
+//class GroupByRewriterPatch(var map : HashMap[FileModif, List[PatchBlock]]) {
+//
+//  def update(fm: FileModif, pb: PatchBlock): Unit = {
+//    try {
+//      this.map(fm) = pb :: this.map(fm)
+//    } catch {
+//      case e => {
+//        this.map(fm) = List(pb)
+//      }
+//    }
+//  }
+//
+//  def getText(): String = {
+//    map.foldLeft("")((acc, x) => acc + (
+//        (x._2.foldLeft("")((acc, y) => acc + "\n" + y.description))))
+//  }
+//
+//  /* returns the cost of all the patches stored in this.map */
+//  def getTotalCost(): PatchCost = {
+//    this.map.foldLeft(Globals.unitCost)((acc,patches) => {
+//      val cost = patches._2.foldLeft(Globals.unitCost)((acc,pb) => acc.add(pb.cost))
+//      acc.add(cost)})
+//  }
+//}
 
 /* maps patch ID -> list of individual code modifications */
-class GroupByIdPatchOptions(var map : HashMap[Int, GroupByRewriterPatch]) {
+class GroupByIdPatchOptions(var map : HashMap[Int, List[PatchBlock]]) {
 
-  def update(id: Int, fm: FileModif, pb: PatchBlock): Unit = {
+  def update(id: Int, pb: PatchBlock): Unit = {
     try {
-      this.map(id).update(fm,pb)
+      this.map.update(id, this.map(id) ++ List(pb))
     } catch {
       case e => {
-        this.map(id) = new GroupByRewriterPatch(HashMap(fm -> List(pb)))
+        this.map(id) = List(pb)
       }
     }
   }
@@ -54,12 +53,12 @@ class GroupByIdPatchOptions(var map : HashMap[Int, GroupByRewriterPatch]) {
       "\n" +
         "==========================" +
         "\n" +
-        "Patch ID: " + x._1 + x._2.getText()))
+        "Patch ID: " + x._1 + x._2.foldLeft("")((acc, y) => acc + "\n" + y.description)))
   }
 
   /* returns the cost of the patch with id `patchID` */
   def getCost(patchID: Int) = {
-    this.map(patchID).getTotalCost()
+    this.map(patchID).foldLeft(Globals.unitCost)((acc,pb) => acc.add(pb.cost))
   }
 }
 
@@ -97,12 +96,11 @@ object TraverseJavaClass  {
   }
 
   def generateUpdatePatch(update: Update,
-                          tokens: TokenStream,
-                          tree: Java8Parser.CompilationUnitContext): Option[PatchBlock] ={
+                          ast: ASTStoreElem): Option[PatchBlock] ={
     val syncVisitor = new SynchronizedVisitor
-    val rewriter    = new TokenStreamRewriter(tokens)
+    val rewriter    = new TokenStreamRewriter(ast.tokens)
     syncVisitor.setFix(update)
-    syncVisitor.visit(tree)
+    syncVisitor.visit(ast.tree)
     val sblock = syncVisitor.getSynchronizedBlock
     sblock match {
       case Some(sblock) =>
@@ -112,7 +110,7 @@ object TraverseJavaClass  {
         "Replace (UPDATE) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
         + ("\n" + "-: " + oldcode)
         + ("\n" + "+: " + patch) )
-        Some(new PatchBlock(patch, sblock.start, sblock.stop, description, Globals.defCost))
+        Some(new PatchBlock(ast.rewriter, patch, sblock.start, sblock.stop, description, Globals.defCost))
       case None =>
         println("No patch could be generated for attempt ID: " )
         None
@@ -158,12 +156,11 @@ object TraverseJavaClass  {
 
 
   def generateInsertPatch_def(insert: Insert,
-                              tokens: TokenStream,
-                              tree: Java8Parser.CompilationUnitContext): Option[PatchBlock] = {
+                              ast: ASTStoreElem): Option[PatchBlock] = {
     val syncVisitor = new SynchronizedVisitor
-    val rewriter    = new TokenStreamRewriter(tokens)
+    val rewriter    = new TokenStreamRewriter(ast.tokens)
     syncVisitor.setFix(insert)
-    syncVisitor.visit(tree)
+    syncVisitor.visit(ast.tree)
     val sblock = syncVisitor.getResourceStatement
     sblock match {
       case Some(sblock) =>
@@ -172,7 +169,7 @@ object TraverseJavaClass  {
         "Replace (INSERT) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
           + ("\n" + "-: " + oldcode)
           + ("\n" + "+: " + patch) )
-        Some(new PatchBlock(patch, sblock.start, sblock.stop, description, Globals.defCost))
+        Some(new PatchBlock(ast.rewriter, patch, sblock.start, sblock.stop, description, Globals.defCost))
       case None =>
         println("No patch could be generated for attempt ID " )
         None
@@ -181,9 +178,8 @@ object TraverseJavaClass  {
 
   /* debugger */
   def generateInsertPatch(insert: Insert,
-                          tokens: TokenStream,
-                          tree: Java8Parser.CompilationUnitContext): Option[PatchBlock] = {
-    val res = generateInsertPatch_def(insert, tokens, tree)
+                          ast: ASTStoreElem): Option[PatchBlock] = {
+    val res = generateInsertPatch_def(insert, ast)
     if(false) {
       println(insert)
       println("out: " + Globals.getTextOpt[PatchBlock](res))
@@ -197,15 +193,12 @@ object TraverseJavaClass  {
 
   def applyPatch_def(
                  patch_id: Int,
-                 patches: GroupByIdPatchOptions,
-                 config: FixConfig): Unit = {
+                 patches: GroupByIdPatchOptions): Unit = {
     try {
       val patches0 = patches.map(patch_id)
-      patches0.map.foreach( x => {
-        val rewriter = x._1.rewriter
-        val filename = x._1.filename
-        val patches  = x._2
-        patches.foreach( pb => rewriter.replace(pb.start, pb.stop, pb.patch))
+      patches0.foreach( x => {
+        val rewriter = x.rewriter
+        rewriter.replace(x.start, x.stop, x.patch)
       })
     } catch {
       case _ => println("Invalid patch ID")
@@ -214,11 +207,10 @@ object TraverseJavaClass  {
 
   def applyPatch_helper(
                      patch_id_str: String,
-                     patches: GroupByIdPatchOptions,
-                     config: FixConfig): Unit = {
+                     patches: GroupByIdPatchOptions): Unit = {
     try {
       val patch_id = patch_id_str.toInt
-      applyPatch_def(patch_id, patches, config)
+      applyPatch_def(patch_id, patches)
     } catch {
       case _: Exception => {println("Invalid patch ID")
         None
@@ -228,22 +220,20 @@ object TraverseJavaClass  {
 
   /* debugger */
   def applyPatch( patch_id_str: String,
-                  patches: GroupByIdPatchOptions,
-                  config: FixConfig): Unit = {
+                  patches: GroupByIdPatchOptions): Unit = {
     if (false){
       println("Patch id: " + patch_id_str)
       println("Patches: "  + patches)
     }
-    applyPatch_helper(patch_id_str, patches, config)
+    applyPatch_helper(patch_id_str, patches)
   }
 
   /* Generates a list of patches corresponding to the list of UPDATE objects (updates) */
   def generateUpdatePatch0(
                             updates: Update,
-                            tokens: TokenStream,
-                            tree: Java8Parser.CompilationUnitContext,
+                            ast: ASTStoreElem,
                             id: Option[Int] = None): List[(Int, Option[PatchBlock])] = {
-    val res     = generateUpdatePatch(updates,tokens,tree)
+    val res     = generateUpdatePatch(updates,ast)
     val patchID = id match {
       case None => patchIDGenerator
       case Some (id) => id
@@ -255,10 +245,9 @@ object TraverseJavaClass  {
   /* Generates a list of patches corresponding to the list of INSERT objects (inserts) */
   def generateInsertPatch0(
                             inserts: Insert,
-                            tokens: TokenStream,
-                            tree: Java8Parser.CompilationUnitContext,
+                            ast: ASTStoreElem,
                             id: Option[Int] = None): List[(Int, Option[PatchBlock])] = {
-     val res     = generateInsertPatch(inserts,tokens,tree)
+     val res     = generateInsertPatch(inserts,ast)
      val patchID = id match {
        case None => patchIDGenerator
        case Some (id) => id
@@ -266,16 +255,16 @@ object TraverseJavaClass  {
      List((patchID,res))
   }
 
-  def generatePatches( fixobj: FixKind,
-                       tokens: TokenStream,
-                       tree: Java8Parser.CompilationUnitContext,
-                       id: Option[Int] = None): List[(Int, Option[PatchBlock])] = {
+  def generatePatches(fixobj: FixKind,
+                      ast: ASTStoreElem,
+                      id: Option[Int] = None): List[(Int, Option[PatchBlock])] = {
     fixobj match {
       case NoFix => Nil
-      case Insert(_,_,_,_)  => generateInsertPatch0(fixobj.asInstanceOf[Insert],tokens,tree,id)
-      case Update(_,_,_,_)  => generateUpdatePatch0(fixobj.asInstanceOf[Update],tokens,tree,id)
-      case And(left, right) => generatePatches(left,tokens,tree,id) ++ generatePatches(right,tokens,tree,id)
-      case Or(left, right)  => generatePatches(left,tokens,tree,id) ++ generatePatches(right,tokens,tree,id)
+      case Insert(_,_,_,_)  => generateInsertPatch0(fixobj.asInstanceOf[Insert],ast,id)
+      case Update(_,_,_,_)  => generateUpdatePatch0(fixobj.asInstanceOf[Update],ast,id)
+        /* TODO need to distinguish between And and Or */
+      case And(left, right) => generatePatches(left,ast,id) ++ generatePatches(right,ast,id)
+      case Or(left, right)  => generatePatches(left,ast,id) ++ generatePatches(right,ast,id)
     }
   }
 
@@ -283,12 +272,11 @@ object TraverseJavaClass  {
   /* group patches by ID */
   def generateGroupPatches(groupByIdPatchOptions: GroupByIdPatchOptions,
                            patches: List[(Int, Option[PatchBlock])], summ: FSumm) = {
-//    var empty_map = new GroupByIdPatchResult(HashMap.empty[Int, GroupByRewriterPatchResult])
     patches.foldLeft(groupByIdPatchOptions)((acc: GroupByIdPatchOptions, ptch) =>
       ptch._2 match {
         case None => acc
         case Some(pb) => {
-          acc.update(ptch._1, summ.fm, pb)
+          acc.update(ptch._1, pb)
           acc
         }
       }
@@ -296,11 +284,11 @@ object TraverseJavaClass  {
   }
 
   def leastCostlyPatch(groupByIdPatchResult: GroupByIdPatchOptions) = {
-    val patch_id = groupByIdPatchResult.map.foldLeft((None:Option[Int],Globals.maxCost))((acc:(Option[Int],PatchCost),map) => {
+    val patch_id = groupByIdPatchResult.map.foldLeft((None:Option[Int],Globals.maxCost))((acc:(Option[Int],PatchCost),pair) => {
       val leastCostlySoFar   = acc._2
-      val costOfCurrentPatch = map._2.getTotalCost()
+      val costOfCurrentPatch = groupByIdPatchResult.getCost(pair._1)
       if (leastCostlySoFar.compare(costOfCurrentPatch) <= 0) acc
-      else (Some(map._1),costOfCurrentPatch)
+      else (Some(pair._1),costOfCurrentPatch)
     })
     patch_id._1
   }
@@ -310,17 +298,14 @@ object TraverseJavaClass  {
       case None => {
         val javaFile = csumm1.filename
         val astElem = ast.retrieveAST(javaFile)
-        val fm = new FileModif(javaFile, astElem.rewriter)
-        val summ1 = new FSumm(fm, astElem.tree, astElem.tokens, csumm1)
+        val summ1 = new FSumm(astElem, csumm1)
         (summ1, None)
       }
       case Some(csumm2) => {
           val astElem1 = ast.retrieveAST(csumm1.filename)
           val astElem2 = ast.retrieveAST(csumm2.filename)
-          val fm1 = new FileModif(csumm1.filename, astElem1.rewriter)
-          val fm2 = new FileModif(csumm2.filename, astElem2.rewriter)
-          val summ1 = new FSumm(fm1, astElem1.tree, astElem1.tokens, csumm1)
-          val summ2 = new FSumm(fm2, astElem2.tree, astElem2.tokens, csumm2)
+          val summ1 = new FSumm(astElem1, csumm1)
+          val summ2 = new FSumm(astElem2, csumm2)
           (summ1, Some(summ2))
       }
     }
@@ -333,21 +318,21 @@ object TraverseJavaClass  {
 
     println("************* GENERATE PATCH *************")
 //    if ( true /*csumm1.resource == csumm2.resource*/) {
-    var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
+    var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, List[PatchBlock]])
     summ2 match {
       case None => {
         /* `csumm1` is not synchronized ==>
          * INSERT new synchronization using a lock on the resource in `csumm1` */
 
         val patch_id = patchIDGeneratorRange(0)._2
-        var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
+        var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, List[PatchBlock]])
         val grouped_patches = if (summ1.csumm.locks.length == 0) {
           /* ************** INSERTS ***************** */
           /* generate insert objects */
           val inserts1 = generateInsertObjectOnUnprotectedResource(summ1.csumm)
 
           /* generate insert patches */
-          val patches1 = generatePatches(inserts1, summ1.tokens, summ1.tree, Some(patch_id))
+          val patches1 = generatePatches(inserts1, summ1.ast, Some(patch_id))
 
           val grouped_patches1 = generateGroupPatches(empty_map, patches1, summ1)
           grouped_patches1
@@ -356,7 +341,7 @@ object TraverseJavaClass  {
         println(grouped_patches.getText())
 
         println("************* GENERATE FIX *************")
-        applyPatch_def(patch_id, grouped_patches, config)
+        applyPatch_def(patch_id, grouped_patches)
       }
       case Some(summ2) => {
         if ((summ1.csumm.locks concat summ2.csumm.locks).length > 0) {
@@ -371,27 +356,27 @@ object TraverseJavaClass  {
             /* generate update objects */
             /* TODO need to check which locks suit to be changed (e.g. they don't protect other resources) */
             /* currently just generate blindly all possibilities */
-            if(false) { // TODO avoid updates for now
+            //if(false) { // TODO avoid updates for now
               val updates1 = new Or(NoFix, NoFix).mkOr(generateUpdateObjects(summ1.csumm, summ2.csumm))
               val updates2 = new Or(NoFix, NoFix).mkOr(generateUpdateObjects(summ2.csumm, summ1.csumm))
 
               /* generate update patches */
-              val update_patches1 = generatePatches(updates1, summ1.tokens, summ1.tree)
-              val update_patches2 = generatePatches(updates2, summ2.tokens, summ2.tree)
-             }
+              val update_patches1 = generatePatches(updates1, summ1.ast)
+              val update_patches2 = generatePatches(updates2, summ2.ast)
+            // }
             /* ************** INSERTS ***************** */
             /* generate insert objects */
             val inserts1 = new Or(NoFix,NoFix).mkOr(generateInsertObjects(summ1.csumm, summ2.csumm))
             val inserts2 = new Or(NoFix,NoFix).mkOr(generateInsertObjects(summ2.csumm, summ1.csumm))
 
             /* generate inserts patches */
-            val insert_patches1 = generatePatches(inserts1, summ1.tokens, summ1.tree)
-            val insert_patches2 = generatePatches(inserts2, summ2.tokens, summ2.tree)
+            val insert_patches1 = generatePatches(inserts1, summ1.ast)
+            val insert_patches2 = generatePatches(inserts2, summ2.ast)
 
-//            val patches1 = generateGroupPatches(empty_map, update_patches1 ++ insert_patches1, summ1)
-//            val patches2 = generateGroupPatches(patches1, update_patches2 ++ insert_patches2, summ2)
-            val patches1 = generateGroupPatches(empty_map, insert_patches1, summ1)
-            val patches2 = generateGroupPatches(patches1, insert_patches2, summ2)
+            val patches1 = generateGroupPatches(empty_map, update_patches1 ++ insert_patches1, summ1)
+            val patches2 = generateGroupPatches(patches1, update_patches2 ++ insert_patches2, summ2)
+//            val patches1 = generateGroupPatches(empty_map, insert_patches1, summ1)
+//            val patches2 = generateGroupPatches(patches1, insert_patches2, summ2)
             patches2
           } else empty_map
 
@@ -405,7 +390,7 @@ object TraverseJavaClass  {
             val inserts = new Or(NoFix,NoFix).mkOr(generateInsertObjects(summ2.csumm, summ1.csumm))
 
             /* generate insert patches */
-            val patches = generatePatches(inserts, summ1.tokens, summ1.tree)
+            val patches = generatePatches(inserts, summ1.ast)
             generateGroupPatches(patches1, patches, summ1)
           } else patches1
 
@@ -419,7 +404,7 @@ object TraverseJavaClass  {
             val inserts = new Or(NoFix,NoFix).mkOr(generateInsertObjects(summ1.csumm, summ2.csumm))
 
             /* generate insert patches */
-            val patches = generatePatches( inserts, summ2.tokens, summ2.tree)
+            val patches = generatePatches( inserts, summ2.ast)
             generateGroupPatches(patches2, patches, summ2)
           } else patches2
 
@@ -433,13 +418,13 @@ object TraverseJavaClass  {
             val patch_id_str = readLine()
 
             println("************* GENERATE FIX *************")
-            applyPatch(patch_id_str, grouped_patches, config)
+            applyPatch(patch_id_str, grouped_patches)
           } else {
             /* apply the patch with the least cost */
             val patch_id = leastCostlyPatch(grouped_patches)
             patch_id match {
               case None =>
-              case Some(id) => applyPatch_def(id, grouped_patches, config)
+              case Some(id) => applyPatch_def(id, grouped_patches)
             }
           }
         } else {
@@ -448,7 +433,7 @@ object TraverseJavaClass  {
            * INSERT new synchronization using a lock on the common resource  */
 
           val patch_id = patchIDGeneratorRange(0)._2
-          var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, GroupByRewriterPatch])
+          var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, List[PatchBlock]])
           val grouped_patches = if (summ1.csumm.locks.length == 0 && summ2.csumm.locks.length == 0) {
             /* ************** INSERTS ***************** */
             /* generate insert objects */
@@ -458,8 +443,8 @@ object TraverseJavaClass  {
 
 
             /* generate insert patches */
-            val patches1 = generatePatches(ins1, summ1.tokens, summ1.tree, Some(patch_id))
-            val patches2 = generatePatches(ins2, summ2.tokens, summ2.tree, Some(patch_id))
+            val patches1 = generatePatches(ins1, summ1.ast, Some(patch_id))
+            val patches2 = generatePatches(ins2, summ2.ast, Some(patch_id))
 
             val grouped_patches1 = generateGroupPatches(empty_map, patches1, summ1)
             val grouped_patches2 = generateGroupPatches(grouped_patches1, patches2, summ2)
@@ -469,7 +454,7 @@ object TraverseJavaClass  {
           println(grouped_patches.getText())
 
           println("************* GENERATE FIX *************")
-          applyPatch_def(patch_id, grouped_patches, config)
+          applyPatch_def(patch_id, grouped_patches)
         }
       }
     }
