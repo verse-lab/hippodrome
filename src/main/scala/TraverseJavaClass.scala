@@ -65,21 +65,6 @@ class GroupByIdPatchOptions(var map : HashMap[Int, List[PatchBlock]]) {
 
 object TraverseJavaClass  {
 
-  var patchID_ref = 1
-
-  def patchIDGenerator(): Int = {
-    val patchID = patchID_ref
-    patchID_ref = patchID+ 1
-    patchID
-  }
-
-  def patchIDGeneratorRange(len: Int): (Int, Int) = {
-    val patchID_start = patchID_ref
-    val patchID_stop  = patchID_ref + len + 1
-    patchID_ref = patchID_stop + 1
-    (patchID_start, patchID_stop)
-  }
-
   /* ************************************************ */
   /*                       UPDATE                     */
   /* ************************************************ */
@@ -137,7 +122,7 @@ object TraverseJavaClass  {
     /* TODO  need to check which is that common resouce, e.g. myA or myA.f?
     *   should be the outer most one, e.g. myA*/
     val lck    = RacerDAPI.varOfResource(summ1.resource)
-    val varName = "obj" + patchIDGenerator
+    val varName = "obj" + RacerDFix.patchIDGenerator
     val declareObj = { if (summ1.line < summ2.line)  InsertDeclareAndInst(summ1.cls,summ1.line,"Object", varName)
     else InsertDeclareAndInst(summ2.cls,summ1.line,"Object", varName)}
     val insert1 = InsertSync(summ1.cls,summ1.line,RacerDAPI.varOfResource(summ1.resource),varName)
@@ -156,7 +141,7 @@ object TraverseJavaClass  {
     /* TODO need to recheck what is the resource we create lock for. myA.f is not the right type, it should be
     *   a reference type. */
     // val lck     = RacerDAPI.varOfResource(summ.resource)
-    val varName = "obj" + patchIDGenerator
+    val varName = "obj" + RacerDFix.patchIDGenerator
     val declareObj = InsertDeclareAndInst(summ.cls,summ.line,"Object", varName)
     val insert1 = InsertSync(summ.cls,summ.line,RacerDAPI.varOfResource(summ.resource),varName)
     And(declareObj,insert1)
@@ -202,16 +187,19 @@ object TraverseJavaClass  {
     val rewriter    = new TokenStreamRewriter(ast.tokens)
     syncVisitor.setFix(insert)
     syncVisitor.visit(ast.tree)
-    val sblock = syncVisitor.getResourceStatement
-    sblock match {
-      case Some(sblock) =>
+    val sblock = syncVisitor.getClassStatement
+    println("cls: " + insert.cls)
+    println("SBLOCK:" + sblock)
+    println("START" + syncVisitor.getClassStart)
+    (sblock,syncVisitor.getClassStart) match {
+      case (Some(sblock),Some(start)) =>
         val (oldcode,patch) = syncVisitor.insertInsertDeclareAndInstStatement(rewriter,sblock,insert)
         val description = (
           "Replace (INSERT) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
             + ("\n" + "+: " + patch) )
-        Some(new PatchBlock(ast.rewriter, InsBefore, patch, sblock.start, sblock.stop, description, Globals.defCost))
-      case None =>
-        println("No patch could be generated for attempt ID " )
+        Some(new PatchBlock(ast.rewriter, InsAfter, patch, start, start, description, Globals.defCost))
+      case (_,_ )=>
+        println("No InsertDeclareAndInst patch could be generated. " )
         None
     }
   }
@@ -279,7 +267,7 @@ object TraverseJavaClass  {
                             id: Option[Int] = None): Patch = {
     val res     = generateUpdatePatch(updates,ast)
     val patchID = id match {
-      case None => patchIDGenerator
+      case None => RacerDFix.patchIDGenerator
       case Some (id) => id
     }
     res match {
@@ -296,7 +284,7 @@ object TraverseJavaClass  {
                             id: Option[Int] = None): Patch = {
      val res     = generateInsertPatch(inserts,ast)
      val patchID = id match {
-       case None => patchIDGenerator
+       case None => RacerDFix.patchIDGenerator
        case Some (id) => id
      }
     res match {
@@ -313,7 +301,7 @@ object TraverseJavaClass  {
                             id: Option[Int] = None): Patch = {
     val res     = generateInsertDeclareAndInstPatch(inserts,ast)
     val patchID = id match {
-      case None => patchIDGenerator
+      case None => RacerDFix.patchIDGenerator
       case Some (id) => id
     }
     res match {
@@ -332,7 +320,7 @@ object TraverseJavaClass  {
       case InsertDeclareAndInst(_,_,_,_) => generateInsertDeclareAndInstPatch0(fixobj.asInstanceOf[InsertDeclareAndInst],ast,id)
       case And(left, right) =>
         val fresh_id =  id match {
-          case None => Some(patchIDGenerator)
+          case None => Some(RacerDFix.patchIDGenerator)
           case Some(_) => id
         }
         new PAnd(generatePatches(left,ast,fresh_id), generatePatches(right,ast,fresh_id))
@@ -404,10 +392,9 @@ object TraverseJavaClass  {
     summ2 match {
       case None => {
         /* UNPROTECTED WRITE */
-        /* `csumm1` is not synchronized ==>
-         * INSERT new synchronization using a lock on the resource in `csumm1` */
+        /* `csumm1` is not synchronized */
 
-        val patch_id = patchIDGeneratorRange(0)._2
+        val patch_id = RacerDFix.patchIDGeneratorRange(0)._2
         var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, List[PatchBlock]])
         val grouped_patches = if (summ1.csumm.locks.length == 0) {
           /* ************** INSERTS ***************** */
@@ -515,7 +502,7 @@ object TraverseJavaClass  {
           /* Both of the resources `csumm1` and `csumm2` are not synchronized ==>
            * INSERT new synchronization using a lock on the common resource  */
 
-          val patch_id = patchIDGeneratorRange(0)._2
+          val patch_id = RacerDFix.patchIDGeneratorRange(0)._2
           var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, List[PatchBlock]])
           val grouped_patches = if (summ1.csumm.locks.length == 0 && summ2.csumm.locks.length == 0) {
             /* ************** INSERTS ***************** */

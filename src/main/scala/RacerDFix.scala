@@ -102,6 +102,22 @@ object RacerDFix {
 
   def cost( val1: Int, val2: Int) = val1 <= val2
 
+  /* Generating uniwue references */
+  var patchID_ref = 1
+
+  def patchIDGenerator(): Int = {
+    val patchID = patchID_ref
+    patchID_ref = patchID+ 1
+    patchID
+  }
+
+  def patchIDGeneratorRange(len: Int): (Int, Int) = {
+    val patchID_start = patchID_ref
+    val patchID_stop  = patchID_ref + len + 1
+    patchID_ref = patchID_stop + 1
+    (patchID_start, patchID_stop)
+  }
+
   def runPatchAndFix(config: FixConfig, initial_iteration: Boolean): Unit = {
 
     /* run infer */
@@ -119,7 +135,8 @@ object RacerDFix {
     val norm_and_translate = ((s:SummaryIn) => s.racerDToRacerDFix())
     val summaries   = summariesIn.results.flatMap(norm_and_translate)
     val bugsInAll   = jsonTranslator.getJsonBugs()
-    val bugsIn      = new TranslationResult[BugIn](bugsInAll.results.filter(b => Globals.tackled_bug_kinds.contains(b.bug_type)))
+    val bugsIn      = new TranslationResult[BugIn](bugsInAll.results.filter(b => b.isInstanceOf[BugIn] &&
+      Globals.tackled_bug_kinds.contains(b.asInstanceOf[BugIn].bug_type)).map(b => b.asInstanceOf[BugIn]))
     val bugs        = bugsIn.results.map(b => b.racerDToRacerDFix(summaries))
 
     /* for each bug in `bugs` find a patch and possibly generate a fix */

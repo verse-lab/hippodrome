@@ -114,11 +114,17 @@ object RacerDAPI {
 //    result
 //  }
 
-  /* "B.<init>()" */
+  /* "B.<init>()" => "B" */
   def classNameOfMethodString_def(method: String): String ={
-    val pattern = "[^)]+(?=\\.)".r
+    val pattern = "[^)]+(?=\\()".r
     pattern.findFirstMatchIn(method) match {
-      case Some(resource) => resource.toString()
+      case Some(resource) => {
+        val pattern = "[^)]+(?=\\.)".r
+        pattern.findFirstMatchIn(resource.toString()) match {
+          case Some(cls) => cls.toString
+          case None      => resource.toString()
+        }
+      }
       case None => method
     }
   }
@@ -145,12 +151,25 @@ object RacerDAPI {
     }
   }
 
+  /* "A.B.C" => ["A","A.B","A.B.C"] */
   def refToListOfRef(sp: String) = {
     val lst   = sp.split(Array('.')).toList
     val vars  = lst.foldLeft((Nil:List[String],""))((acc:(List[String],String),str) => {
       val vr = acc._2 match {
         case "" => str
         case _  => acc._2 + "." + str
+      }
+      (acc._1 ++ List(vr), vr)})
+    vars._1
+  }
+
+  /* "A.B.C" => ["C","B.C","A.B.C"] */
+  def classToListOfCls(sp: String) = {
+    val lst   = sp.split(Array('.')).toList
+    val vars  = lst.foldRight((Nil:List[String],""))((str,acc:(List[String],String)) => {
+      val vr = acc._2 match {
+        case "" => str
+        case _  => str + "." + acc._2
       }
       (acc._1 ++ List(vr), vr)})
     vars._1

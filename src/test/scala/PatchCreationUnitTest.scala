@@ -1,5 +1,5 @@
 import org.racerdfix.language.{EmptyTrace, InsertSync, NoFix, Or, PatchBlock, RFSumm, Read, Write}
-import org.racerdfix.TraverseJavaClass.{generateInsertObjectOnCommonResource, generateInsertObjects, generatePatches, generateUpdateObjects, patchIDGeneratorRange, translateRawSnapshotsToSnapshots}
+import org.racerdfix.TraverseJavaClass.{generateInsertObjectOnCommonResource, generateInsertObjects, generatePatches, generateUpdateObjects, translateRawSnapshotsToSnapshots}
 import org.hamcrest.CoreMatchers.is
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
@@ -78,7 +78,7 @@ class PatchCreationUnitTest {
                 val ins2 = new Or(NoFix, NoFix).mkOr(inserts2)
 
                 /* generate insert patches */
-                val patch_id = patchIDGeneratorRange(0)._2
+                val patch_id = RacerDFix.patchIDGeneratorRange(0)._2
                 val patches1 = generatePatches(ins1, summ1.ast, Some(patch_id))
                 val patches2 = generatePatches(ins2, summ2.ast, Some(patch_id))
 //

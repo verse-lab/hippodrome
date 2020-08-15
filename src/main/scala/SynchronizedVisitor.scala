@@ -11,6 +11,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var sblock: Option[Java8Parser.SynchronizedStatementContext] = None
   private var resource: Option[Java8Parser.ExpressionNameContext] = None
   private var resourceStatement: Option[Java8Parser.StatementContext] = None
+  private var classStmt: Option[Java8Parser.ClassDeclarationContext] = None
 
   def setFix(init_fix: FixKind): Unit = {
     fix = init_fix
@@ -19,6 +20,11 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   def getSynchronizedBlock = sblock
   def getResource = resource
   def getResourceStatement = resourceStatement
+  def getClassStatement = classStmt
+  def getClassStart = classStmt match {
+    case Some(cls) => Some (cls.normalClassDeclaration().classBody().start )
+    case None => None
+  }
 
   override def visitSynchronizedStatement(ctx: Java8Parser.SynchronizedStatementContext): Unit = {
     fix match {
@@ -71,7 +77,17 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   override def visitClassDeclaration(ctx: Java8Parser.ClassDeclarationContext): Unit = {
-    println("CLASS: " + ctx.getText)
+    println("CLASS:" + ctx.normalClassDeclaration().Identifier().getText)
+    fix match {
+      case InsertDeclareAndInst(cls,line,_,_) =>  {
+        val classes = RacerDAPI.classToListOfCls(cls)
+        println("CLASSES:" + classes.toString)
+        if (classes.contains(ctx.normalClassDeclaration().Identifier().getText)){
+          classStmt = Some(ctx)
+        }
+      }
+      case _ =>
+    }
     this.visitChildren(ctx)
   }
 
@@ -116,7 +132,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   def insertInsertDeclareAndInstStatement(rewriter: TokenStreamRewriter,
-                                  ctx: Java8Parser.StatementContext, fix: InsertDeclareAndInst): (String,String) = {
+                                  ctx: Java8Parser.ClassDeclarationContext, fix: InsertDeclareAndInst): (String,String) = {
     val a = ctx.start.getStartIndex
     val b = ctx.stop.getStopIndex
     val interval = new Interval(a, b)
@@ -125,13 +141,13 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
     // only work for object now, since it has no arguments
     val textToInsert = fix.typ + " " + fix.variable + " = " + " new " + fix.typ + "(); "
-    rewriter.insertBefore(ctx.start, textToInsert)
+    rewriter.insertAfter(ctx.normalClassDeclaration.classBody().start, textToInsert)
 
-    val rinterval = new Interval(ctx.getSourceInterval.a,ctx.getSourceInterval.a)
+    //val rinterval = new Interval(ctx.getSourceInterval.a,ctx.getSourceInterval.a)
 
     //    println("ctx: " + ctx.start.getInputStream.getText(interval)  + "#####")
     //    println("rewriter:" + rewriter.getText())
-        println("rewriter:" + rewriter.getText(rinterval) + "#####")
+    //    println("rewriter:" + rewriter.getText(rinterval) + "#####")
 
     (ctx.start.getInputStream.getText(interval),textToInsert)
   }
