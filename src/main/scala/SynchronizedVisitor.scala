@@ -4,7 +4,7 @@ import org.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
 import org.antlr.v4.runtime.{CommonTokenStream, TokenStreamRewriter}
 import org.antlr.v4.runtime.misc.Interval
 import org.racerdfix.inferAPI.RacerDAPI
-import org.racerdfix.language.{FixKind, Insert, NoFix, Update}
+import org.racerdfix.language.{FixKind, InsertDeclareAndInst, InsertSync, NoFix, UpdateSync}
 
 class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var fix: FixKind = NoFix
@@ -22,15 +22,15 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
   override def visitSynchronizedStatement(ctx: Java8Parser.SynchronizedStatementContext): Unit = {
     fix match {
-      case Update(cls, line, lock_old, lock_new) => {
+      case UpdateSync(cls, line, lock_old, lock_new) => {
         val block = ctx.block()
         if (Globals.getRealLineNo(block.getStart.getLine) <= line && line <= Globals.getRealLineNo(block.getStop.getLine)) {
           if (lock_old== ctx.expression().getText)
             sblock = Some (ctx)
         }
       }
-      case Insert(_, _, _, _) =>
-      case NoFix =>
+      case InsertSync(_, _, _, _) =>
+      case _ =>
     }
     this.visitChildren(ctx)
   }
@@ -39,7 +39,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 //    println("VISIT EXPRESSION " + ctx.getText)
 //    println(ctx.children)
     fix match {
-      case Insert(cls, line, unprotected_resource, lock_new) => {
+      case InsertSync(cls, line, unprotected_resource, lock_new) => {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
           val vars = RacerDAPI.refToListOfRef(ctx.getText)
           if (vars.contains(unprotected_resource)){
@@ -47,8 +47,13 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           }
         }
       }
-      case Update(cls, line, lock_old, lock_new) =>
-      case NoFix =>
+      case InsertDeclareAndInst(cls,line,_,_) =>  {
+        if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
+          resource = Some(ctx)
+        }
+      }
+      case UpdateSync(cls, line, lock_old, lock_new) =>
+      case _ =>
     }
     this.visitChildren(ctx)
   }
@@ -65,6 +70,10 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     }
   }
 
+  override def visitClassDeclaration(ctx: Java8Parser.ClassDeclarationContext): Unit = {
+    println("CLASS: " + ctx.getText)
+    this.visitChildren(ctx)
+  }
 
   override def visitFieldAccess(ctx: Java8Parser.FieldAccessContext): Unit = {
 //    println("Field Access" + ctx.getText)
@@ -87,16 +96,16 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   def insertSynchronizedStatement(rewriter: TokenStreamRewriter,
-                                  ctx: Java8Parser.StatementContext, fix: Insert): (String,String) = {
+                                  ctx: Java8Parser.StatementContext, fix: InsertSync): (String,String) = {
     val a = ctx.start.getStartIndex
     val b = ctx.stop.getStopIndex
     val interval = new Interval(a, b)
 
 //    println("ctx:" + ctx.start.getInputStream.getText(interval))
 
-
     rewriter.insertBefore(ctx.start, "synchronized(" + fix.lock + ") { ")
     rewriter.insertAfter(ctx.stop, " } ")
+
     val rinterval = new Interval(ctx.getSourceInterval.a,ctx.getSourceInterval.b+1)
 
 //    println("ctx: " + ctx.start.getInputStream.getText(interval)  + "#####")
@@ -106,9 +115,31 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     (ctx.start.getInputStream.getText(interval),rewriter.getText(rinterval))
   }
 
+  def insertInsertDeclareAndInstStatement(rewriter: TokenStreamRewriter,
+                                  ctx: Java8Parser.StatementContext, fix: InsertDeclareAndInst): (String,String) = {
+    val a = ctx.start.getStartIndex
+    val b = ctx.stop.getStopIndex
+    val interval = new Interval(a, b)
+
+    //    println("ctx:" + ctx.start.getInputStream.getText(interval))
+
+    // only work for object now, since it has no arguments
+    val textToInsert = fix.typ + " " + fix.variable + " = " + " new " + fix.typ + "(); "
+    rewriter.insertBefore(ctx.start, textToInsert)
+
+    val rinterval = new Interval(ctx.getSourceInterval.a,ctx.getSourceInterval.a)
+
+    //    println("ctx: " + ctx.start.getInputStream.getText(interval)  + "#####")
+    //    println("rewriter:" + rewriter.getText())
+        println("rewriter:" + rewriter.getText(rinterval) + "#####")
+
+    (ctx.start.getInputStream.getText(interval),textToInsert)
+  }
+
+
 
   def updateSynchronizedStatement(rewriter: TokenStreamRewriter,
-                                  ctx: Java8Parser.SynchronizedStatementContext, fix: Update): (String,String) = {
+                                  ctx: Java8Parser.SynchronizedStatementContext, fix: UpdateSync): (String,String) = {
     val a = ctx.start.getStartIndex
     val b = ctx.stop.getStopIndex
     val interval = new Interval(a, b)

@@ -8,10 +8,13 @@ import org.racerdfix.utils.{ASTStoreElem, FileModif}
 
 sealed trait FixKind
 case object NoFix extends FixKind
-case class Update(cls: String, line: Int, lock_old: String, lock_new: String) extends FixKind
-case class Insert(cls: String, line: Int, resource: String, lock: String) extends FixKind
+case class UpdateSync(cls: String, line: Int, lock_old: String, lock_new: String) extends FixKind
+case class InsertSync(cls: String, line: Int, resource: String, lock: String) extends FixKind
+case class InsertDeclare(cls: String, line: Int, typ: String, variable: String) extends FixKind
+case class InsertDeclareAndInst(cls: String, line: Int, typ: String, variable: String) extends FixKind
 case class And(left: FixKind, right: FixKind) extends FixKind {
   def mkAnd(lst: List[FixKind]) = {
+
     lst match {
       case Nil     => NoFix
       case x::Nil  => x
@@ -34,6 +37,7 @@ case class And(left: FixKind, right: FixKind) extends FixKind {
 }
 
 case class Or(left: FixKind, right: FixKind) extends FixKind {
+
   def mkOr(lst: List[FixKind]) = {
     lst match {
       case Nil     => NoFix
@@ -61,12 +65,67 @@ class PatchCost(val cost: Int) extends Ordered[PatchCost] {
   def compare(that: PatchCost) = this.cost - that.cost
   def add(that: PatchCost) = new PatchCost(this.cost + that.cost)
 }
+sealed trait RewriteKind
+case object Replace extends RewriteKind
+case object InsBefore extends RewriteKind
+case object InsAfter extends RewriteKind
 
-class PatchBlock(var rewriter: TokenStreamRewriter, val patch: String, val start: Token, val stop: Token, val description: String, val cost: PatchCost) {
+class PatchBlock(var rewriter: TokenStreamRewriter, val kind: RewriteKind, val patch: String, val start: Token, val stop: Token, val description: String, val cost: PatchCost) {
   override def toString() : String = {
     patch
   }
 }
+
+sealed trait Patch
+case object NoPatch extends Patch
+case class PInsert(val id: Int, val block: PatchBlock) extends Patch
+case class PUpdate(val id: Int, val block: PatchBlock) extends Patch
+case class PAnd(val left: Patch, val right: Patch) extends Patch {
+
+  def mkAnd(lst: List[Patch]) = {
+    lst match {
+      case Nil     => NoPatch
+      case x::Nil  => x
+      case _       => lst.dropRight(1).foldRight(lst.last)((fix,acc) => PAnd(fix,acc))
+    }
+  }
+
+  def listOf(): List[Patch] = {
+    val left_lst = left match {
+      case PAnd(_,_) => left.asInstanceOf[PAnd].listOf()
+      case _ => List(left)
+    }
+    val right_lst = right match {
+      case PAnd(_,_) => right.asInstanceOf[PAnd].listOf()
+      case _ => List(right)
+    }
+    left_lst ++ right_lst
+  }
+}
+case class POr(val left: Patch, val right: Patch) extends Patch {
+
+  def mkOr(lst: List[Patch]) = {
+    lst match {
+      case Nil     => NoPatch
+      case x::Nil  => x
+      case _       => lst.dropRight(1).foldRight(lst.last)((fix,acc) => POr(fix,acc))
+    }
+  }
+
+  def listOf(): List[Patch] = {
+    val left_lst = left match {
+      case POr(_,_) => left.asInstanceOf[POr].listOf()
+      case _ => List(left)
+    }
+    val right_lst = right match {
+      case POr(_,_) => right.asInstanceOf[POr].listOf()
+      case _ => List(right)
+    }
+    left_lst ++ right_lst
+  }
+
+}
+
 
 
 class Fix(file: String, cls: String, line_start: Int, lines_top: Int, code: String)
