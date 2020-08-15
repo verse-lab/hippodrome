@@ -110,10 +110,13 @@ object TraverseJavaClass  {
    based on the locks available in summary `locks_summ` */
   def generateInsertObjects(locks_summ: RFSumm, resource_summ: RFSumm): List[InsertSync] = {
     locks_summ.locks.foldLeft(List[InsertSync]())((acc, lock) => {
-      val lck    = lock.resource
-      val insert = InsertSync(resource_summ.cls,resource_summ.line,RacerDAPI.varOfResource(resource_summ.resource),lck)
-      insert::acc }
-    )
+      /* double check that there is no double-lock attempt */
+      if (resource_summ.locks.exists(lck => lck.resource == lock.resource)) acc
+      else {
+        val lck = lock.resource
+        val insert = InsertSync(resource_summ.cls, resource_summ.line, RacerDAPI.varOfResource(resource_summ.resource), lck)
+        insert :: acc
+      } } )
   }
 
   /* Generates a list of INSERT objects for the resource in `resource_summ`
@@ -188,9 +191,6 @@ object TraverseJavaClass  {
     syncVisitor.setFix(insert)
     syncVisitor.visit(ast.tree)
     val sblock = syncVisitor.getClassStatement
-    println("cls: " + insert.cls)
-    println("SBLOCK:" + sblock)
-    println("START" + syncVisitor.getClassStart)
     (sblock,syncVisitor.getClassStart) match {
       case (Some(sblock),Some(start)) =>
         val (oldcode,patch) = syncVisitor.insertInsertDeclareAndInstStatement(rewriter,sblock,insert)
@@ -490,6 +490,7 @@ object TraverseJavaClass  {
             println("************* GENERATE FIX *************")
             applyPatch(patch_id_str, grouped_patches)
           } else {
+            println(grouped_patches.getText())
             /* apply the patch with the least cost */
             val patch_id = leastCostlyPatch(grouped_patches)
             patch_id match {

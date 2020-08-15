@@ -136,10 +136,10 @@ object BugProtocol extends DefaultJsonProtocol {
       JsNumber(proc_start),
       JsString(file),
       JsArray(vector),
-      JsString(access),
       JsString(key),
       JsString(hash),
       JsString(bug_type_hum),
+      JsString(access),
       JsString(snapshot1),
       JsString(snapshot2)) =>
         val trace = vector.map(e => jsonToTraceElem(e)).toList
@@ -154,10 +154,10 @@ object BugProtocol extends DefaultJsonProtocol {
       JsNumber(proc_start),
       JsString(file),
       JsArray(vector),
-      JsString(access),
       JsString(key),
       JsString(hash),
       JsString(bug_type_hum),
+      JsString(access),
       JsString(snapshot1)) =>
         val trace = vector.map(e => jsonToTraceElem(e)).toList
         new BugIn(bug_type, qualifier,severity,line.toInt,column.toInt,proc,proc_start.toInt,file,trace,key,hash,bug_type_hum, access,Some(snapshot1),None)

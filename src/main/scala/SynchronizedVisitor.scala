@@ -77,11 +77,9 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   override def visitClassDeclaration(ctx: Java8Parser.ClassDeclarationContext): Unit = {
-    println("CLASS:" + ctx.normalClassDeclaration().Identifier().getText)
     fix match {
       case InsertDeclareAndInst(cls,line,_,_) =>  {
         val classes = RacerDAPI.classToListOfCls(cls)
-        println("CLASSES:" + classes.toString)
         if (classes.contains(ctx.normalClassDeclaration().Identifier().getText)){
           classStmt = Some(ctx)
         }

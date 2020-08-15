@@ -142,6 +142,7 @@ object RacerDFix {
     /* for each bug in `bugs` find a patch and possibly generate a fix */
     val ast = new ASTManipulation
     bugs.foreach(bug => {
+      println("**************** BUG: " + bug.hash + " ************* ")
       bug.snapshot2 match {
         case Nil => {/* possibly Unprotected write */
           /* assumes that snapshot1 is non-empty*/
