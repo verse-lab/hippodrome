@@ -6,12 +6,15 @@ case class FixConfig(
                       // Modus Operandi params
                       interactive: Boolean      = false,
                       testing:     Boolean      = false,
+                      intellij:    Boolean      = false,
+                      log:         Boolean      = true,
                       // Files
                       json_path: String         = Globals.results_out_dir,
                       json_bugs:   String       = Globals.json_bugs_file,
                       json_summaries: String    = Globals.json_summaries,
                       json_patches: String      = Globals.json_patches,
                       java_sources_path: String = Globals.def_src_path,
+                      log_file: String          = Globals.log_file,
                       // Infer
                       config_file: String       = Globals.config_file,
                       infer: String             = Globals.def_infer,

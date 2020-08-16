@@ -32,6 +32,8 @@ object Globals {
   val def_src_path     = "src/test/java/"
   val def_src_filename = "RacyFalseNeg.java"
   val def_src_file     = def_src_path + def_src_filename
+  val log_file         = "log.txt"
+  val log              = true
 
   /* tackled bugs type (see infer's documentation for a full list of bug types) */
   val tackled_bug_kinds = List("THREAD_SAFETY_VIOLATION_2")
