@@ -4,7 +4,7 @@ import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertD
 import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.antlr.Java8Parser
 import org.antlr.v4.runtime.{TokenStream, TokenStreamRewriter}
-import utils.{ASTManipulation, ASTStoreElem, FileModif}
+import utils.{ASTManipulation, ASTStoreElem, FileModif, PatchStore}
 
 import scala.io.StdIn.readLine
 import scala.collection.mutable.HashMap
@@ -221,9 +221,11 @@ object TraverseJavaClass  {
 
   def applyPatch_def(
                  patch_id: Int,
-                 patches: GroupByIdPatchOptions): Unit = {
+                 patches: GroupByIdPatchOptions,
+                 patchStore: PatchStore): Unit = {
     try {
       val patches0 = patches.map(patch_id)
+      patchStore.update(patch_id, patches)
       patches0.foreach( x => {
         val rewriter = x.rewriter
         x.kind match{
@@ -239,10 +241,11 @@ object TraverseJavaClass  {
 
   def applyPatch_helper(
                      patch_id_str: String,
-                     patches: GroupByIdPatchOptions): Unit = {
+                     patches: GroupByIdPatchOptions,
+                     patchStore: PatchStore): Unit = {
     try {
       val patch_id = patch_id_str.toInt
-      applyPatch_def(patch_id, patches)
+      applyPatch_def(patch_id, patches, patchStore)
     } catch {
       case _: Exception => {println("Invalid patch ID")
         None
@@ -252,12 +255,13 @@ object TraverseJavaClass  {
 
   /* debugger */
   def applyPatch( patch_id_str: String,
-                  patches: GroupByIdPatchOptions): Unit = {
+                  patches: GroupByIdPatchOptions,
+                  patchStore: PatchStore): Unit = {
     if (false){
       println("Patch id: " + patch_id_str)
       println("Patches: "  + patches)
     }
-    applyPatch_helper(patch_id_str, patches)
+    applyPatch_helper(patch_id_str, patches, patchStore)
   }
 
   /* Generates a list of patches corresponding to the list of UPDATE objects (updates) */
@@ -381,7 +385,7 @@ object TraverseJavaClass  {
     }
   }
 
-  def mainAlgo(csumm1: RFSumm, csumm2: Option[RFSumm], config: FixConfig, ast: ASTManipulation): Unit = {
+  def mainAlgo(csumm1: RFSumm, csumm2: Option[RFSumm], config: FixConfig, ast: ASTManipulation, patchStore: PatchStore): Unit = {
     /* ******** */
     /*   PARSE  */
     val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1, csumm2, ast)
@@ -411,7 +415,7 @@ object TraverseJavaClass  {
         println(grouped_patches.getText())
 
         println("************* GENERATE FIX *************")
-        applyPatch_def(patch_id, grouped_patches)
+        applyPatch_def(patch_id, grouped_patches, patchStore)
       }
       case Some(summ2) => {
         if ((summ1.csumm.locks concat summ2.csumm.locks).length > 0) {
@@ -488,14 +492,14 @@ object TraverseJavaClass  {
             val patch_id_str = readLine()
 
             println("************* GENERATE FIX *************")
-            applyPatch(patch_id_str, grouped_patches)
+            applyPatch(patch_id_str, grouped_patches, patchStore)
           } else {
             println(grouped_patches.getText())
             /* apply the patch with the least cost */
             val patch_id = leastCostlyPatch(grouped_patches)
             patch_id match {
               case None =>
-              case Some(id) => applyPatch_def(id, grouped_patches)
+              case Some(id) => applyPatch_def(id, grouped_patches, patchStore)
             }
           }
         } else {
@@ -525,7 +529,7 @@ object TraverseJavaClass  {
           println(grouped_patches.getText())
 
           println("************* GENERATE FIX *************")
-          applyPatch_def(patch_id, grouped_patches)
+          applyPatch_def(patch_id, grouped_patches, patchStore)
         }
       }
     }

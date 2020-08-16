@@ -1,7 +1,9 @@
 package org.racerdfix.inferAPI
 
-import org.racerdfix.language._
-import org.racerdfix.{Config, FixConfig}
+import java.io.{BufferedWriter, FileWriter}
+
+import org.racerdfix.language.{PatchBlock, _}
+import org.racerdfix.{Config, FixConfig, GroupByIdPatchOptions}
 import spray.json._
 import org.racerdfix.utils.FileManipulation
 
@@ -79,6 +81,29 @@ object BugProtocol extends DefaultJsonProtocol {
     }
   }
 
+  def patchBlockToJson(patch: PatchBlock) = {
+    JsObject(
+      "start" -> JsNumber(patch.start.getLine),
+      "stop"  -> JsNumber(patch.stop.getLine),
+      "partial_patch" -> JsString(patch.patch),
+      "kind"  -> JsString(patch.kind.getText),
+      "description" -> JsString(patch.description)
+    )
+  }
+
+  def patchToJson(id: Int, patches: List[PatchBlock]) = {
+    JsObject(
+      "patch_id" -> JsNumber(id),
+      "patch"    -> JsArray(patches.map(p => patchBlockToJson(p)).toVector)
+    )
+  }
+
+  def patchesToJson(patches: GroupByIdPatchOptions) = {
+    JsObject(
+      "patch_options" -> JsArray(patches.map.toList.map( k => patchToJson(k._1,k._2)).toVector)
+    )
+  }
+
   def bugToJson(bugO: Bugs) = {
     if (bugO.isInstanceOf[BugIn]) {
       val bug = bugO.asInstanceOf[BugIn]
@@ -107,7 +132,37 @@ object BugProtocol extends DefaultJsonProtocol {
         "snapshot1" -> JsString(snapshot1),
         "snapshot2" -> JsString(snapshot2)
       )
-    } else JsObject()
+    } else if (bugO.isInstanceOf[BugOut]) {
+      val bug = bugO.asInstanceOf[BugOut]
+      val snapshot2 = bug.snapshot2_hash match {
+        case None => ""
+        case Some(snp) => snp
+      }
+      val snapshot1 = bug.snapshot1_hash match {
+        case None => ""
+        case Some(snp) => snp
+      }
+      JsObject(
+        "bug_type" -> JsString(bug.bug_type),
+        "qualifier" -> JsString(bug.qualifier),
+        "severity" -> JsString(bug.severity),
+        "line" -> JsNumber(bug.line),
+        "column" -> JsNumber(bug.column),
+        "procedure" -> JsString(bug.proc),
+        "procedure_start_line" -> JsNumber(bug.proc_start),
+        "file" -> JsString(bug.file),
+        "bug_trace" -> JsArray(bug.bug_trace.map(e => traceElemToJson(e)).toVector),
+        "key" -> JsString(bug.key),
+        "hash" -> JsString(bug.hash),
+        "bug_type_hum" -> JsString(bug.bug_type_hum),
+        "access" -> JsString(bug.access),
+        "snapshot1" -> JsString(snapshot1),
+        "snapshot2" -> JsString(snapshot2),
+        "patch_choice" -> JsNumber(bug.patch_choice),
+        "patches" -> patchesToJson(bug.patches)
+      )
+    }
+    else JsObject()
   }
 
   def jsonToBug(value: JsValue) = {
@@ -307,6 +362,16 @@ class InterpretJson(val config: FixConfig) {
     val jsonAst = src.parseJson
     val bugsDS  = jsonAst.convertTo[TranslationResult[Bugs]]
     bugsDS
+  }
+
+  def printJsonBugsResults(bugsOut: List[BugOut]): Unit = {
+    import BugProtocol._
+    val jsonBugResults = config.getJsonBugsResults
+    val bw = new BufferedWriter(new FileWriter(jsonBugResults))
+    val res = new TranslationResult[Bugs](bugsOut)
+    val str = res.toJson.toString()
+    bw.write(str)
+    bw.close()
   }
 
   def getJsonSummaries(): TranslationResult[SummaryIn] = {

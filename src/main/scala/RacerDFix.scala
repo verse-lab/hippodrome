@@ -1,9 +1,9 @@
 package org.racerdfix
 
-import org.racerdfix.language.{BugIn, RFSumm, SummaryIn}
+import org.racerdfix.language.{BugIn, BugOut, RFSumm, SummaryIn}
 import org.racerdfix.TraverseJavaClass.mainAlgo
 import org.racerdfix.inferAPI.{InterpretJson, TranslationResult}
-import org.racerdfix.utils.ASTManipulation
+import org.racerdfix.utils.{ASTManipulation, PatchStore}
 import spray.json.DeserializationException
 
 import scala.io.StdIn.readLine
@@ -141,8 +141,10 @@ object RacerDFix {
 
     /* for each bug in `bugs` find a patch and possibly generate a fix */
     val ast = new ASTManipulation
+    val patchStore = new PatchStore
     bugs.foreach(bug => {
       println("**************** BUG: " + bug.hash + " ************* ")
+      patchStore.bug = bug.hash
       bug.snapshot2 match {
         case Nil => {/* possibly Unprotected write */
           /* assumes that snapshot1 is non-empty*/
@@ -151,7 +153,7 @@ object RacerDFix {
             if (cost(summ.getCost(costSumm), acc.getCost(costSumm ))) summ
             else acc
           } )
-          mainAlgo(summ1, None, config, ast)
+          mainAlgo(summ1, None, config, ast, patchStore)
           }
         case _   => {/* Read/Write */
           /* assumes that snapshot1 is non-empty*/
@@ -164,13 +166,16 @@ object RacerDFix {
             if (cost(summ.getCost(costSumm), acc.getCost(costSumm ))) summ
             else acc
           } )
-          mainAlgo(summ1, Some(summ2), config, ast)
+          mainAlgo(summ1, Some(summ2), config, ast, patchStore)
         }
       }
     })
 
     /* Write the fixes to files */
+    /* TODO for logging purposes, but also for generating the json, perhaps ast should also account for the patches*/
     ast.dumpAll(config, initial_iteration)
+    val bugsOut = bugsIn.results.map(bug => bug.toBugOut(patchStore))
+    jsonTranslator.printJsonBugsResults(bugsOut)
 
     /* VALIDATON */
     val val_res = infer_process.!

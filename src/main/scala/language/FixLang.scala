@@ -1,8 +1,7 @@
 package org.racerdfix.language
 
-import org.antlr.v4.runtime.{Token, TokenStream, TokenStreamRewriter}
-import org.racerdfix.antlr.Java8Parser
-import org.racerdfix.utils.{ASTStoreElem, FileModif}
+import org.antlr.v4.runtime.{Token, TokenStreamRewriter}
+import org.racerdfix.utils.{ASTStoreElem}
 
 /* FIXES */
 
@@ -65,10 +64,12 @@ class PatchCost(val cost: Int) extends Ordered[PatchCost] {
   def compare(that: PatchCost) = this.cost - that.cost
   def add(that: PatchCost) = new PatchCost(this.cost + that.cost)
 }
-sealed trait RewriteKind
-case object Replace extends RewriteKind
-case object InsBefore extends RewriteKind
-case object InsAfter extends RewriteKind
+sealed trait RewriteKind {
+  def getText() = ""
+}
+case object Replace extends RewriteKind    { override def getText() = "Replace"}
+case object InsBefore extends RewriteKind  { override def getText() = "InsBefore"}
+case object InsAfter extends RewriteKind   { override def getText() = "InsAfter"}
 
 class PatchBlock(var rewriter: TokenStreamRewriter, val kind: RewriteKind, val patch: String, val start: Token, val stop: Token, val description: String, val cost: PatchCost) {
   override def toString() : String = {

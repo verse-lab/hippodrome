@@ -1,6 +1,10 @@
 package  org.racerdfix.language
 
+import org.racerdfix.GroupByIdPatchOptions
 import org.racerdfix.inferAPI.RacerDAPI
+import org.racerdfix.utils.PatchStore
+
+import scala.collection.mutable.HashMap
 
 /*  bug */
 class TraceElem(val level: Int, val filename: String, val line_number: Int,val column_number: Int, val description: String)
@@ -29,7 +33,25 @@ case class BugIn(val bug_type: String, val qualifier: String, val severity: Stri
     }
     new FBug(summ1, summ2, hash)
   }
+
+  def toBugOut(patchStore: PatchStore): BugOut = {
+    try {
+      new BugOut(bug_type,qualifier,severity, line, column, proc, proc_start, file, bug_trace, key, hash, bug_type_hum, access,
+        snapshot1_hash, snapshot2_hash, patchStore.map(hash).choiceId, patchStore.map(hash).patches)
+    } catch {
+      case _ =>        new BugOut(bug_type,qualifier,severity, line, column, proc, proc_start, file, bug_trace, key, hash, bug_type_hum, access,
+        snapshot1_hash, snapshot2_hash, -1, new GroupByIdPatchOptions(HashMap.empty))
+    }
+  }
 }
+
+case class BugOut(val bug_type: String, val qualifier: String, val severity: String, val line: Int, val column: Int,
+                   val proc: String, val proc_start: Int, val file: String,
+                   val bug_trace: List[TraceElem], val key: String, val hash: String, val bug_type_hum: String, val access: String,
+                   val snapshot1_hash: Option[String], val snapshot2_hash: Option[String],
+                   val patch_choice: Int,
+                   val patches: GroupByIdPatchOptions) extends Bugs
+
 
 class SummaryIn(var file: String, val procedure: String, var accesses: List[AccessElem]) {
 

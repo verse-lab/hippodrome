@@ -25,6 +25,11 @@ case class FixConfig(
       ++ (List(s"testing = $testing"))
       ).mkString(", ")
 
+  def getJsonBugsResults = {
+    if (json_patches != Globals.json_patches) json_patches
+    else json_path + Globals.json_patches_filename
+  }
+
   def getJsonBugs = {
     if (json_bugs != Globals.json_bugs_file) json_bugs
     else json_path + Globals.json_bugs_filename
