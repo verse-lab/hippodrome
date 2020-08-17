@@ -42,7 +42,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   override def visitExpressionName(ctx: Java8Parser.ExpressionNameContext): Unit = {
-//    println("VISIT EXPRESSION " + ctx.getText)
+ //   println("VISIT EXPRESSION " + ctx.getText)
 //    println(ctx.children)
     fix match {
       case InsertSync(cls, line, unprotected_resource, lock_new) => {
@@ -59,21 +59,21 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           resource = Some(ctx)
         }
       }
-      case UpdateSync(cls, line, lock_old, lock_new) =>
-      case _ =>
+      case _ => this.visitChildren(ctx)
     }
-    this.visitChildren(ctx)
   }
 
   /* capture the inner most statement which contains the culprit resource */
   override def visitStatement(ctx: Java8Parser.StatementContext): Unit = {
-    this.visitChildren(ctx)
     resource match {
-      case None      =>
-      case Some(res) => {
-        resource = None
-        resourceStatement = Some(ctx)
-      }
+      case None      => { this.visitChildren(ctx)
+        resource match {
+          case None =>
+          case Some(_) =>
+            resource = None
+            resourceStatement = Some(ctx)
+        }}
+      case Some(_) =>
     }
   }
 
@@ -85,9 +85,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           classStmt = Some(ctx)
         }
       }
-      case _ =>
+      case _ => this.visitChildren(ctx)
     }
-    this.visitChildren(ctx)
   }
 
   override def visitFieldAccess(ctx: Java8Parser.FieldAccessContext): Unit = {
