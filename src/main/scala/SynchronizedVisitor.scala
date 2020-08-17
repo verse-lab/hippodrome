@@ -48,7 +48,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
       case InsertSync(cls, line, unprotected_resource, lock_new) => {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
           val vars = RacerDAPI.refToListOfRef(ctx.getText)
-          if (vars.contains(unprotected_resource)){
+          val vars_extended = vars.map(v => if (cls.length >0 ) cls + "." + v else v)
+          if ((vars ++ vars_extended).contains(unprotected_resource)){
             resource = Some(ctx)
           }
         }
