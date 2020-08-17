@@ -4,7 +4,7 @@ import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertD
 import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.antlr.Java8Parser
 import org.antlr.v4.runtime.{TokenStream, TokenStreamRewriter}
-import utils.{ASTManipulation, ASTStoreElem, FileModif, PatchStore}
+import utils.{ASTManipulation, ASTStoreElem, FileModif, Logging, PatchStore}
 
 import scala.io.StdIn.readLine
 import scala.collection.mutable.HashMap
@@ -385,7 +385,7 @@ object TraverseJavaClass  {
     }
   }
 
-  def mainAlgo(csumm1: RFSumm, csumm2: Option[RFSumm], config: FixConfig, ast: ASTManipulation, patchStore: PatchStore): Unit = {
+  def mainAlgo_def(csumm1: RFSumm, csumm2: Option[RFSumm], config: FixConfig, ast: ASTManipulation, patchStore: PatchStore): Unit = {
     /* ******** */
     /*   PARSE  */
     val (summ1,summ2) = translateRawSnapshotsToSnapshots(csumm1, csumm2, ast)
@@ -533,6 +533,12 @@ object TraverseJavaClass  {
         }
       }
     }
+  }
+
+  /* logging wrapper for mainAlgo */
+  def mainAlgo(csumm1: RFSumm, csumm2: Option[RFSumm], config: FixConfig, ast: ASTManipulation, patchStore: PatchStore): Unit = {
+    def fnc (a: Unit) = mainAlgo_def(csumm1: RFSumm, csumm2: Option[RFSumm], config: FixConfig, ast: ASTManipulation, patchStore: PatchStore)
+    Logging.addTime("Time to generate patch: ", fnc, ())
   }
 }
 

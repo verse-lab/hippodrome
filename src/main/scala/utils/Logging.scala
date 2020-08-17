@@ -32,7 +32,15 @@ object Logging {
 
    def add(str: String) = {
      if(config.log) {
-       bw.write(str)
+       bw.write(str + "\n")
      }
+   }
+
+   def addTime[A,B](str: String, fnc: A => B, arg: A): B = {
+     val time_start = System.currentTimeMillis()
+     val res = fnc(arg)
+     val time_stop  = System.currentTimeMillis()
+     bw.write(str + (time_stop - time_start) + " ms "  + "\n")
+     res
    }
 }

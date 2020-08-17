@@ -14,6 +14,8 @@ class PatchStore{
   var bug = ""
 
   def update(choice: Int, patches: GroupByIdPatchOptions) = {
+    Logging.add("Patch ID:" + choice)
+    Logging.add("Patch: " + patches.map(choice).map( pb => pb.toStringDetailed() + "\n"))
     map.update(new PatchStoreKey(bug).getText, new PatchStoreElem(choice, patches))
   }
 }

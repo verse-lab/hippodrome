@@ -75,6 +75,10 @@ class PatchBlock(var rewriter: TokenStreamRewriter, val kind: RewriteKind, val p
   override def toString() : String = {
     patch
   }
+
+  def toStringDetailed() : String = {
+    description
+  }
 }
 
 sealed trait Patch
