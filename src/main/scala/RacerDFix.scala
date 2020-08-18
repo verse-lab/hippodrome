@@ -1,12 +1,10 @@
 package org.racerdfix
 
-import org.racerdfix.language.{BugIn, BugOut, FBug, PatchBlock, RFSumm, SummaryIn}
+import org.racerdfix.language.{BugIn, Bugs, RFSumm, SummaryIn}
 import org.racerdfix.TraverseJavaClass.mainAlgo
 import org.racerdfix.inferAPI.{InterpretJson, TranslationResult}
 import org.racerdfix.utils.{ASTManipulation, BugsMisc, BugsStore, Logging, PatchStore}
-import spray.json.DeserializationException
 
-import scala.collection.mutable.HashMap
 import scala.io.StdIn.readLine
 import scala.sys.process._
 
@@ -83,7 +81,12 @@ object RacerDFix {
       rc.copy(fixConfig = {
         val jsonTranslator = new InterpretJson(rc.fixConfig.copy(config_file = b))
         val infer_config = jsonTranslator.getJsonConfig()
-        rc.fixConfig.copy(config_file = b, infer = infer_config.infer, infer_opt = infer_config.infer_opt, infer_target_files = infer_config.infer_target_files, json_path = infer_config.json_path)})
+        rc.fixConfig.copy(config_file = b,
+          infer = infer_config.infer,
+          infer_opt = infer_config.infer_opt,
+          infer_target_files = infer_config.infer_target_files,
+          json_path = infer_config.json_path,
+          prio_files = infer_config.prio_files)})
     }.text("the config file to setup infers. The default one is " + Globals.config_file)
 
 
@@ -147,7 +150,13 @@ object RacerDFix {
     val summariesIn = jsonTranslator.getJsonSummaries()
     val norm_and_translate = ((s:SummaryIn) => s.racerDToRacerDFix())
     val summaries   = summariesIn.results.flatMap(norm_and_translate)
-    val bugsInAll   = jsonTranslator.getJsonBugs()
+    val bugsInAll   = {
+      val bugs = jsonTranslator.getJsonBugs()
+      config.prio_files match {
+        case Nil => bugs
+        case _   => new TranslationResult[Bugs](bugs.results.filter(bug =>
+        { bug.isInstanceOf[BugIn] && config.prio_files.contains(bug.asInstanceOf[BugIn].file) }))
+      }}
     val bugsIn      = new TranslationResult[BugIn](bugsInAll.results.filter(b => b.isInstanceOf[BugIn] &&
       Globals.tackled_bug_kinds.contains(b.asInstanceOf[BugIn].bug_type)).map(b => b.asInstanceOf[BugIn]))
     val bugs        = bugsIn.results.map(b => b.racerDToRacerDFix(summaries))
