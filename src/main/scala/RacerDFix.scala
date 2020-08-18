@@ -152,11 +152,13 @@ object RacerDFix {
     val summaries   = summariesIn.results.flatMap(norm_and_translate)
     val bugsInAll   = {
       val bugs = jsonTranslator.getJsonBugs()
+      /* filter out all the bugs located in files not specified by `prio_file` in `CONFIG.json` */
       config.prio_files match {
         case Nil => bugs
         case _   => new TranslationResult[Bugs](bugs.results.filter(bug =>
         { bug.isInstanceOf[BugIn] && config.prio_files.contains(bug.asInstanceOf[BugIn].file) }))
       }}
+    /* filter out all the bugs not related to data races */
     val bugsIn      = new TranslationResult[BugIn](bugsInAll.results.filter(b => b.isInstanceOf[BugIn] &&
       Globals.tackled_bug_kinds.contains(b.asInstanceOf[BugIn].bug_type)).map(b => b.asInstanceOf[BugIn]))
     val bugs        = bugsIn.results.map(b => b.racerDToRacerDFix(summaries))
@@ -179,66 +181,6 @@ object RacerDFix {
       val summs = bugs_group.foldLeft[List[RFSumm]](Nil)((acc,bug) =>  {acc ++ BugsMisc.retrieveSummary(bug)})
       mainAlgo(summs, config, ast, patchStore)
     })
-//      println("**************** BUG: " + bug.hash + " ************* ")
-//      patchStore.bug = bug.hash
-//      Logging.add("*********************************")
-//      Logging.add("bug: " + bug.hash)
-//      bug.snapshot2 match {
-//        case Nil => {/* possibly Unprotected write */
-//          /* assumes that snapshot1 is non-empty*/
-//          println("Unprotected Write")
-//          val summ1 = bug.snapshot1.foldLeft(bug.snapshot1.head)((acc,summ) => {
-//            if (cost(summ.getCost(costSumm), acc.getCost(costSumm ))) summ
-//            else acc
-//          } )
-//          mainAlgo(summ1, None, config, ast, patchStore)
-//        }
-//        case _   => {/* Read/Write */
-//          /* assumes that snapshot1 is non-empty*/
-//          println("Read/Write Race")
-//          val summ1 = bug.snapshot1.foldLeft(bug.snapshot1.head)((acc,summ) => {
-//            if (cost(summ.getCost(costSumm), acc.getCost(costSumm ))) summ
-//            else acc
-//          } )
-//          val summ2 = bug.snapshot2.foldLeft(bug.snapshot2.head)((acc,summ) => {
-//            if (cost(summ.getCost(costSumm), acc.getCost(costSumm ))) summ
-//            else acc
-//          } )
-//          mainAlgo(summ1, Some(summ2), config, ast, patchStore)
-//        }
-//      }
-//    })
-//
-
-//      bugs.foreach(bug => {
-//      println("**************** BUG: " + bug.hash + " ************* ")
-//      patchStore.bug = bug.hash
-//      Logging.add("*********************************")
-//      Logging.add("bug: " + bug.hash)
-//
-//        /* assumes that snapshot1 is non-empty*/
-//        val summ1 = bug.snapshot1.foldLeft[Option[RFSumm]](None)((acc,summ) => {
-//          acc match {
-//            case None => Some(summ)
-//            case Some(summ2) => if (lessExpensive(summ.getCost(costSumm), summ2.getCost(costSumm ))) Some(summ) else  acc
-//          }
-//        } )
-//        val summ2 = bug.snapshot2.foldLeft[Option[RFSumm]](None)((acc,summ) => {
-//          acc match {
-//            case None => Some(summ)
-//            case Some(summ2) => if (lessExpensive(summ.getCost(costSumm), summ2.getCost(costSumm ))) Some(summ) else  acc
-//          }
-//        } )
-//        val summ1_lst = summ1 match {
-//          case Some(summ) => List(summ)
-//          case None => Nil
-//        }
-//        val summ2_lst = summ2 match {
-//          case Some(summ) => List(summ)
-//          case None => Nil
-//        }
-//        mainAlgo((summ1_lst ++ summ2_lst), config, ast, patchStore)
-//    })
 
     /* Write the fixes to files */
     /* TODO for logging purposes, but also for generating the json, perhaps ast should also account for the patches*/

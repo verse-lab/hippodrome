@@ -387,7 +387,7 @@ object TraverseJavaClass  {
     val summs = translateRawSnapshotsToSnapshots(csumms, ast)
 
     println("************* GENERATE PATCH *************")
-//    if ( true /*csumm1.resource == csumm2.resource*/) {
+    //    if ( true /*csumm1.resource == csumm2.resource*/) {
     var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, List[PatchBlock]])
     summs match {
       case Nil =>
@@ -425,60 +425,49 @@ object TraverseJavaClass  {
             case Some (lck_0) => if (lck_ext._2 < lck_0._2) Some(lck_0) else Some(lck_ext)
           }
         })
-        val (fix,lock) = {
+        val (fix_aux,lock) = {
           candidate_lock match {
             case Some(lck) => (NoFix, lck._1)
             case None      => {
               /* CREATE new lock object */
               val varName = "obj" + RacerDFix.patchIDGenerator
-//              /* TODO: populate with the right details */
               val declareObj = InsertDeclareAndInst(summs.head,summs.head.csumm.cls,summs.head.csumm.line,"Object", varName)
-//              val declareObj = NoFix
               (declareObj, new Lock("this",summs.head.csumm.cls,varName))
             }
           }
         }
-        //if (existing_locks.length > 0) {
 
-          /* Both statements are synchronized but there is no common lock ==>
-        *  1. UPDATE one of the locks with a lock from the peer statement
-        *  2. INSERT a new synchronization over one of the two statements  */
+        val grouped_patches = {
+          /* ************** INSERTS ***************** */
+          /* generate insert objects */
+          val insert = summs.foldLeft(fix_aux:FixKind)((acc,p) => new And(acc,(generateInsertObjects(p,lock))))
 
-          val patches1 = {
-            /* ************** INSERTS ***************** */
-            /* generate insert objects */
-            val insert = summs.foldLeft(fix:FixKind)((acc,p) => new And(acc,(generateInsertObjects(p,lock))))
+          /* generate inserts patches */
+          val insert_patches = generatePatches(insert)
+          /* group patches based on their ID */
+          val patches = generateGroupPatches(empty_map, insert_patches)
 
-            /* generate inserts patches */
-            val insert_patches1 = generatePatches(insert)
+          patches
+        }
 
+        if (config.interactive) {
+          /* when working in interactive mode allow the user to choose the patch */
+          println(grouped_patches.getText())
 
-//            val patches1 = generateGroupPatches(empty_map, update_patches1 ++ insert_patches1, summ1)
-//            val patches2 = generateGroupPatches(patches1, update_patches2 ++ insert_patches2, summ2)
-            val patches = generateGroupPatches(empty_map, insert_patches1)
-            patches
+          println("Choose a patch <enter patch id>")
+          val patch_id_str = readLine()
+
+          println("************* GENERATE FIX *************")
+          applyPatch(patch_id_str, grouped_patches, patchStore)
+        } else {
+          println(grouped_patches.getText())
+          /* apply the patch with the least cost */
+          val patch_id = leastCostlyPatch(grouped_patches)
+          patch_id match {
+            case None =>
+            case Some(id) => applyPatch_def(id, grouped_patches, patchStore)
           }
-
-          val grouped_patches = patches1
-
-          if (config.interactive) {
-            /* when working in interactive mode allow the user to choose the patch */
-            println(grouped_patches.getText())
-
-            println("Choose a patch <enter patch id>")
-            val patch_id_str = readLine()
-
-            println("************* GENERATE FIX *************")
-            applyPatch(patch_id_str, grouped_patches, patchStore)
-          } else {
-            println(grouped_patches.getText())
-            /* apply the patch with the least cost */
-            val patch_id = leastCostlyPatch(grouped_patches)
-            patch_id match {
-              case None =>
-              case Some(id) => applyPatch_def(id, grouped_patches, patchStore)
-            }
-          }
+        }
         //}
       }
     }
