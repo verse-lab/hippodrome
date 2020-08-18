@@ -28,14 +28,14 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
   override def visitSynchronizedStatement(ctx: Java8Parser.SynchronizedStatementContext): Unit = {
     fix match {
-      case UpdateSync(cls, line, lock_old, lock_new) => {
+      case UpdateSync(_,cls, line, lock_old, lock_new) => {
         val block = ctx.block()
         if (Globals.getRealLineNo(block.getStart.getLine) <= line && line <= Globals.getRealLineNo(block.getStop.getLine)) {
           if (lock_old== ctx.expression().getText)
             sblock = Some (ctx)
         }
       }
-      case InsertSync(_, _, _, _) =>
+      case InsertSync(_,_, _, _, _) =>
       case _ =>
     }
     this.visitChildren(ctx)
@@ -45,7 +45,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
  //   println("VISIT EXPRESSION " + ctx.getText)
 //    println(ctx.children)
     fix match {
-      case InsertSync(cls, line, unprotected_resource, lock_new) => {
+      case InsertSync(_,cls, line, unprotected_resource, lock_new) => {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
           val vars = RacerDAPI.refToListOfRef(ctx.getText)
           val vars_extended = vars.map(v => if (cls.length >0 ) cls + "." + v else v)
@@ -54,7 +54,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           }
         }
       }
-      case InsertDeclareAndInst(cls,line,_,_) =>  {
+      case InsertDeclareAndInst(_,cls,line,_,_) =>  {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
           resource = Some(ctx)
         }
@@ -79,7 +79,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
   override def visitClassDeclaration(ctx: Java8Parser.ClassDeclarationContext): Unit = {
     fix match {
-      case InsertDeclareAndInst(cls,line,_,_) =>  {
+      case InsertDeclareAndInst(_,cls,line,_,_) =>  {
         val classes = RacerDAPI.classToListOfCls(cls)
         if (classes.contains(ctx.normalClassDeclaration().Identifier().getText)){
           classStmt = Some(ctx)

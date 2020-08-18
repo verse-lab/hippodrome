@@ -7,10 +7,10 @@ import org.racerdfix.utils.{ASTStoreElem}
 
 sealed trait FixKind
 case object NoFix extends FixKind
-case class UpdateSync(cls: String, line: Int, lock_old: String, lock_new: String) extends FixKind
-case class InsertSync(cls: String, line: Int, resource: String, lock: String) extends FixKind
-case class InsertDeclare(cls: String, line: Int, typ: String, variable: String) extends FixKind
-case class InsertDeclareAndInst(cls: String, line: Int, typ: String, variable: String) extends FixKind
+case class UpdateSync(val fsumm: FSumm, cls: String, line: Int, lock_old: String, lock_new: String) extends FixKind
+case class InsertSync(val fsumm: FSumm, cls: String, line: Int, resource: String, lock: String) extends FixKind
+case class InsertDeclare(val fsumm: FSumm, cls: String, line: Int, typ: String, variable: String) extends FixKind
+case class InsertDeclareAndInst(val fsumm: FSumm, cls: String, line: Int, typ: String, variable: String) extends FixKind
 case class And(left: FixKind, right: FixKind) extends FixKind {
   def mkAnd(lst: List[FixKind]) = {
 
@@ -152,7 +152,9 @@ sealed trait Trace {
 case object EmptyTrace extends Trace
 case class  NonEmptyTrace(val trace:List[String]) extends Trace
 
-class Lock(val obj: String, val cls: String, val resource: String)
+class Lock(val obj: String, val cls: String, val resource: String) {
+  def equals(obj: Lock): Boolean = this.obj == obj.obj && this.cls == obj.cls && this.resource == obj.resource
+}
 
 /* raw racerdfix snapshot */
 class RFSumm(val filename: String, val cls: String, val resource: String, val access: AccessKind, val locks: List[Lock], val line: Int, val trace: Trace, val hash: String){

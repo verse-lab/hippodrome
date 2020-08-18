@@ -69,7 +69,7 @@ object RacerDAPI {
     result
   }
 
-  /* P<0>{(this:B*).myA2} ==> B */
+  /* P<0>{(this:B*).myA2} ==> (this,B,myA2) */
   def lockOfString(str: String): Lock = {
     val cls      = classNameOfLockString_def(str)
     val obj      = objectOfLockString_def(str)
