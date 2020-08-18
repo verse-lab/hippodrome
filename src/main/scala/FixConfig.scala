@@ -19,7 +19,8 @@ case class FixConfig(
                       config_file: String       = Globals.config_file,
                       infer: String             = Globals.def_infer,
                       infer_opt: Seq[String]    = Globals.def_infer_options,
-                      infer_target_files: Seq[String]  = Globals.def_target_files
+                      infer_target_files: Seq[String]  = Globals.def_target_files,
+                      prio_files: List[String]  = Nil  // checks only the bugs in prio_files if the list in non-empty
 
   ) extends PrettyPrinting {
 
@@ -49,4 +50,6 @@ case class RacerDFixException(msg: String) extends Exception(msg)
 class Config(val infer: String,
              val infer_opt: Seq[String],
              val json_path: String,
-             val infer_target_files: Seq[String])
+             val infer_target_files: Seq[String],
+             val prio_files: List[String]
+            )

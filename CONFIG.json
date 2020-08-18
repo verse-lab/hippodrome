@@ -1,1 +1,6 @@
-{"infer":"/Users/andrea/git/infer-clean/infer/infer/bin/infer","options":["--racerdfix-only", "--starvation"],"json_path": "./infer-out/","target_options": ["--", "javac", "src/test/java/RacyFalseNeg.java"]}
+{"infer":"/Users/andrea/git/infer-clean/infer/infer/bin/infer",
+  "options":["--racerdfix-only", "--starvation"],
+  "json_path": "./infer-out/",
+  "target_options": ["--", "javac", "src/test/java/RacyFalseNeg.java"],
+  "prio_files":  ["src/test/java/RacyFalseNeg.java"]
+}

@@ -18,7 +18,8 @@ object ConfigProtocol extends DefaultJsonProtocol {
       "infer"          -> JsString(configInfer.infer),
       "options"        -> JsArray(configInfer.infer_opt.map(f => JsString(f)).toVector),
       "json_path"       -> JsString(configInfer.json_path),
-      "target_options" -> JsArray(configInfer.infer_target_files.map(f => JsString(f)).toVector)
+      "target_options" -> JsArray(configInfer.infer_target_files.map(f => JsString(f)).toVector),
+      "prio_files"     -> JsArray(configInfer.prio_files.map(f => JsString(f)).toVector)
     )
   }
 
@@ -34,12 +35,14 @@ object ConfigProtocol extends DefaultJsonProtocol {
       "infer",
       "options",
       "json_path",
-      "target_options") match {
+      "target_options",
+      "prio_files") match {
       case Seq( JsString(infer),
       JsArray(infer_opt),
       JsString(json_path),
-      JsArray(infer_target_files)) =>
-        new Config(infer,infer_opt.map(v => jsonToString(v)).toList,json_path,infer_target_files.map(v => jsonToString(v)).toList)
+      JsArray(infer_target_files),
+      JsArray(prio_files)) =>
+        new Config(infer,infer_opt.map(v => jsonToString(v)).toList,json_path,infer_target_files.map(v => jsonToString(v)).toList, prio_files.map(f => jsonToString(f)).toList)
       case _ => throw new DeserializationException("Config expected")
     }
   }
