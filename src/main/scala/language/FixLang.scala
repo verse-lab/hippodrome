@@ -67,9 +67,9 @@ class PatchCost(val cost: Int) extends Ordered[PatchCost] {
 sealed trait RewriteKind {
   def getText() = ""
 }
-case object Replace extends RewriteKind    { override def getText() = "Replace"}
+case object Replace   extends RewriteKind  { override def getText() = "Replace"}
 case object InsBefore extends RewriteKind  { override def getText() = "InsBefore"}
-case object InsAfter extends RewriteKind   { override def getText() = "InsAfter"}
+case object InsAfter  extends RewriteKind  { override def getText() = "InsAfter"}
 
 class PatchBlock(var rewriter: TokenStreamRewriter, val kind: RewriteKind, val patch: String, val start: Token, val stop: Token, val description: String, val cost: PatchCost) {
   override def toString() : String = {
@@ -79,6 +79,19 @@ class PatchBlock(var rewriter: TokenStreamRewriter, val kind: RewriteKind, val p
   def toStringDetailed() : String = {
     description
   }
+
+  def equals(that: PatchBlock): Boolean = {
+    this.kind == that.kind &&
+    this.patch == that.patch &&
+    this.start == that.start &&
+    this.stop == that.stop
+  }
+
+  def subsumes(that: PatchBlock): Boolean = {
+      this.start.getStartIndex < that.start.getStartIndex &&
+      that.stop.getStopIndex < this.stop.getStopIndex
+  }
+
 }
 
 sealed trait Patch

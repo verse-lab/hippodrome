@@ -9,32 +9,6 @@ import utils.{ASTManipulation, ASTStoreElem, FileModif, Logging, PatchStore}
 import scala.io.StdIn.readLine
 import scala.collection.mutable.HashMap
 
-
-//class GroupByRewriterPatch(var map : HashMap[FileModif, List[PatchBlock]]) {
-//
-//  def update(fm: FileModif, pb: PatchBlock): Unit = {
-//    try {
-//      this.map(fm) = pb :: this.map(fm)
-//    } catch {
-//      case e => {
-//        this.map(fm) = List(pb)
-//      }
-//    }
-//  }
-//
-//  def getText(): String = {
-//    map.foldLeft("")((acc, x) => acc + (
-//        (x._2.foldLeft("")((acc, y) => acc + "\n" + y.description))))
-//  }
-//
-//  /* returns the cost of all the patches stored in this.map */
-//  def getTotalCost(): PatchCost = {
-//    this.map.foldLeft(Globals.unitCost)((acc,patches) => {
-//      val cost = patches._2.foldLeft(Globals.unitCost)((acc,pb) => acc.add(pb.cost))
-//      acc.add(cost)})
-//  }
-//}
-
 /* maps patch ID -> list of individual code modifications */
 class GroupByIdPatchOptions(var map : HashMap[Int, List[PatchBlock]]) {
 
@@ -60,6 +34,23 @@ class GroupByIdPatchOptions(var map : HashMap[Int, List[PatchBlock]]) {
   def getCost(patchID: Int) = {
     this.map(patchID).foldLeft(Globals.unitCost)((acc,pb) => acc.add(pb.cost))
   }
+
+  def removeRedundant(patchStore:PatchStore) = {
+    /* filter redundant components for each patch */
+    this.map.foreach(patch => {
+      val patch_components = patch._2
+      val filtered_patch   = patch_components.foldLeft[List[PatchBlock]](Nil)((acc,pb) => {
+        if (
+          /* remove duplicated/redundant patch components from within the same patch for the same bug group*/
+          acc.exists(pb_acc => pb_acc.equals(pb) || pb_acc.subsumes(pb)) ||
+          /* remove components which are subsumed by other patches' for the same bug group */
+          (this.map.exists(patch_inner => patch_inner._1 != patch._1 && patch_inner._2.exists(pb_inner => pb_inner.subsumes(pb))))||
+          /* remove components which are subsumed by other patches' for a different bug group */
+          patchStore.map.exists((bug_grp) => bug_grp._2.patches.map(bug_grp._2.choiceId).exists(p => p.subsumes(pb)))
+          ) acc
+        else acc ++ List(pb)})
+      this.map.update(patch._1,filtered_patch)})
+    }
 }
 
 
@@ -105,19 +96,6 @@ object TraverseJavaClass  {
   /* ************************************************ */
   /*                       INSERT                     */
   /* ************************************************ */
-
-  /* Generates a list of INSERT objects for the resource in `resource_summ`
-   based on the locks available in summary `locks_summ` */
-//  def generateInsertObjects_deprecated(locks_summ: RFSumm, resource_summ: RFSumm): List[InsertSync] = {
-//    locks_summ.locks.foldLeft(List[InsertSync]())((acc, lock) => {
-//      /* double check that there is no double-lock attempt */
-//      if (resource_summ.locks.exists(lck => lck.resource == lock.resource)) acc
-//      else {
-//        val lck = lock.resource
-//        val insert = InsertSync(resource_summ.cls, resource_summ.line, RacerDAPI.varOfResource(resource_summ.resource), lck)
-//        insert :: acc
-//      } } )
-//  }
 
   /* Generates a list of INSERT objects for the resource in `resource_summ`
  based on the locks available in summary `locks_summ` */
@@ -409,6 +387,7 @@ object TraverseJavaClass  {
           grouped_patches1
         } else empty_map
 
+        grouped_patches.removeRedundant(patchStore)
         println(grouped_patches.getText())
 
         //println("************* GENERATE FIX *************")
@@ -446,7 +425,8 @@ object TraverseJavaClass  {
           val insert_patches = generatePatches(insert)
           /* group patches based on their ID */
           val patches = generateGroupPatches(empty_map, insert_patches)
-
+          /* remove redundant patches */
+          patches.removeRedundant(patchStore)
           patches
         }
 
