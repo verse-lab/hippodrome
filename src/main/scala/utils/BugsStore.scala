@@ -25,7 +25,18 @@ class BugsStore {
     })
 
     key match {
-      case None =>
+      case None => {
+        key_0 match {
+          case None =>
+          case Some(key) =>  {
+            try {
+              map.update(key, map(key) ++ List(bug))
+            } catch {
+              case _ => map.update(key, List(bug))
+            }
+          }
+        }
+      }
       case Some(key) =>  {
         try {
           map.update(key, map(key) ++ List(bug))
