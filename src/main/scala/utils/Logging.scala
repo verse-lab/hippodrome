@@ -2,8 +2,7 @@ package org.racerdfix.utils
 
 import java.io.{BufferedWriter, FileWriter}
 
-import org.racerdfix.{FixConfig, Globals}
-import org.racerdfix.RacerDFix.RunConfig
+import org.racerdfix.{FixConfig, Globals, RunConfig}
 
 object Logging {
    var config = RunConfig(FixConfig(), Globals.def_src_path).fixConfig

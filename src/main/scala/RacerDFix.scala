@@ -11,88 +11,7 @@ import scala.sys.process._
 
 object RacerDFix {
 
-  case class RunConfig(fixConfig: FixConfig, fileName: String)
-
-  private val TOOLNAME   = "RacerDFix"
-  private val SCRIPTNAME = "racerdfix"
-  private val VERSION    = "0.1"
-  private val VERSION_STRING = s"v$VERSION"
-
-  private val parser = new {
-
-  } with scopt.OptionParser[RunConfig](SCRIPTNAME) {
-    // See examples at https://github.com/scopt/scopt
-
-    head(TOOLNAME, VERSION_STRING)
-
-    opt[String]("fileName").action {(x, c) =>
-      c.copy(fileName = x)
-    }.text("a synthesis file name (the file under the specified folder, called filename.syn)")
-
-    opt[Boolean]('i', "interactive").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(interactive = b))
-    }.text("runs RacerDFix in interactive mode - the user is expected to choose a patch")
-
-    opt[Boolean]('t', "testing").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(testing = b))
-    }.text("runs RacerDFix in testing mode - generated fixes do not overwrite the original file")
-
-    opt[Boolean]('n', "intellij").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(intellij = b))
-    }.text("runs RacerDFix in IntelliJ mode - runs infer only once")
-
-    opt[Boolean]('l', "log").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(log = b))
-    }.text("logs all the applied patches")
-
-    opt[String]('b', "json_bugs").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(json_bugs = b))
-    }.text("sets the file which provides the bug details. The default one is " + Globals.json_bugs_file)
-
-    opt[String]('s', "json_summaries").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(json_summaries = b))
-    }.text("sets the file which provides the methods' summaries. The default one is " + Globals.json_summ_path)
-
-    opt[String]('r', "json_patches").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(json_patches = b))
-    }.text("sets the file where the generated patches will be stored. The default one is " + Globals.json_patches)
-
-    opt[String]('g', "log_file").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(json_patches = b))
-    }.text("sets the logging. The default one is " + Globals.log_file)
-
-    opt[String]('j', "java_sources_path").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(java_sources_path = b))
-    }.text("the path to the source files. The default one is " + Globals.def_src_path)
-
-    opt[String]('p', "infer").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(infer = b))
-    }.text("the infer process to be called for generating json and validating. The default one is " + Globals.def_infer)
-
-    opt[Seq[String]]('o', "infer_opt").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(infer_opt = b))
-    }.text("the options infer runs with. The default one is " + Globals.def_infer_options)
-
-    opt[Seq[String]]('f', "infer_target_files").action { (b, rc) =>
-      rc.copy(fixConfig = rc.fixConfig.copy(infer_target_files = b))
-    }.text("the target files to analyse and fix. The default one is " + Globals.def_target_files)
-
-    opt[String]('c', "config_file").action { (b, rc) =>
-      rc.copy(fixConfig = {
-        val jsonTranslator = new InterpretJson(rc.fixConfig.copy(config_file = b))
-        val infer_config = jsonTranslator.getJsonConfig()
-        rc.fixConfig.copy(config_file = b,
-          infer = infer_config.infer,
-          infer_opt = infer_config.infer_opt,
-          infer_target_files = infer_config.infer_target_files,
-          json_path = infer_config.json_path,
-          prio_files = infer_config.prio_files)})
-    }.text("the config file to setup infers. The default one is " + Globals.config_file)
-
-
-    help("help").text("prints this usage text")
-
-  }
+  private val parser = ArgParser.argsParser
 
   def parseParams(paramString: Array[String], params: FixConfig): FixConfig = {
     val newConfig = RunConfig(params, Globals.def_src_path)
@@ -107,7 +26,7 @@ object RacerDFix {
     parser.parse(args, newConfig) match {
       case Some(RunConfig(fixConfig, file)) =>
         Logging.init(fixConfig)
-        runPatchAndFix(fixConfig,true)
+        runPatchAndFix(fixConfig, 1)
         Logging.stop
       case None =>
         System.err.println("Bad argument format.")
@@ -130,7 +49,7 @@ object RacerDFix {
     (patchID_start, patchID_stop)
   }
 
-  def runPatchAndFix(config: FixConfig, initial_iteration: Boolean): Unit = {
+  def runPatchAndFix(config: FixConfig, iteration: Int): Unit = {
 
     /* run infer */
     val infer   = config.infer
@@ -177,7 +96,7 @@ object RacerDFix {
 
     /* Write the fixes to files */
     /* TODO for logging purposes, but also for generating the json, perhaps ast should also account for the patches*/
-    ast.dumpAll(config, initial_iteration)
+    ast.dumpAll(config, iteration == 1)
     val bugsOut = bugsIn.results.map(bug => bug.toBugOut(patchStore))
     jsonTranslator.printJsonBugsResults(bugsOut)
 
@@ -191,9 +110,9 @@ object RacerDFix {
       val diffBugsNo = bugsInAll.results.length - bugsIn.results.length
       if (diffBugsNo < newBugsInAll.results.length) {
         println("New bugs detected during validation phase. Rerun RacerDFix? (Y/n)")
-        val patch_id_str = readLine()
-        if (patch_id_str == "Y") runPatchAndFix(config, false)
-        else if (patch_id_str != "n") println("Unrecognized answer.")
+        val answer_str = if (config.interactive) { readLine() } else if (iteration <= config.iterations) "Y" else "n"
+        if (answer_str == "Y") runPatchAndFix(config, iteration +1 )
+        else if (answer_str != "n") println("Unrecognized answer.")
       }
     }
   }
