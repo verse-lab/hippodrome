@@ -2,9 +2,8 @@ package org.racerdfix
 
 import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, NoFix, NoPatch, Or, PAnd, PInsert, POr, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, UpdateSync}
 import org.racerdfix.inferAPI.RacerDAPI
-import org.racerdfix.antlr.Java8Parser
-import org.antlr.v4.runtime.{TokenStream, TokenStreamRewriter}
-import utils.{ASTManipulation, ASTStoreElem, FileModif, Logging, PatchStore}
+import org.antlr.v4.runtime.{TokenStreamRewriter}
+import utils.{ASTManipulation, ASTStoreElem, Logging, PatchStore}
 
 import scala.io.StdIn.readLine
 import scala.collection.mutable.HashMap
@@ -54,7 +53,7 @@ class GroupByIdPatchOptions(var map : HashMap[Int, List[PatchBlock]]) {
 }
 
 
-object TraverseJavaClass  {
+object ProcessOneBugGroup  {
 
   /* ************************************************ */
   /*                       UPDATE                     */

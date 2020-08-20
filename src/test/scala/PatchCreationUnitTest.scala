@@ -1,5 +1,5 @@
 import org.racerdfix.language.{EmptyTrace, InsertSync, NoFix, Or, PatchBlock, RFSumm, Read, Write}
-import org.racerdfix.TraverseJavaClass.{generateInsertObjectOnCommonResource, generateInsertObjects, generatePatches, generateUpdateObjects, translateRawSnapshotsToSnapshots}
+import org.racerdfix.ProcessOneBugGroup.{generateInsertObjectOnCommonResource, generateInsertObjects, generatePatches, generateUpdateObjects, translateRawSnapshotsToSnapshots}
 import org.hamcrest.CoreMatchers.is
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
