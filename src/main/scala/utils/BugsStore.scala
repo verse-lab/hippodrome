@@ -8,19 +8,20 @@ import scala.collection.mutable.HashMap
 class BugsStore {
   val map: HashMap[String, List[FBug]] = new mutable.HashMap[String, List[FBug]]
 
+  /* TODO this is monstrous - need to refactor */
   def update(bug: FBug) = {
     /* TODO: relax the equality to subset */
     val key_0 = bug.snapshot1.foldLeft[Option[String]](None)((acc:Option[String],s) => {
       acc match {
-        case None => Some(s.resource)
-        case Some(res) =>  if (res == s.resource) Some(res) else None
+        case None => Some(s.resource.head)
+        case Some(res) =>  if (s.resource.contains(res)) Some(res) else None
       }
     })
 
     val key = bug.snapshot2.foldLeft(key_0)((acc:Option[String],s) => {
       acc match {
-        case None => Some(s.resource)
-        case Some(res) =>  if (res == s.resource) Some(res) else None
+        case None => Some(s.resource.head)
+        case Some(res) =>  if (s.resource.contains(res)) Some(res) else None
       }
     })
 

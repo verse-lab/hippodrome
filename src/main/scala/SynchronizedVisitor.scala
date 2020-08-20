@@ -49,7 +49,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
           val vars = RacerDAPI.refToListOfRef(ctx.getText)
           val vars_extended = vars.map(v => if (cls.length >0 ) cls + "." + v else v)
-          if ((vars ++ vars_extended).contains(unprotected_resource)){
+          if ((vars ++ vars_extended).intersect(unprotected_resource).length>0){
             resource = Some(ctx)
           }
         }

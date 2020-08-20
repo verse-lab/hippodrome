@@ -1,10 +1,5 @@
 import org.racerdfix.language.{EmptyTrace, InsertSync, NoFix, Or, PatchBlock, RFSumm, Read, Write}
-import org.racerdfix.ProcessOneBugGroup.{generateInsertObjectOnCommonResource, generateInsertObjects, generatePatches, generateUpdateObjects, translateRawSnapshotsToSnapshots}
-import org.hamcrest.CoreMatchers.is
-import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
-import org.racerdfix.{FixConfig, Globals, RacerDFix}
-import org.racerdfix.RacerDFix.RunConfig
 import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.utils.ASTManipulation
 
@@ -16,8 +11,8 @@ class PatchCreationUnitTest {
         val filename = "src/test/java/RacyFalseNeg.java"
         val lock1 = RacerDAPI.lockOfString("P<0>{(this:B*).myA2}")
         val lock2 = RacerDAPI.lockOfString("P<0>{(this:B*).myA1}")
-        val csumm1 = new RFSumm(filename, "B", "this->myA->f", Read, List(lock1), 30, EmptyTrace, "")
-        val csumm2 = new RFSumm(filename, "B", "this->myA", Write, List(lock2), 24, EmptyTrace, "")
+        val csumm1 = new RFSumm(filename, "B", List("this->myA->f"), Read, List(lock1), 30, EmptyTrace, "")
+        val csumm2 = new RFSumm(filename, "B", List("this->myA"), Write, List(lock2), 24, EmptyTrace, "")
         val ast = new ASTManipulation
 
 //        val (summ1, summ2) = translateRawSnapshotsToSnapshots(csumm1, Some(csumm2), ast)
@@ -63,8 +58,8 @@ class PatchCreationUnitTest {
     @throws[Exception]
     def whenSameResources(): Unit = {
         val filename = "src/test/java/RacyFalseNeg.java"
-        val csumm1 = new RFSumm(filename, "B","this->myA->f", Read, List(), 30, EmptyTrace, "" )
-        val csumm2 = new RFSumm(filename,"B","this->myA", Write, List(), 24, EmptyTrace, "" )
+        val csumm1 = new RFSumm(filename, "B",List("this->myA->f"), Read, List(), 30, EmptyTrace, "" )
+        val csumm2 = new RFSumm(filename,"B", List("this->myA"), Write, List(), 24, EmptyTrace, "" )
         val ast = new ASTManipulation
 
 //                assertThat(patches1.size, is(1))

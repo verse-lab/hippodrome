@@ -107,7 +107,6 @@ object ProcessOneBugGroup  {
   def generateInsertObjectOnCommonResource(summ1: FSumm, summ2: FSumm): (List[FixKind], List[FixKind]) = {
     /* TODO  need to check which is that common resouce, e.g. myA or myA.f?
     *   should be the outer most one, e.g. myA*/
-    val lck    = summ1.csumm.resource
     val varName = "obj" + RacerDFix.patchIDGenerator
     val declareObj = { if (summ1.csumm.line < summ2.csumm.line)  InsertDeclareAndInst(summ1, summ1.csumm.cls,summ1.csumm.line,"Object", varName)
     else InsertDeclareAndInst(summ2, summ2.csumm.cls,summ1.csumm.line,"Object", varName)}

@@ -79,26 +79,30 @@ object RacerDAPI {
 
 
   /* this->myA2 ==> myA2*/
-  def varOfResource_def(resource: String): String = {
+  def varOfResource_def(resource: String): List[String] = {
     val pattern1 = "(?<=->)[^)]+".r
+    def replace_arrow(str: String) = str.replace("->",".")
     val resource1 = pattern1.findFirstMatchIn(resource) match {
-      case Some(resource) => resource.toString().replace("->",".")
-      case None => resource
+      case Some(res) => List(replace_arrow(res.toString()), replace_arrow(resource))
+      case None => List(replace_arrow(resource))
     }
     /* "*(buggyprogram.BuggyProgram.history)[_]" => history */
     val resource2 = try {
       val pattern2 = "(?<=\\*\\()[^)\\[]+".r
-      pattern2.findFirstMatchIn(resource1) match {
-        case Some(resource) => classToListOfCls(resource.toString()).head
-        case None => resource1
-      }
+      val resource_lst = resource1.foldLeft[List[String]](Nil)((acc,res) => {
+        pattern2.findFirstMatchIn(res) match {
+          case Some(resource) => (classToListOfCls(resource.toString()).head) :: acc
+          case None => res ::acc
+        }
+      })
+      resource_lst
     } catch  {
       case  _ => resource1
     }
     resource2
   }
 
-  def varOfResource(resource: String): String = {
+  def varOfResource(resource: String): List[String] = {
     val result = varOfResource_def(resource)
     if (false) {
       println("inp1: " + resource)
