@@ -8,7 +8,8 @@ class Config(val infer: String,
              val infer_opt: Seq[String],
              val json_path: String,
              val infer_target_files: Seq[String],
-             val prio_files: List[String]
+             val prio_files: List[String],
+             val iterations: Int
             )
 case class RunConfig(fixConfig: FixConfig, fileName: String)
 
@@ -128,7 +129,9 @@ object ArgParser {
           infer_opt = infer_config.infer_opt,
           infer_target_files = infer_config.infer_target_files,
           json_path = infer_config.json_path,
-          prio_files = infer_config.prio_files)})
+          prio_files = infer_config.prio_files,
+          iterations = infer_config.iterations
+        )})
     }.text("the config file to setup infers. The default one is " + Globals.config_file)
 
     help("help").text("prints this usage text")
