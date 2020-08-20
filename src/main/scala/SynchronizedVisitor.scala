@@ -1,5 +1,6 @@
 package org.racerdfix
 
+import com.sun.jndi.toolkit.dir.HierMemDirCtx
 import org.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
 import org.antlr.v4.runtime.{CommonTokenStream, ParserRuleContext, TokenStreamRewriter}
 import org.antlr.v4.runtime.misc.Interval
@@ -45,7 +46,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     this.visitChildren(ctx)
   }
 
-  def visitResource(ctx: ParserRuleContext) = {
+  def visitCriticalSection(ctx: ParserRuleContext) = {
     fix match {
       case InsertSync(_,cls, line, unprotected_resource, lock_new) => {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
@@ -75,7 +76,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   override def visitExpressionName(ctx: Java8Parser.ExpressionNameContext): Unit = {
  //   println("VISIT EXPRESSION " + ctx.getText)
  //    println(ctx.children)
-  visitResource(ctx)
+  visitCriticalSection(ctx)
   }
 
   /* capture the inner most statement which contains the culprit resource */
@@ -106,22 +107,34 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
   override def visitFieldAccess(ctx: Java8Parser.FieldAccessContext): Unit = {
    // println("Field Access" + ctx.getText)
-    visitResource(ctx)
+    visitCriticalSection(ctx)
   }
 
   override def visitFieldAccess_lfno_primary(ctx: Java8Parser.FieldAccess_lfno_primaryContext): Unit = {
     //println("Field Access_lfno_primary" + ctx.getText)
-    visitResource(ctx)
+    visitCriticalSection(ctx)
   }
 
   override def visitFieldAccess_lf_primary(ctx: Java8Parser.FieldAccess_lf_primaryContext): Unit = {
     //println("Field Access_lf_primary" + ctx.getText)
-    visitResource(ctx)
+    visitCriticalSection(ctx)
   }
 
   override def visitResource(ctx: Java8Parser.ResourceContext): Unit = {
     this.visitChildren(ctx)
 //    println("Resource" + ctx.getText)
+  }
+
+  override def visitMethodInvocation(ctx: Java8Parser.MethodInvocationContext): Unit = {
+    visitCriticalSection(ctx)
+  }
+
+  override def visitMethodInvocation_lf_primary(ctx: Java8Parser.MethodInvocation_lf_primaryContext): Unit = {
+    visitCriticalSection(ctx)
+  }
+
+  override def visitMethodInvocation_lfno_primary(ctx: Java8Parser.MethodInvocation_lfno_primaryContext): Unit = {
+    visitCriticalSection(ctx)
   }
 
   override def visitMethodDeclaration(ctx: Java8Parser.MethodDeclarationContext): Unit = {
