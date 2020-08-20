@@ -153,6 +153,7 @@ object ProcessOneBugGroup  {
 
   def generateInsertDeclareAndInstPatch_def(insert: InsertDeclareAndInst,
                               ast: ASTStoreElem): Option[PatchBlock] = {
+
     val syncVisitor = new SynchronizedVisitor
     val rewriter    = new TokenStreamRewriter(ast.tokens)
     syncVisitor.setFix(insert)
@@ -378,8 +379,6 @@ object ProcessOneBugGroup  {
 
           /* generate insert patches */
           val patches = generatePatches(inserts1, Some(patch_id))
-          //val patches_norm = if(patches.contains(p => p.modifiers.contains("static")))
-
 
           val grouped_patches1 = generateGroupPatches(empty_map, patches)
           grouped_patches1
@@ -398,8 +397,16 @@ object ProcessOneBugGroup  {
         /* TODO start from a new object */
         val candidate_lock     = existing_locks_ext.foldLeft[Option[(Lock,Int)]](None)((acc,lck_ext) => {
           acc match {
-            case None => Some(lck_ext)
-            case Some (lck_0) => if (lck_ext._2 < lck_0._2) Some(lck_0) else Some(lck_ext)
+            case None => {
+              Some(lck_ext)
+            }
+            case Some (lck_0) => {
+              if (lck_ext._2 < lck_0._2) {
+                Some(lck_0)
+              } else {
+                Some(lck_ext)
+              }
+            }
           }
         })
         val (fix_aux,lock) = {
@@ -419,6 +426,7 @@ object ProcessOneBugGroup  {
         val grouped_patches = {
           /* ************** INSERTS ***************** */
           /* generate insert objects */
+          // println("LOCK: " + lock.resource)
           val insert = summs.foldLeft(fix_aux:FixKind)((acc,p) => new And(acc,(generateInsertObjects(p,lock))))
 
           /* generate inserts patches */

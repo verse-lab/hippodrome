@@ -70,13 +70,21 @@ object RacerDAPI {
   }
 
   /* P<0>{(this:B*).myA2} ==> (this,B,myA2) */
-  def lockOfString(str: String): Lock = {
+  def lockOfString_def(str: String): Lock = {
     val cls      = classNameOfLockString_def(str)
     val obj      = objectOfLockString_def(str)
     val resource = resourceVarOfLockString_def(str)
     new Lock(obj, cls, resource)
   }
 
+  def lockOfString(str: String): Lock = {
+    val result = lockOfString_def(str)
+    if (false) {
+      println("inp1: " + str)
+      println("out:  " + result.resource)
+    }
+    result
+  }
 
   /* this->myA2 ==> myA2*/
   def varOfResource_def(resource: String): List[String] = {
@@ -99,7 +107,20 @@ object RacerDAPI {
     } catch  {
       case  _ => resource1
     }
-    resource2
+    /* "*iDest1[_]" => iDest1 */
+    val resource3 = try {
+      val pattern3 = "(?<=\\*)[^)\\[]+".r
+      val resource_lst = resource2.foldLeft[List[String]](Nil)((acc,res) => {
+        pattern3.findFirstMatchIn(res) match {
+          case Some(resource) => (classToListOfCls(resource.toString()).head) :: acc
+          case None => res ::acc
+        }
+      })
+      resource_lst
+    } catch  {
+      case  _ => resource2
+    }
+    resource3
   }
 
   def varOfResource(resource: String): List[String] = {
