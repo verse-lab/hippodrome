@@ -3,14 +3,27 @@ package org.racerdfix.language
 import org.antlr.v4.runtime.{Token, TokenStreamRewriter}
 import org.racerdfix.utils.{ASTStoreElem}
 
-/* FIXES */
+
+/* ******************************************************** */
+/*                FIX OBJECTS KINDS                         */
+/* ******************************************************** */
 
 sealed trait FixKind
 case object NoFix extends FixKind
+case class Test(lines: Int) extends FixKind
 case class UpdateSync(val fsumm: FSumm, cls: String, line: Int, lock_old: String, lock_new: String) extends FixKind
 case class InsertSync(val fsumm: FSumm, cls: String, line: Int, resource: List[String], lock: String) extends FixKind
 case class InsertDeclare(val fsumm: FSumm, cls: String, line: Int, typ: String, variable: String) extends FixKind
-case class InsertDeclareAndInst(val fsumm: FSumm, cls: String, line: Int, typ: String, variable: String) extends FixKind
+case class InsertDeclareAndInst(val fsumm: FSumm, cls: String, line: Int, typ: String, variable: String, modifiers: List[String]) extends FixKind {
+  def clone( fsumm: FSumm = this.fsumm,
+             cls: String = this.cls,
+             line: Int = this.line,
+             typ: String = this.typ,
+             variable: String = this.variable,
+             modifiers: List[String] = this.modifiers) = {
+    new InsertDeclareAndInst(fsumm,cls,line,typ,variable,modifiers)
+  }
+}
 case class And(left: FixKind, right: FixKind) extends FixKind {
   def mkAnd(lst: List[FixKind]) = {
 
@@ -59,6 +72,9 @@ case class Or(left: FixKind, right: FixKind) extends FixKind {
 
 }
 
+/* ********************************************************** */
+/*                                                            */
+/* ********************************************************** */
 
 class PatchCost(val cost: Int) extends Ordered[PatchCost] {
   def compare(that: PatchCost) = this.cost - that.cost
@@ -71,7 +87,9 @@ case object Replace   extends RewriteKind  { override def getText() = "Replace"}
 case object InsBefore extends RewriteKind  { override def getText() = "InsBefore"}
 case object InsAfter  extends RewriteKind  { override def getText() = "InsAfter"}
 
-class PatchBlock(var rewriter: TokenStreamRewriter, val kind: RewriteKind, val patch: String, val start: Token, val stop: Token, val description: String, val cost: PatchCost) {
+class PatchBlock(var rewriter: TokenStreamRewriter, val kind: RewriteKind, val patch: String,
+                 val start: Token, val stop: Token, val description: String, val cost: PatchCost,
+                 val modifiers: List[String]) {
   override def toString() : String = {
     patch
   }
@@ -94,10 +112,25 @@ class PatchBlock(var rewriter: TokenStreamRewriter, val kind: RewriteKind, val p
 
 }
 
-sealed trait Patch
-case object NoPatch extends Patch
-case class PInsert(val id: Int, val block: PatchBlock) extends Patch
-case class PUpdate(val id: Int, val block: PatchBlock) extends Patch
+sealed trait Patch {
+  def contains(f: PatchBlock => Boolean): Boolean
+}
+case object NoPatch extends Patch {
+  def contains(f: PatchBlock => Boolean) = false
+}
+case class PTest(val block: PatchBlock) extends Patch {
+  def contains(f: PatchBlock => Boolean) = false
+}
+case class PInsert(val id: Int, val block: PatchBlock) extends Patch {
+  def contains(f: PatchBlock => Boolean) = {
+      f(this.block)
+  }
+}
+case class PUpdate(val id: Int, val block: PatchBlock) extends Patch{
+  def contains(f: PatchBlock => Boolean) = {
+    f(this.block)
+  }
+}
 case class PAnd(val left: Patch, val right: Patch) extends Patch {
 
   def mkAnd(lst: List[Patch]) = {
@@ -118,6 +151,10 @@ case class PAnd(val left: Patch, val right: Patch) extends Patch {
       case _ => List(right)
     }
     left_lst ++ right_lst
+  }
+
+  def contains(f: PatchBlock => Boolean): Boolean = {
+    this.left.contains(f) || this.right.contains(f)
   }
 }
 case class POr(val left: Patch, val right: Patch) extends Patch {
@@ -142,6 +179,9 @@ case class POr(val left: Patch, val right: Patch) extends Patch {
     left_lst ++ right_lst
   }
 
+  def contains(f: PatchBlock => Boolean) = {
+    this.left.contains(f) || this.right.contains(f)
+  }
 }
 
 

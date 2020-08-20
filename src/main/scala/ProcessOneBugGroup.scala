@@ -1,7 +1,7 @@
 package org.racerdfix
 
-import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, NoFix, NoPatch, Or, PAnd, PInsert, POr, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, UpdateSync}
-import org.antlr.v4.runtime.{TokenStreamRewriter}
+import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, NoFix, NoPatch, Or, PAnd, PInsert, POr, PTest, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, Test, UpdateSync}
+import org.antlr.v4.runtime.TokenStreamRewriter
 import utils.{ASTManipulation, ASTStoreElem, Logging, PatchStore}
 
 import scala.io.StdIn.readLine
@@ -76,6 +76,7 @@ object ProcessOneBugGroup  {
     syncVisitor.setFix(update)
     syncVisitor.visit(ast.tree)
     val sblock = syncVisitor.getSynchronizedBlock
+    val modifiers = syncVisitor.getModifiers
     sblock match {
       case Some(sblock) =>
         val (oldcode,patch) = syncVisitor.updateSynchronizedStatement(rewriter,sblock,update)
@@ -84,7 +85,7 @@ object ProcessOneBugGroup  {
         "Replace (UPDATE) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
         + ("\n" + "-: " + oldcode)
         + ("\n" + "+: " + patch) )
-        Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost))
+        Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
       case None =>
         println("No patch could be generated for attempt ID: " )
         None
@@ -103,22 +104,6 @@ object ProcessOneBugGroup  {
    }
 
   /* Generates a list of INSERT objects for the resource in `resource_summ`
-     based on the locks available in summary `locks_summ` */
-  def generateInsertObjectOnCommonResource(summ1: FSumm, summ2: FSumm): (List[FixKind], List[FixKind]) = {
-    /* TODO  need to check which is that common resouce, e.g. myA or myA.f?
-    *   should be the outer most one, e.g. myA*/
-    val varName = "obj" + RacerDFix.patchIDGenerator
-    val declareObj = { if (summ1.csumm.line < summ2.csumm.line)  InsertDeclareAndInst(summ1, summ1.csumm.cls,summ1.csumm.line,"Object", varName)
-    else InsertDeclareAndInst(summ2, summ2.csumm.cls,summ1.csumm.line,"Object", varName)}
-    val insert1 = InsertSync(summ1, summ1.csumm.cls, summ1.csumm. line, summ1.csumm.resource,varName)
-    val insert2 = InsertSync(summ2, summ2.csumm.cls,summ2.csumm.line,summ2.csumm.resource,varName)
-    if (summ1.csumm.line < summ2.csumm.line)
-      (List(And(declareObj,insert1)),List(insert2))
-    else
-      (List(insert1),List(And(declareObj,insert2)))
-  }
-
-  /* Generates a list of INSERT objects for the resource in `resource_summ`
    based on the locks available in summary `locks_summ` */
   def generateInsertObjectOnUnprotectedResource(summ: FSumm) = {
     /* TODO  need to check which is that common resouce, e.g. myA or myA.f?
@@ -126,11 +111,10 @@ object ProcessOneBugGroup  {
     /* TODO need to recheck what is the resource we create lock for. myA.f is not the right type, it should be
     *   a reference type. */
     val varName = "obj" + RacerDFix.patchIDGenerator
-    val declareObj = InsertDeclareAndInst(summ, summ.csumm.cls,summ.csumm.line,"Object", varName)
+    val declareObj = InsertDeclareAndInst(summ, summ.csumm.cls,summ.csumm.line,"Object", varName, Nil)
     val insert1 = InsertSync(summ,summ.csumm.cls,summ.csumm.line,summ.csumm.resource,varName)
     And(declareObj,insert1)
   }
-
 
   def generateInsertPatch_def(insert: InsertSync,
                               ast: ASTStoreElem): Option[PatchBlock] = {
@@ -138,6 +122,7 @@ object ProcessOneBugGroup  {
     val rewriter    = new TokenStreamRewriter(ast.tokens)
     syncVisitor.setFix(insert)
     syncVisitor.visit(ast.tree)
+    val modifiers = syncVisitor.getModifiers
     val sblock = syncVisitor.getResourceStatement
     sblock match {
       case Some(sblock) =>
@@ -146,7 +131,7 @@ object ProcessOneBugGroup  {
         "Replace (INSERT) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
           + ("\n" + "-: " + oldcode)
           + ("\n" + "+: " + patch) )
-        Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost))
+        Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
       case None =>
         println("No patch could be generated for attempt ID " )
         None
@@ -172,13 +157,15 @@ object ProcessOneBugGroup  {
     syncVisitor.setFix(insert)
     syncVisitor.visit(ast.tree)
     val sblock = syncVisitor.getClassStatement
+    val modifiers = (syncVisitor.getModifiers ++ insert.modifiers).distinct
     (sblock,syncVisitor.getClassStart) match {
       case (Some(sblock),Some(start)) =>
-        val (oldcode,patch) = syncVisitor.insertInsertDeclareAndInstStatement(rewriter,sblock,insert)
+        val insert_modif = insert.clone(modifiers = modifiers)
+        val (oldcode,patch) = syncVisitor.insertInsertDeclareAndInstStatement(rewriter,sblock,insert_modif)
         val description = (
           "Replace (INSERT) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
             + ("\n" + "+: " + patch) )
-        Some(new PatchBlock(ast.rewriter, InsAfter, patch, start, start, description, Globals.defCost))
+        Some(new PatchBlock(ast.rewriter, InsAfter, patch, start, start, description, Globals.defCost, modifiers))
       case (_,_ )=>
         println("No InsertDeclareAndInst patch could be generated. " )
         None
@@ -195,6 +182,17 @@ object ProcessOneBugGroup  {
     }
     res
   }
+
+
+  def generateTestPatch(test: Test,
+                        ast: ASTStoreElem): PTest = {
+    val syncVisitor = new SynchronizedVisitor
+    syncVisitor.setFix(test)
+    syncVisitor.visit(ast.tree)
+    val modifiers = syncVisitor.getModifiers
+    PTest(new PatchBlock(ast.rewriter, Replace, "", ast.tokens.get(0), ast.tokens.get(0), "", Globals.defCost, modifiers))
+  }
+
 
   /* ************************************************ */
   /*                         FIX                      */
@@ -298,10 +296,11 @@ object ProcessOneBugGroup  {
   def generatePatches(fixobj: FixKind,
                       id: Option[Int] = None): Patch = {
     fixobj match {
-      case NoFix => NoPatch
+      case NoFix   => NoPatch
+      case Test(_) => NoPatch
       case InsertSync(s,_,_,_,_)  => generateInsertPatch0(fixobj.asInstanceOf[InsertSync],s.ast,id)
       case UpdateSync(s,_,_,_,_)  => generateUpdatePatch0(fixobj.asInstanceOf[UpdateSync],s.ast,id)
-      case InsertDeclareAndInst(s,_,_,_,_) => generateInsertDeclareAndInstPatch0(fixobj.asInstanceOf[InsertDeclareAndInst],s.ast,id)
+      case InsertDeclareAndInst(s,_,_,_,_,_) => generateInsertDeclareAndInstPatch0(fixobj.asInstanceOf[InsertDeclareAndInst],s.ast,id)
       case And(left, right) =>
         val fresh_id =  id match {
           case None => Some(RacerDFix.patchIDGenerator)
@@ -377,9 +376,11 @@ object ProcessOneBugGroup  {
           val inserts1 = generateInsertObjectOnUnprotectedResource(summ)
 
           /* generate insert patches */
-          val patches1 = generatePatches(inserts1, Some(patch_id))
+          val patches = generatePatches(inserts1, Some(patch_id))
+          //val patches_norm = if(patches.contains(p => p.modifiers.contains("static")))
 
-          val grouped_patches1 = generateGroupPatches(empty_map, patches1)
+
+          val grouped_patches1 = generateGroupPatches(empty_map, patches)
           grouped_patches1
         } else empty_map
 
@@ -404,9 +405,11 @@ object ProcessOneBugGroup  {
           candidate_lock match {
             case Some(lck) => (NoFix, lck._1)
             case None      => {
+              /* retrieve possible modifiers e.g. static */
+              val modifiers = summs.foldLeft[List[String]](Nil)((acc,p) => acc ++ generateTestPatch(new Test(p.csumm.line),p.ast).block.modifiers).distinct
               /* CREATE new lock object */
               val varName = "obj" + RacerDFix.patchIDGenerator
-              val declareObj = InsertDeclareAndInst(summs.head,summs.head.csumm.cls,summs.head.csumm.line,"Object", varName)
+              val declareObj = InsertDeclareAndInst(summs.head,summs.head.csumm.cls,summs.head.csumm.line,"Object", varName, modifiers)
               (declareObj, new Lock("this",summs.head.csumm.cls,varName))
             }
           }
@@ -419,6 +422,7 @@ object ProcessOneBugGroup  {
 
           /* generate inserts patches */
           val insert_patches = generatePatches(insert)
+
           /* group patches based on their ID */
           val patches = generateGroupPatches(empty_map, insert_patches)
           /* remove redundant patches */

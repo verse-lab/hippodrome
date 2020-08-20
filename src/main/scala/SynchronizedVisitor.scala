@@ -4,7 +4,7 @@ import org.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
 import org.antlr.v4.runtime.{CommonTokenStream, ParserRuleContext, TokenStreamRewriter}
 import org.antlr.v4.runtime.misc.Interval
 import org.racerdfix.inferAPI.RacerDAPI
-import org.racerdfix.language.{FixKind, InsertDeclareAndInst, InsertSync, NoFix, UpdateSync}
+import org.racerdfix.language.{FixKind, InsertDeclareAndInst, InsertSync, NoFix, Test, UpdateSync}
 
 class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var fix: FixKind = NoFix
@@ -12,6 +12,9 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var resource: Option[Any] = None
   private var resourceStatement: Option[Java8Parser.StatementContext] = None
   private var classStmt: Option[Java8Parser.ClassDeclarationContext] = None
+  private var static_mthd: Boolean = false
+  private var static_ctx: Boolean = false
+
 
   def setFix(init_fix: FixKind): Unit = {
     fix = init_fix
@@ -24,6 +27,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     case Some(cls) => Some (cls.normalClassDeclaration().classBody().start )
     case None => None
   }
+  def isStaticCtx = static_ctx
+  def getModifiers = if (isStaticCtx) List("static") else Nil
 
   override def visitSynchronizedStatement(ctx: Java8Parser.SynchronizedStatementContext): Unit = {
     fix match {
@@ -48,12 +53,19 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           val vars_extended = vars.map(v => if (cls.length >0 ) cls + "." + v else v)
           if ((vars ++ vars_extended).intersect(unprotected_resource).length>0){
             resource = Some(ctx)
+            static_ctx = static_mthd
           }
         }
       }
-      case InsertDeclareAndInst(_,cls,line,_,_) =>  {
+      case InsertDeclareAndInst(_,cls,line,_,_,_) =>  {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
           resource = Some(ctx)
+          static_ctx = static_mthd
+        }
+      }
+      case Test(line) => {
+        if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)) {
+          static_ctx = static_mthd
         }
       }
       case _ => this.visitChildren(ctx)
@@ -82,7 +94,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
   override def visitClassDeclaration(ctx: Java8Parser.ClassDeclarationContext): Unit = {
     fix match {
-      case InsertDeclareAndInst(_,cls,line,_,_) =>  {
+      case InsertDeclareAndInst(_,cls,line,_,_,_) =>  {
         val classes = RacerDAPI.classToListOfCls(cls)
         if (classes.contains(ctx.normalClassDeclaration().Identifier().getText)){
           classStmt = Some(ctx)
@@ -110,6 +122,14 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   override def visitResource(ctx: Java8Parser.ResourceContext): Unit = {
     this.visitChildren(ctx)
 //    println("Resource" + ctx.getText)
+  }
+
+  override def visitMethodDeclaration(ctx: Java8Parser.MethodDeclarationContext): Unit = {
+    val static_prev = static_mthd
+    val isStatic    = ctx.methodModifier().toArray.exists(x => x.asInstanceOf[Java8Parser.MethodModifierContext].getText == "static")
+    if (isStatic) static_mthd = true
+    this.visitChildren(ctx)
+    if (isStatic) static_mthd = static_prev
   }
 
   def insertSynchronizedStatement(rewriter: TokenStreamRewriter,
@@ -141,7 +161,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     //    println("ctx:" + ctx.start.getInputStream.getText(interval))
 
     // only work for object now, since it has no arguments
-    val textToInsert = fix.typ + " " + fix.variable + " = " + " new " + fix.typ + "(); "
+    val textToInsert = fix.modifiers.foldLeft("")((acc,a) => acc + " " + a) + " " + fix.typ + " " + fix.variable + " = " + " new " + fix.typ + "(); "
     rewriter.insertAfter(ctx.normalClassDeclaration.classBody().start, textToInsert)
 
     //val rinterval = new Interval(ctx.getSourceInterval.a,ctx.getSourceInterval.a)
