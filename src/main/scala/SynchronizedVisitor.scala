@@ -1,7 +1,7 @@
 package org.racerdfix
 
 import org.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
-import org.antlr.v4.runtime.{CommonTokenStream, TokenStreamRewriter}
+import org.antlr.v4.runtime.{CommonTokenStream, ParserRuleContext, TokenStreamRewriter}
 import org.antlr.v4.runtime.misc.Interval
 import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.language.{FixKind, InsertDeclareAndInst, InsertSync, NoFix, UpdateSync}
@@ -9,7 +9,7 @@ import org.racerdfix.language.{FixKind, InsertDeclareAndInst, InsertSync, NoFix,
 class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var fix: FixKind = NoFix
   private var sblock: Option[Java8Parser.SynchronizedStatementContext] = None
-  private var resource: Option[Java8Parser.ExpressionNameContext] = None
+  private var resource: Option[Any] = None
   private var resourceStatement: Option[Java8Parser.StatementContext] = None
   private var classStmt: Option[Java8Parser.ClassDeclarationContext] = None
 
@@ -18,7 +18,6 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   def getSynchronizedBlock = sblock
-  def getResource = resource
   def getResourceStatement = resourceStatement
   def getClassStatement = classStmt
   def getClassStart = classStmt match {
@@ -41,9 +40,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     this.visitChildren(ctx)
   }
 
-  override def visitExpressionName(ctx: Java8Parser.ExpressionNameContext): Unit = {
- //   println("VISIT EXPRESSION " + ctx.getText)
-//    println(ctx.children)
+  def visitResource(ctx: ParserRuleContext) = {
     fix match {
       case InsertSync(_,cls, line, unprotected_resource, lock_new) => {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
@@ -61,6 +58,12 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
       }
       case _ => this.visitChildren(ctx)
     }
+  }
+
+  override def visitExpressionName(ctx: Java8Parser.ExpressionNameContext): Unit = {
+ //   println("VISIT EXPRESSION " + ctx.getText)
+ //    println(ctx.children)
+  visitResource(ctx)
   }
 
   /* capture the inner most statement which contains the culprit resource */
@@ -90,18 +93,18 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   override def visitFieldAccess(ctx: Java8Parser.FieldAccessContext): Unit = {
-//    println("Field Access" + ctx.getText)
-    this.visitChildren(ctx)
+   // println("Field Access" + ctx.getText)
+    visitResource(ctx)
   }
 
   override def visitFieldAccess_lfno_primary(ctx: Java8Parser.FieldAccess_lfno_primaryContext): Unit = {
-//    println("Field Access_lfno_primary" + ctx.getText)
-    this.visitChildren(ctx)
+    //println("Field Access_lfno_primary" + ctx.getText)
+    visitResource(ctx)
   }
 
   override def visitFieldAccess_lf_primary(ctx: Java8Parser.FieldAccess_lf_primaryContext): Unit = {
-//    println("Field Access_lf_primary" + ctx.getText)
-    this.visitChildren(ctx)
+    //println("Field Access_lf_primary" + ctx.getText)
+    visitResource(ctx)
   }
 
   override def visitResource(ctx: Java8Parser.ResourceContext): Unit = {
