@@ -110,7 +110,7 @@ object RacerDFix {
       val diffBugsNo = bugsInAll.results.length - bugsIn.results.length
       if (diffBugsNo < newBugsInAll.results.length) {
         println("New bugs detected during validation phase. Rerun RacerDFix? (Y/n)")
-        val answer_str = if (config.interactive) { readLine() } else if (iteration <= config.iterations) "Y" else "n"
+        val answer_str = if (config.interactive) { readLine() } else if (iteration < config.iterations) "Y" else "n"
         if (answer_str == "Y") runPatchAndFix(config, iteration +1 )
         else if (answer_str != "n") println("Unrecognized answer.")
       }
