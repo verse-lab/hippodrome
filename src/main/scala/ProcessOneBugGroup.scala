@@ -110,8 +110,9 @@ object ProcessOneBugGroup  {
     *   should be the outer most one, e.g. myA*/
     /* TODO need to recheck what is the resource we create lock for. myA.f is not the right type, it should be
     *   a reference type. */
+    val modifiers = generateTestPatch(new Test(summ.csumm.line),summ.ast).block.modifiers.distinct
     val varName = "obj" + RacerDFix.patchIDGenerator
-    val declareObj = InsertDeclareAndInst(summ, summ.csumm.cls,summ.csumm.line,"Object", varName, Nil)
+    val declareObj = InsertDeclareAndInst(summ, summ.csumm.cls,summ.csumm.line,"Object", varName, modifiers)
     val insert1 = InsertSync(summ,summ.csumm.cls,summ.csumm.line,summ.csumm.resource,varName)
     And(declareObj,insert1)
   }
