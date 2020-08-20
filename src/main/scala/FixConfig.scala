@@ -1,6 +1,7 @@
 package org.racerdfix
 
 import org.racerdfix.language.PrettyPrinting
+import org.racerdfix.utils.FileManipulation
 
 case class FixConfig(
                       // Modus Operandi params
@@ -11,7 +12,7 @@ case class FixConfig(
                       // Files
                       json_path: String         = Globals.results_out_dir,
                       json_bugs:   String       = Globals.json_bugs_file,
-                      json_summaries: String    = Globals.json_summaries,
+                      json_summaries: String    = Globals.json_summ_path,
                       json_patches: String      = Globals.json_patches,
                       java_sources_path: String = Globals.def_src_path,
                       log_file: String          = Globals.log_file,
@@ -24,6 +25,8 @@ case class FixConfig(
 
   ) extends PrettyPrinting {
 
+  val fm = new FileManipulation
+
   override def pp: String =
     ( (List(s"interactive = $interactive"))
       ++ (List(s"testing = $testing"))
@@ -31,17 +34,17 @@ case class FixConfig(
 
   def getJsonBugsResults = {
     if (json_patches != Globals.json_patches) json_patches
-    else json_path + Globals.json_patches_filename
+    else fm.getPath(json_path, Globals.json_patches_filename)
   }
 
   def getJsonBugs = {
     if (json_bugs != Globals.json_bugs_file) json_bugs
-    else json_path + Globals.json_bugs_filename
+    else fm.getFile(json_path, Globals.json_bugs_filename)
   }
 
-  def getJsonSummaries = {
-    if (json_summaries != Globals.json_summaries) json_summaries
-    else json_path + Globals.json_summaries_filename
+  def getJsonSummariesPath = {
+    if (json_summaries != Globals.json_summ_path) json_summaries
+    else fm.getPath(json_path,Globals.json_summaries_dir)
   }
 }
 

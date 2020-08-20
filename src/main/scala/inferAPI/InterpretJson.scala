@@ -379,11 +379,21 @@ class InterpretJson(val config: FixConfig) {
 
   def getJsonSummaries(): TranslationResult[SummaryIn] = {
     import SummaryProtocol._
-    val fm  = new FileManipulation
-    val src = fm.fileToString(config.getJsonSummaries)
-    val jsonAst = src.parseJson
-    val summariesDS = jsonAst.convertTo[TranslationResult[SummaryIn]]
-    summariesDS
+    val fm    = new FileManipulation
+    val files = config.prio_files match {
+      case Nil =>  /* all files in dir */
+          fm.getListOfFiles(config.getJsonSummariesPath)
+      case _   =>  /* just those in prio */
+        fm.getListOfFiles(config.getJsonSummariesPath).filter(p => config.prio_files.contains(p.replace('_','/')) /* infer replaces `/` with `_` */
+        ).map(file =>  fm.getFile(config.getJsonSummariesPath,file))
+    }
+    files.foldLeft[TranslationResult[SummaryIn]](new TranslationResult[SummaryIn](Nil))((acc,file) => {
+      val src = fm.fileToString(file)
+      val jsonAst = src.parseJson
+      val summariesDS = jsonAst.convertTo[TranslationResult[SummaryIn]]
+      new TranslationResult[SummaryIn](acc.results ++ summariesDS.results)
+    }
+    )
   }
 
   def getJsonConfig() = {

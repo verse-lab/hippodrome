@@ -1,6 +1,7 @@
 package org.racerdfix
 
 import language.PatchCost
+import org.racerdfix.utils.FileManipulation
 
 object Globals {
 
@@ -24,14 +25,15 @@ object Globals {
   /* default files and paths */
   val results_out_dir           = "src/main/misc/infer-out/"
   val json_bugs_filename        = "report.json"
-  val json_summaries_filename   = "racerdfix_summaries.json"
+  val json_summaries_dir        = "racerdfix_summaries"
   val json_patches_filename     = "racerdfix_patches.json"
-  val json_bugs_file   = results_out_dir + json_bugs_filename
-  val json_summaries   = results_out_dir + json_summaries_filename
-  val json_patches     = results_out_dir + json_patches_filename
+  val fm  = new FileManipulation
+  val json_bugs_file   = fm.getFile(results_out_dir, json_bugs_filename)
+  val json_summ_path   = fm.getPath(results_out_dir, json_summaries_dir)
+  val json_patches     = fm.getFile(results_out_dir, json_patches_filename)
   val def_src_path     = "src/test/java/"
   val def_src_filename = "RacyFalseNeg.java"
-  val def_src_file     = def_src_path + def_src_filename
+  val def_src_file     = fm.getFile(def_src_path, def_src_filename)
   val log_file         = "log.txt"
   val log              = true
 

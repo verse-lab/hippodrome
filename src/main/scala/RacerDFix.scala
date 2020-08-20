@@ -51,7 +51,7 @@ object RacerDFix {
 
     opt[String]('s', "json_summaries").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(json_summaries = b))
-    }.text("sets the file which provides the methods' summaries. The default one is " + Globals.json_summaries)
+    }.text("sets the file which provides the methods' summaries. The default one is " + Globals.json_summ_path)
 
     opt[String]('r', "json_patches").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(json_patches = b))
@@ -150,6 +150,8 @@ object RacerDFix {
     val summariesIn = jsonTranslator.getJsonSummaries()
     val norm_and_translate = ((s:SummaryIn) => s.racerDToRacerDFix())
     val summaries   = summariesIn.results.flatMap(norm_and_translate)
+    val bugsInAll   = jsonTranslator.getJsonBugs()
+    /*
     val bugsInAll   = {
       val bugs = jsonTranslator.getJsonBugs()
       /* filter out all the bugs located in files not specified by `prio_file` in `CONFIG.json` */
@@ -158,6 +160,7 @@ object RacerDFix {
         case _   => new TranslationResult[Bugs](bugs.results.filter(bug =>
         { bug.isInstanceOf[BugIn] && config.prio_files.contains(bug.asInstanceOf[BugIn].file) }))
       }}
+    */
     /* filter out all the bugs not related to data races */
     val bugsIn      = new TranslationResult[BugIn](bugsInAll.results.filter(b => b.isInstanceOf[BugIn] &&
       Globals.tackled_bug_kinds.contains(b.asInstanceOf[BugIn].bug_type)).map(b => b.asInstanceOf[BugIn]))
