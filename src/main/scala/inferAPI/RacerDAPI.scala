@@ -80,11 +80,22 @@ object RacerDAPI {
 
   /* this->myA2 ==> myA2*/
   def varOfResource_def(resource: String): String = {
-    val pattern = "(?<=->)[^)]+".r
-    pattern.findFirstMatchIn(resource) match {
+    val pattern1 = "(?<=->)[^)]+".r
+    val resource1 = pattern1.findFirstMatchIn(resource) match {
       case Some(resource) => resource.toString().replace("->",".")
       case None => resource
     }
+    /* "*(buggyprogram.BuggyProgram.history)[_]" => history */
+    val resource2 = try {
+      val pattern2 = "(?<=\\*\\()[^)\\[]+".r
+      pattern2.findFirstMatchIn(resource1) match {
+        case Some(resource) => classToListOfCls(resource.toString()).head
+        case None => resource1
+      }
+    } catch  {
+      case  _ => resource1
+    }
+    resource2
   }
 
   def varOfResource(resource: String): String = {

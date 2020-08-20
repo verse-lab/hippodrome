@@ -1,7 +1,6 @@
 package org.racerdfix
 
 import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, NoFix, NoPatch, Or, PAnd, PInsert, POr, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, UpdateSync}
-import org.racerdfix.inferAPI.RacerDAPI
 import org.antlr.v4.runtime.{TokenStreamRewriter}
 import utils.{ASTManipulation, ASTStoreElem, Logging, PatchStore}
 
@@ -100,7 +99,7 @@ object ProcessOneBugGroup  {
  based on the locks available in summary `locks_summ` */
   def generateInsertObjects(summ: FSumm, lock: Lock): FixKind = {
     if (summ.csumm.locks.exists(lck => lck.equals(lock))) NoFix
-    else InsertSync(summ, summ.csumm.cls, summ.csumm.line, RacerDAPI.varOfResource(summ.csumm.resource), lock.resource)
+    else InsertSync(summ, summ.csumm.cls, summ.csumm.line, summ.csumm.resource, lock.resource)
    }
 
   /* Generates a list of INSERT objects for the resource in `resource_summ`
@@ -108,12 +107,12 @@ object ProcessOneBugGroup  {
   def generateInsertObjectOnCommonResource(summ1: FSumm, summ2: FSumm): (List[FixKind], List[FixKind]) = {
     /* TODO  need to check which is that common resouce, e.g. myA or myA.f?
     *   should be the outer most one, e.g. myA*/
-    val lck    = RacerDAPI.varOfResource(summ1.csumm.resource)
+    val lck    = summ1.csumm.resource
     val varName = "obj" + RacerDFix.patchIDGenerator
     val declareObj = { if (summ1.csumm.line < summ2.csumm.line)  InsertDeclareAndInst(summ1, summ1.csumm.cls,summ1.csumm.line,"Object", varName)
     else InsertDeclareAndInst(summ2, summ2.csumm.cls,summ1.csumm.line,"Object", varName)}
-    val insert1 = InsertSync(summ1, summ1.csumm.cls, summ1.csumm. line, RacerDAPI.varOfResource(summ1.csumm.resource),varName)
-    val insert2 = InsertSync(summ2, summ2.csumm.cls,summ2.csumm.line,RacerDAPI.varOfResource(summ2.csumm.resource),varName)
+    val insert1 = InsertSync(summ1, summ1.csumm.cls, summ1.csumm. line, summ1.csumm.resource,varName)
+    val insert2 = InsertSync(summ2, summ2.csumm.cls,summ2.csumm.line,summ2.csumm.resource,varName)
     if (summ1.csumm.line < summ2.csumm.line)
       (List(And(declareObj,insert1)),List(insert2))
     else
@@ -127,10 +126,9 @@ object ProcessOneBugGroup  {
     *   should be the outer most one, e.g. myA*/
     /* TODO need to recheck what is the resource we create lock for. myA.f is not the right type, it should be
     *   a reference type. */
-    // val lck     = RacerDAPI.varOfResource(summ.resource)
     val varName = "obj" + RacerDFix.patchIDGenerator
     val declareObj = InsertDeclareAndInst(summ, summ.csumm.cls,summ.csumm.line,"Object", varName)
-    val insert1 = InsertSync(summ,summ.csumm.cls,summ.csumm.line,RacerDAPI.varOfResource(summ.csumm.resource),varName)
+    val insert1 = InsertSync(summ,summ.csumm.cls,summ.csumm.line,summ.csumm.resource,varName)
     And(declareObj,insert1)
   }
 
