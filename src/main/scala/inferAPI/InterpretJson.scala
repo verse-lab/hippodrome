@@ -3,7 +3,7 @@ package org.racerdfix.inferAPI
 import java.io.{BufferedWriter, FileWriter}
 
 import org.racerdfix.language.{PatchBlock, _}
-import org.racerdfix.{Config, FixConfig, GroupByIdPatchOptions}
+import org.racerdfix.{Config, FixConfig, Globals, GroupByIdPatchOptions}
 import spray.json._
 import org.racerdfix.utils.FileManipulation
 
@@ -20,7 +20,7 @@ object ConfigProtocol extends DefaultJsonProtocol {
       "json_path"      -> JsString(configInfer.json_path),
       "target_options" -> JsArray(configInfer.infer_target_files.map(f => JsString(f)).toVector),
       "prio_files"     -> JsArray(configInfer.prio_files.map(f => JsString(f)).toVector),
-      "iterations"     -> JsNumber(configInfer.iterations)
+      "iterations"     -> Option(configInfer.iterations).map(JsNumber(_)).getOrElse(JsNull)
     )
   }
 
@@ -32,21 +32,31 @@ object ConfigProtocol extends DefaultJsonProtocol {
   }
 
   def jsonToConfig(value: JsValue) = {
-    value.asJsObject.getFields(  "level",
-      "infer",
-      "options",
-      "json_path",
-      "target_options",
-      "prio_files",
-      "iterations") match {
-      case Seq( JsString(infer),
-      JsArray(infer_opt),
-      JsString(json_path),
-      JsArray(infer_target_files),
-      JsArray(prio_files),
-      JsNumber(iterations)) =>
-        new Config(infer,infer_opt.map(v => jsonToString(v)).toList,json_path,infer_target_files.map(v => jsonToString(v)).toList, prio_files.map(f => jsonToString(f)).toList, iterations.toInt)
-      case _ => throw new DeserializationException("Config expected")
+    value match {
+      case JsObject(fields) => {
+        val options = fields.get("options").map(w => w.asInstanceOf[JsArray].elements.map(v => jsonToString(v)).toList).getOrElse[List[String]](Nil)
+        val files   = fields.get("target_options").map(w => w.asInstanceOf[JsArray].elements.map(v => jsonToString(v)).toList).getOrElse[List[String]](Nil)
+        val prio_files = fields.get("prio_filed").map(w => w.asInstanceOf[JsArray].elements.map(f => jsonToString(f)).toList).getOrElse[List[String]](Nil)
+        val iterations = fields.get("iterations") match {
+          case None        => Globals.no_iter
+          case Some(value) => value.toString().toInt
+        }
+        val infer = fields.get("infer") match {
+          case None => Globals.def_infer
+          case Some (JsString(infer)) => infer
+        }
+        val json_path = fields.get("json_path") match {
+          case None => Globals.results_out_dir
+          case Some (JsString(json_path)) => json_path
+        }
+        new Config(
+          infer,
+          options,
+          json_path,
+          files,
+          prio_files,
+          iterations)
+      }
     }
   }
 
