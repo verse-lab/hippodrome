@@ -74,9 +74,9 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   override def visitExpressionName(ctx: Java8Parser.ExpressionNameContext): Unit = {
- //   println("VISIT EXPRESSION " + ctx.getText)
+    //println("VISIT EXPRESSION " + ctx.getText)
  //    println(ctx.children)
-  visitCriticalSection(ctx)
+    visitCriticalSection(ctx)
   }
 
   /* capture the inner most statement which contains the culprit resource */
@@ -106,7 +106,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   override def visitFieldAccess(ctx: Java8Parser.FieldAccessContext): Unit = {
-   // println("Field Access" + ctx.getText)
+    //println("Field Access" + ctx.getText)
     visitCriticalSection(ctx)
   }
 
@@ -143,6 +143,51 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     if (isStatic) static_mthd = true
     this.visitChildren(ctx)
     if (isStatic) static_mthd = static_prev
+  }
+
+  override def visitVariableInitializer(ctx: Java8Parser.VariableInitializerContext): Unit = {
+    //println("Variable Initializer: " + ctx.getText)
+    this.visitChildren(ctx)
+  }
+
+  override def visitFieldDeclaration(ctx: Java8Parser.FieldDeclarationContext): Unit =  {
+    //println("Field Declarator: " + ctx.getText)
+    this.visitChildren(ctx)
+  }
+
+  override def visitVariableDeclarator(ctx: Java8Parser.VariableDeclaratorContext): Unit = {
+    //println("Variable Declarator: " + ctx.getText)
+    this.visitChildren(ctx)
+  }
+
+  override def visitLocalVariableDeclaration(ctx: Java8Parser.LocalVariableDeclarationContext): Unit = {
+   // println("visit visitLocalVariableDeclaration: " + ctx.getText)
+    val lst = ctx.variableDeclaratorList().variableDeclarator()
+   // println("visit visitLocalVariableDeclaration - variabledeclarator: " + lst)
+    this.visitChildren(ctx)
+  }
+
+  override def visitLocalVariableDeclarationStatement(ctx: Java8Parser.LocalVariableDeclarationStatementContext): Unit = {
+//    println("visit visitLocalVariableStatement: " + ctx.getText)
+//    println("Type:" + ctx.localVariableDeclaration().unannType().getText)
+//    println("Declarator List:" + ctx.localVariableDeclaration().variableDeclaratorList())
+//    println("Declarator List modifiers:" + ctx.localVariableDeclaration().variableModifier())
+    this.visitChildren(ctx)
+  }
+
+  override def visitAdditiveExpression(ctx: Java8Parser.AdditiveExpressionContext): Unit = {
+ //   println("Additive Expression: " + ctx.getText)
+    this.visitChildren(ctx)
+  }
+
+  override def visitMultiplicativeExpression(ctx: Java8Parser.MultiplicativeExpressionContext): Unit = {
+//    println("Multiplicative Expression: " + ctx.getText)
+    this.visitChildren(ctx)
+  }
+
+  override def visitUnaryExpression(ctx: Java8Parser.UnaryExpressionContext): Unit = {
+ //   println("Unary Expression: " + ctx.getText)
+    this.visitChildren(ctx)
   }
 
   def insertSynchronizedStatement(rewriter: TokenStreamRewriter,
