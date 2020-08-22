@@ -5,15 +5,9 @@ import org.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
 import org.antlr.v4.runtime.{CommonTokenStream, ParserRuleContext, TokenStreamRewriter}
 import org.antlr.v4.runtime.misc.Interval
 import org.racerdfix.inferAPI.RacerDAPI
-import org.racerdfix.language.{DeclaratorSlicing, FixKind, InsertDeclareAndInst, InsertSync, NoFix, Test, UpdateSync}
+import org.racerdfix.language.{DeclaratorSlicing, FixKind, InsertDeclareAndInst, InsertSync, NoFix, Test, UpdateSync, Variable}
 
 import scala.collection.mutable
-
-class Variable(modifiers: List[String], typ: String, id: String){
-  def isStatic() = {
-    this.modifiers.contains("static")
-  }
-}
 
 class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var fix: FixKind = NoFix
@@ -24,9 +18,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var static_mthd: Boolean = false
   private var static_ctx: Boolean = false
   private var decl_slice: Option[DeclaratorSlicing] = None
-  var variables: mutable.HashMap[String, List[Variable]] = new mutable.HashMap[String,List[Variable]]() {
-    def getStaticVars(cls: String): List[Variable] = this.getOrElseUpdate(cls,Nil).filter(v => v.isStatic())
-  }
+  var variables: mutable.HashMap[String, List[Variable]] = new mutable.HashMap[String,List[Variable]]()
   private var className: String = ""
 
 
@@ -47,6 +39,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   def getVariables(cls: String): List[Variable] = {
     variables.getOrElseUpdate(cls,Nil)
   }
+
 
   override def visitSynchronizedStatement(ctx: Java8Parser.SynchronizedStatementContext): Unit = {
     fix match {

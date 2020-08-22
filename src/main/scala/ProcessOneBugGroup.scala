@@ -1,7 +1,8 @@
 package org.racerdfix
 
-import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, NoFix, NoPatch, Or, PAnd, PInsert, POr, PTest, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, Test, UpdateSync}
+import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, NoFix, NoPatch, Or, PAnd, PInsert, POr, PTest, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, Test, UpdateSync, Variable}
 import org.antlr.v4.runtime.TokenStreamRewriter
+import org.racerdfix.inferAPI.RacerDAPI
 import utils.{ASTManipulation, ASTStoreElem, Logging, PatchStore}
 
 import scala.collection.mutable
@@ -404,8 +405,16 @@ object ProcessOneBugGroup  {
         val modifiers        = summs.foldLeft[List[String]](Nil)((acc,p) => acc ++ generateTestPatch(new Test(p.csumm.line),p.ast).block.modifiers).distinct
         val atLeastOneStatic = modifiers.exists( m => m == "static")
         val variables_store  = getVariablesStore(summs.head.ast)
+        def getStaticVars(cls: String): List[Variable] = variables_store.getOrElseUpdate(cls,Nil).filter(v => v.isStatic())
+        def isLockStatic(lck: Lock) = {
+          val static_vars = getStaticVars(lck.cls)
+          static_vars.exists( p => RacerDAPI.refToListOfRef(lck.resource).contains(p.id))
+        }
 
-        val existing_locks      = summs.foldLeft[List[Lock]](Nil)((acc,summ) => acc ++ summ.csumm.locks)
+        val existing_locks      = summs.foldLeft[List[Lock]](Nil)((acc,summ) => {
+          val locks = summ.csumm.locks.filter( lck => (atLeastOneStatic &&  isLockStatic((lck)) || !atLeastOneStatic ))
+          acc ++ locks
+        })
         //val existing_locks_filt = existing_locks.filter( lck => if(atLeastOneStatic && ))
         val existing_locks_ext  = existing_locks.map( lock => (lock,summs.count( p => p.csumm.locks.exists(lck => lck.equals(lock)))))
         /* TODO start from a new object */

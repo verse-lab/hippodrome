@@ -221,3 +221,9 @@ class FBug(val snapshot1: List[RFSumm], val snapshot2: List[RFSumm], val hash: S
 
 /**/
 class DeclaratorSlicing(val declarations: String, val initializations: String)
+
+class Variable(modifiers: List[String], typ: String, val id: String){
+  def isStatic() = {
+    this.modifiers.contains("static")
+  }
+}
