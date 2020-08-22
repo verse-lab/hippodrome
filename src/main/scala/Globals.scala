@@ -56,5 +56,19 @@ object Globals {
   val def_target_files          = Seq("--", "javac", def_src_file)
   val config_file               = "CONFIG.json"
 
+  /* MISC */
+  val base_obj_id = "objR"
+  val def_obj_typ = "Object"
 
+  def print_list[A](printer: A => String, separator: String, lst: List[A], last: Boolean = false) = {
+    def helper(lst: List[A]): String =
+      lst match {
+        case Nil    => ""
+        case x::Nil => printer(x) + (if(last) separator else "")
+        case x::xs  => printer(x) + separator + helper(xs)
+      }
+    helper(lst)
+  }
+
+  def pr_id(str: String): String = str
 }
