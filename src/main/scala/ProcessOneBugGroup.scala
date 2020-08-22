@@ -395,10 +395,11 @@ object ProcessOneBugGroup  {
       case _ => {
         /* retrieve possible modifiers e.g. static */
         val modifiers = summs.foldLeft[List[String]](Nil)((acc,p) => acc ++ generateTestPatch(new Test(p.csumm.line),p.ast).block.modifiers).distinct
+        val atLeastOneStatic = modifiers.exists( m => m == "static")
 
-        val existing_locks     = summs.foldLeft[List[Lock]](Nil)((acc,summ) => acc ++ summ.csumm.locks)
-        val common_locks       = summs.foldLeft[List[Lock]](Nil)((acc,summ) => acc intersect summ.csumm.locks)
-        val existing_locks_ext = existing_locks.map( lock => (lock,summs.count( p => p.csumm.locks.exists(lck => lck.equals(lock)))))
+        val existing_locks      = summs.foldLeft[List[Lock]](Nil)((acc,summ) => acc ++ summ.csumm.locks)
+        //val existing_locks_filt = existing_locks.filter( lck => if(atLeastOneStatic && ))
+        val existing_locks_ext  = existing_locks.map( lock => (lock,summs.count( p => p.csumm.locks.exists(lck => lck.equals(lock)))))
         /* TODO start from a new object */
         val candidate_lock     = existing_locks_ext.foldLeft[Option[(Lock,Int)]](None)((acc,lck_ext) => {
           acc match {

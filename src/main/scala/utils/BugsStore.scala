@@ -11,23 +11,30 @@ class BugsStore {
   /* TODO this is monstrous - need to refactor */
   def update(bug: FBug) = {
     val snapshots = bug.snapshot1 ++ bug.snapshot2
-    val key = snapshots.foldLeft[Option[String]](Some(bug.snapshot1.head.resource.head))((acc:Option[String],s) => {
-      acc match {
-        case None => None
-        case Some(res) =>  if (s.resource.contains(res)) Some(res) else None
-      }
-    })
+    if(snapshots.length > 0){
+      try {
+      val key = snapshots.foldLeft[Option[String]](Some(snapshots.head.resource.head))((acc:Option[String],s) => {
+        acc match {
+          case None => None
+          case Some(res) =>  if (s.resource.contains(res)) Some(res) else None
+        }
+      })
 
-    key match {
-      case None =>
-      case Some(key) =>  {
-        try {
-          map.update(key, map(key) ++ List(bug))
-        } catch {
-          case _ => map.update(key, List(bug))
+      key match {
+        case None =>
+        case Some(key) =>  {
+          try {
+            map.update(key, map(key) ++ List(bug))
+          } catch {
+            case _ => map.update(key, List(bug))
+          }
         }
       }
+    } catch{
+        case _ => map.update(bug.hash,  List(bug))
+      }
     }
+    else map.update(bug.hash,  List(bug))
   }
 }
 
