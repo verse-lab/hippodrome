@@ -175,6 +175,7 @@ object RacerDAPI {
   }
 
   def accessKindOfString(str: String) = {
+    println("ACCESS KIND: " + str)
     if (str == "Read") Read
     else if (str == "Write") Write
     else throw new Exception("BugShort expected")

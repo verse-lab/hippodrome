@@ -7,6 +7,14 @@ import org.antlr.v4.runtime.misc.Interval
 import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.language.{DeclaratorSlicing, FixKind, InsertDeclareAndInst, InsertSync, NoFix, Test, UpdateSync}
 
+import scala.collection.mutable
+
+class Variable(modifiers: List[String], typ: String, id: String){
+  def isStatic() = {
+    this.modifiers.contains("static")
+  }
+}
+
 class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var fix: FixKind = NoFix
   private var sblock: Option[Java8Parser.SynchronizedStatementContext] = None
@@ -16,6 +24,10 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var static_mthd: Boolean = false
   private var static_ctx: Boolean = false
   private var decl_slice: Option[DeclaratorSlicing] = None
+  var variables: mutable.HashMap[String, List[Variable]] = new mutable.HashMap[String,List[Variable]]() {
+    def getStaticVars(cls: String): List[Variable] = this.getOrElseUpdate(cls,Nil).filter(v => v.isStatic())
+  }
+  private var className: String = ""
 
 
   def setFix(init_fix: FixKind): Unit = {
@@ -32,6 +44,9 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   def isStaticCtx = static_ctx
   def getModifiers = if (isStaticCtx) List("static") else Nil
   def getDeclSlice = decl_slice
+  def getVariables(cls: String): List[Variable] = {
+    variables.getOrElseUpdate(cls,Nil)
+  }
 
   override def visitSynchronizedStatement(ctx: Java8Parser.SynchronizedStatementContext): Unit = {
     fix match {
@@ -97,6 +112,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   override def visitClassDeclaration(ctx: Java8Parser.ClassDeclarationContext): Unit = {
+    className = ctx.normalClassDeclaration().Identifier().getText
+    variables.update(className,Nil)
     fix match {
       case InsertDeclareAndInst(_,cls,line,_,_,_) =>  {
         val classes = RacerDAPI.classToListOfCls(cls)
@@ -154,6 +171,13 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   override def visitFieldDeclaration(ctx: Java8Parser.FieldDeclarationContext): Unit =  {
+    var modifiers     = List.empty[String]
+    var variables_lst = List.empty[String]
+    ctx.fieldModifier().forEach( m => modifiers = modifiers ++ List(m.getText))
+    ctx.variableDeclaratorList().variableDeclarator.forEach( vd => variables_lst = variables_lst ++ List(vd.variableDeclaratorId().getText))
+    val vars          = variables_lst.map( v => new Variable(modifiers,ctx.unannType().getText,v))
+    val existing_vars = variables.getOrElseUpdate(className,Nil)
+    variables.update(className,existing_vars ++ vars)
     //println("Field Declarator: " + ctx.getText)
     this.visitChildren(ctx)
   }
