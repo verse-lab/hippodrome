@@ -112,16 +112,20 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   override def visitClassDeclaration(ctx: Java8Parser.ClassDeclarationContext): Unit = {
-    className = ctx.normalClassDeclaration().Identifier().getText
-    variables.update(className,Nil)
-    fix match {
-      case InsertDeclareAndInst(_,cls,line,_,_,_) =>  {
-        val classes = RacerDAPI.classToListOfCls(cls)
-        if (classes.contains(ctx.normalClassDeclaration().Identifier().getText)){
-          classStmt = Some(ctx)
+    try {
+      className = ctx.normalClassDeclaration().Identifier().getText
+      variables.update(className, Nil)
+      fix match {
+        case InsertDeclareAndInst(_, cls, line, _, _, _) => {
+          val classes = RacerDAPI.classToListOfCls(cls)
+          if (classes.contains(ctx.normalClassDeclaration().Identifier().getText)) {
+            classStmt = Some(ctx)
+          }
         }
+        case _ => this.visitChildren(ctx)
       }
-      case _ => this.visitChildren(ctx)
+    } catch {
+      case _: NullPointerException =>
     }
   }
 

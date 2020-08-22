@@ -4,6 +4,7 @@ import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertD
 import org.antlr.v4.runtime.TokenStreamRewriter
 import utils.{ASTManipulation, ASTStoreElem, Logging, PatchStore}
 
+import scala.collection.mutable
 import scala.io.StdIn.readLine
 import scala.collection.mutable.HashMap
 
@@ -195,6 +196,12 @@ object ProcessOneBugGroup  {
     syncVisitor.visit(ast.tree)
     val modifiers = syncVisitor.getModifiers
     PTest(new PatchBlock(ast.rewriter, Replace, "", ast.tokens.get(0), ast.tokens.get(0), "", Globals.defCost, modifiers))
+  }
+
+  def getVariablesStore(ast: ASTStoreElem): mutable.HashMap[String, List[Variable]] = {
+    val syncVisitor = new SynchronizedVisitor
+    syncVisitor.visit(ast.tree)
+    syncVisitor.variables
   }
 
 
@@ -394,8 +401,9 @@ object ProcessOneBugGroup  {
       }
       case _ => {
         /* retrieve possible modifiers e.g. static */
-        val modifiers = summs.foldLeft[List[String]](Nil)((acc,p) => acc ++ generateTestPatch(new Test(p.csumm.line),p.ast).block.modifiers).distinct
+        val modifiers        = summs.foldLeft[List[String]](Nil)((acc,p) => acc ++ generateTestPatch(new Test(p.csumm.line),p.ast).block.modifiers).distinct
         val atLeastOneStatic = modifiers.exists( m => m == "static")
+        val variables_store  = getVariablesStore(summs.head.ast)
 
         val existing_locks      = summs.foldLeft[List[Lock]](Nil)((acc,summ) => acc ++ summ.csumm.locks)
         //val existing_locks_filt = existing_locks.filter( lck => if(atLeastOneStatic && ))
