@@ -49,6 +49,11 @@ object RacerDFix {
     (patchID_start, patchID_stop)
   }
 
+  def shouldBePatched(config: FixConfig, bug: BugIn) = {
+    config.prio_files.length == 0 ||
+    (config.prio_files.length > 0 && config.prio_files.contains(bug.asInstanceOf[BugIn].file))
+  }
+
   def runPatchAndFix(config: FixConfig, iteration: Int): Unit = {
 
     /* run infer */
@@ -73,7 +78,7 @@ object RacerDFix {
     /* filter out bugs not in prio_files */
     val bugsAllPrio = new TranslationResult[BugIn](bugsInAll.results.filter( b =>
       b.isInstanceOf[BugIn] &&
-      config.prio_files.contains(b.asInstanceOf[BugIn].file) ).map(b => b.asInstanceOf[BugIn]))
+        (config.prio_files.length > 0 && config.prio_files.contains(b.asInstanceOf[BugIn].file)) ).map(b => b.asInstanceOf[BugIn]))
     /* filter out all the bugs not related to data races */
     val bugsIn      = new TranslationResult[BugIn](bugsAllPrio.results.filter(b => b.isInstanceOf[BugIn] &&
       Globals.tackled_bug_kinds.contains(b.asInstanceOf[BugIn].bug_type)).map(b => b.asInstanceOf[BugIn]))
