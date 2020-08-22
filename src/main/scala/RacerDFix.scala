@@ -70,8 +70,12 @@ object RacerDFix {
     val norm_and_translate = ((s:SummaryIn) => s.racerDToRacerDFix())
     val summaries   = summariesIn.results.flatMap(norm_and_translate)
     val bugsInAll   = jsonTranslator.getJsonBugs()
+    /* filter out bugs not in prio_files */
+    val bugsAllPrio = new TranslationResult[BugIn](bugsInAll.results.filter( b =>
+      b.isInstanceOf[BugIn] &&
+      config.prio_files.contains(b.asInstanceOf[BugIn].file) ).map(b => b.asInstanceOf[BugIn]))
     /* filter out all the bugs not related to data races */
-    val bugsIn      = new TranslationResult[BugIn](bugsInAll.results.filter(b => b.isInstanceOf[BugIn] &&
+    val bugsIn      = new TranslationResult[BugIn](bugsAllPrio.results.filter(b => b.isInstanceOf[BugIn] &&
       Globals.tackled_bug_kinds.contains(b.asInstanceOf[BugIn].bug_type)).map(b => b.asInstanceOf[BugIn]))
     val bugs        = bugsIn.results.map(b => b.racerDToRacerDFix(summaries))
 
