@@ -1,6 +1,6 @@
 package org.racerdfix.inferAPI
 
-import org.racerdfix.language.{EmptyTrace, Lock, NonEmptyTrace, Read, Write}
+import org.racerdfix.language.{EmptyTrace, Lock, NonEmptyTrace, Read, Unk, Write}
 
 object RacerDAPI {
 
@@ -175,10 +175,9 @@ object RacerDAPI {
   }
 
   def accessKindOfString(str: String) = {
-    println("ACCESS KIND: " + str)
     if (str == "Read") Read
     else if (str == "Write") Write
-    else throw new Exception("BugShort expected")
+    else Unk
   }
 
   def traceOfListOfStrings(trace: List[String]) = {

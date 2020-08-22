@@ -393,6 +393,9 @@ object ProcessOneBugGroup  {
         applyPatch_def(patch_id, grouped_patches, patchStore)
       }
       case _ => {
+        /* retrieve possible modifiers e.g. static */
+        val modifiers = summs.foldLeft[List[String]](Nil)((acc,p) => acc ++ generateTestPatch(new Test(p.csumm.line),p.ast).block.modifiers).distinct
+
         val existing_locks     = summs.foldLeft[List[Lock]](Nil)((acc,summ) => acc ++ summ.csumm.locks)
         val common_locks       = summs.foldLeft[List[Lock]](Nil)((acc,summ) => acc intersect summ.csumm.locks)
         val existing_locks_ext = existing_locks.map( lock => (lock,summs.count( p => p.csumm.locks.exists(lck => lck.equals(lock)))))
@@ -415,8 +418,6 @@ object ProcessOneBugGroup  {
           candidate_lock match {
             case Some(lck) => (NoFix, lck._1)
             case None      => {
-              /* retrieve possible modifiers e.g. static */
-              val modifiers = summs.foldLeft[List[String]](Nil)((acc,p) => acc ++ generateTestPatch(new Test(p.csumm.line),p.ast).block.modifiers).distinct
               /* CREATE new lock object */
               val varName = Globals.base_obj_id + RacerDFix.patchIDGenerator
               val declareObj = InsertDeclareAndInst(summs.head,summs.head.csumm.cls,summs.head.csumm.line, Globals.def_obj_typ, varName, modifiers)

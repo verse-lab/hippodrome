@@ -193,6 +193,7 @@ class Fix(file: String, cls: String, line_start: Int, lines_top: Int, code: Stri
 sealed trait AccessKind
 case object Read extends AccessKind
 case object Write extends AccessKind
+case object Unk extends AccessKind
 
 sealed trait Trace {
   def length() = {
