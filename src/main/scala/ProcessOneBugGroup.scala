@@ -111,8 +111,8 @@ object ProcessOneBugGroup  {
     /* TODO need to recheck what is the resource we create lock for. myA.f is not the right type, it should be
     *   a reference type. */
     val modifiers = generateTestPatch(new Test(summ.csumm.line),summ.ast).block.modifiers.distinct
-    val varName = "obj" + RacerDFix.patchIDGenerator
-    val declareObj = InsertDeclareAndInst(summ, summ.csumm.cls,summ.csumm.line,"Object", varName, modifiers)
+    val varName = Globals.base_obj_id + RacerDFix.patchIDGenerator
+    val declareObj = InsertDeclareAndInst(summ, summ.csumm.cls,summ.csumm.line, Globals.def_obj_typ, varName, modifiers)
     val insert1 = InsertSync(summ,summ.csumm.cls,summ.csumm.line,summ.csumm.resource,varName)
     And(declareObj,insert1)
   }
@@ -125,9 +125,10 @@ object ProcessOneBugGroup  {
     syncVisitor.visit(ast.tree)
     val modifiers = syncVisitor.getModifiers
     val sblock = syncVisitor.getResourceStatement
+    val sdecl  = syncVisitor.getDeclSlice
     sblock match {
       case Some(sblock) =>
-        val (oldcode,patch) = syncVisitor.insertSynchronizedStatement(rewriter,sblock,insert)
+        val (oldcode,patch) = syncVisitor.insertSynchronizedStatement(rewriter,sblock,insert,sdecl)
         val description = (
         "Replace (INSERT) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
           + ("\n" + "-: " + oldcode)
@@ -160,6 +161,7 @@ object ProcessOneBugGroup  {
     syncVisitor.visit(ast.tree)
     val sblock = syncVisitor.getClassStatement
     val modifiers = (syncVisitor.getModifiers ++ insert.modifiers).distinct
+    val sdecl  = syncVisitor.getDeclSlice
     (sblock,syncVisitor.getClassStart) match {
       case (Some(sblock),Some(start)) =>
         val insert_modif = insert.clone(modifiers = modifiers)
@@ -416,8 +418,8 @@ object ProcessOneBugGroup  {
               /* retrieve possible modifiers e.g. static */
               val modifiers = summs.foldLeft[List[String]](Nil)((acc,p) => acc ++ generateTestPatch(new Test(p.csumm.line),p.ast).block.modifiers).distinct
               /* CREATE new lock object */
-              val varName = "obj" + RacerDFix.patchIDGenerator
-              val declareObj = InsertDeclareAndInst(summs.head,summs.head.csumm.cls,summs.head.csumm.line,"Object", varName, modifiers)
+              val varName = Globals.base_obj_id + RacerDFix.patchIDGenerator
+              val declareObj = InsertDeclareAndInst(summs.head,summs.head.csumm.cls,summs.head.csumm.line, Globals.def_obj_typ, varName, modifiers)
               (declareObj, new Lock("this",summs.head.csumm.cls,varName))
             }
           }

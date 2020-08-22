@@ -5,16 +5,17 @@ import org.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
 import org.antlr.v4.runtime.{CommonTokenStream, ParserRuleContext, TokenStreamRewriter}
 import org.antlr.v4.runtime.misc.Interval
 import org.racerdfix.inferAPI.RacerDAPI
-import org.racerdfix.language.{FixKind, InsertDeclareAndInst, InsertSync, NoFix, Test, UpdateSync}
+import org.racerdfix.language.{DeclaratorSlicing, FixKind, InsertDeclareAndInst, InsertSync, NoFix, Test, UpdateSync}
 
 class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var fix: FixKind = NoFix
   private var sblock: Option[Java8Parser.SynchronizedStatementContext] = None
   private var resource: Option[Any] = None
-  private var resourceStatement: Option[Java8Parser.StatementContext] = None
+  private var resourceStatement: Option[ParserRuleContext] = None
   private var classStmt: Option[Java8Parser.ClassDeclarationContext] = None
   private var static_mthd: Boolean = false
   private var static_ctx: Boolean = false
+  private var decl_slice: Option[DeclaratorSlicing] = None
 
 
   def setFix(init_fix: FixKind): Unit = {
@@ -30,6 +31,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
   def isStaticCtx = static_ctx
   def getModifiers = if (isStaticCtx) List("static") else Nil
+  def getDeclSlice = decl_slice
 
   override def visitSynchronizedStatement(ctx: Java8Parser.SynchronizedStatementContext): Unit = {
     fix match {
@@ -81,6 +83,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
   /* capture the inner most statement which contains the culprit resource */
   override def visitStatement(ctx: Java8Parser.StatementContext): Unit = {
+    //println("VISIT STATEMENT " + ctx.getText)
     resource match {
       case None      => { this.visitChildren(ctx)
         resource match {
@@ -161,45 +164,86 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   override def visitLocalVariableDeclaration(ctx: Java8Parser.LocalVariableDeclarationContext): Unit = {
-   // println("visit visitLocalVariableDeclaration: " + ctx.getText)
-    val lst = ctx.variableDeclaratorList().variableDeclarator()
-   // println("visit visitLocalVariableDeclaration - variabledeclarator: " + lst)
+    //println("visit visitLocalVariableDeclaration: " + ctx.getText)
+    //val lst = ctx.variableDeclaratorList().variableDeclarator()
+    //println("visit visitLocalVariableDeclaration - variabledeclarator: " + lst)
     this.visitChildren(ctx)
+  }
+
+  def sliceDeclaratorStatement(ctx: Java8Parser.LocalVariableDeclarationStatementContext): DeclaratorSlicing = {
+    var initializers = List.empty[String]
+    var modifiers    = List.empty[String]
+    var ids          = List.empty[String]
+    val typ          = ctx.localVariableDeclaration().unannType().getText
+    val variableDeclarator = ctx.localVariableDeclaration().variableDeclaratorList().variableDeclarator()
+    ctx.localVariableDeclaration().variableModifier().forEach(m => modifiers = modifiers ++ List(m.getText))
+    variableDeclarator.forEach(a => {
+      val a0 = a.start.getStartIndex
+      val a1 = a.stop.getStopIndex
+      val interval = new Interval(a0, a1)
+      if (!a.variableInitializer().children.isEmpty)  initializers = initializers ++ List(a.start.getInputStream.getText(interval))
+    })
+    variableDeclarator.forEach(m => ids = ids ++ List(m.variableDeclaratorId().getText))
+
+    val declarations    = Globals.print_list(Globals.pr_id, " ", modifiers) + typ + " " + Globals.print_list(Globals.pr_id, ", ", ids) + "; "
+    val initializations = Globals.print_list(Globals.pr_id, "; ", initializers, true)
+
+    //println("TEST:"   + Globals.print_list(Globals.pr_id, " ", modifiers) + typ + " " + Globals.print_list(Globals.pr_id, ", ", ids) + "; " )
+    //println("INIT: "  + Globals.print_list(Globals.pr_id, "; ", initializers, true))
+
+    new DeclaratorSlicing(declarations, initializations)
   }
 
   override def visitLocalVariableDeclarationStatement(ctx: Java8Parser.LocalVariableDeclarationStatementContext): Unit = {
-//    println("visit visitLocalVariableStatement: " + ctx.getText)
-//    println("Type:" + ctx.localVariableDeclaration().unannType().getText)
-//    println("Declarator List:" + ctx.localVariableDeclaration().variableDeclaratorList())
-//    println("Declarator List modifiers:" + ctx.localVariableDeclaration().variableModifier())
-    this.visitChildren(ctx)
+    resource match {
+      case None      => { this.visitChildren(ctx)
+        resource match {
+          case None =>
+          case Some(_) =>
+            resource = None
+            resourceStatement = Some(ctx)
+            decl_slice = Some (sliceDeclaratorStatement(ctx))
+        }}
+      case Some(_) =>
+    }
   }
 
   override def visitAdditiveExpression(ctx: Java8Parser.AdditiveExpressionContext): Unit = {
- //   println("Additive Expression: " + ctx.getText)
+    //println("Additive Expression: " + ctx.getText)
     this.visitChildren(ctx)
   }
 
   override def visitMultiplicativeExpression(ctx: Java8Parser.MultiplicativeExpressionContext): Unit = {
-//    println("Multiplicative Expression: " + ctx.getText)
+    //println("Multiplicative Expression: " + ctx.getText)
     this.visitChildren(ctx)
   }
 
   override def visitUnaryExpression(ctx: Java8Parser.UnaryExpressionContext): Unit = {
- //   println("Unary Expression: " + ctx.getText)
+    //println("Unary Expression: " + ctx.getText)
     this.visitChildren(ctx)
   }
 
   def insertSynchronizedStatement(rewriter: TokenStreamRewriter,
-                                  ctx: Java8Parser.StatementContext, fix: InsertSync): (String,String) = {
+                                  ctx: ParserRuleContext, fix: InsertSync,
+                                  decl_slice: Option[DeclaratorSlicing] = None): (String,String) = {
     val a = ctx.start.getStartIndex
     val b = ctx.stop.getStopIndex
     val interval = new Interval(a, b)
 
 //    println("ctx:" + ctx.start.getInputStream.getText(interval))
 
-    rewriter.insertBefore(ctx.start, "synchronized(" + fix.lock + ") { ")
-    rewriter.insertAfter(ctx.stop, " } ")
+    decl_slice match {
+      case None => {
+        rewriter.insertBefore(ctx.start, "synchronized(" + fix.lock + ") { ")
+        rewriter.insertAfter(ctx.stop, " } ")
+      }
+      case Some(sdecl) => {
+        val decl = sdecl.declarations
+        val init = sdecl.initializations
+        val new_init = "synchronized(" + fix.lock + ") { " + init + " } "
+        rewriter.replace(ctx.start, ctx.stop, decl + " " + new_init)
+      }
+    }
 
     val rinterval = new Interval(ctx.getSourceInterval.a,ctx.getSourceInterval.b+1)
 

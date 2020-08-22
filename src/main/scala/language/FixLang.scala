@@ -217,3 +217,6 @@ class RFSumm(val filename: String, val cls: String, val resource: List[String], 
 class FSumm(var ast: ASTStoreElem, val csumm: RFSumm)
 /* racerdfix bug */
 class FBug(val snapshot1: List[RFSumm], val snapshot2: List[RFSumm], val hash: String)
+
+/**/
+class DeclaratorSlicing(val declarations: String, val initializations: String)
