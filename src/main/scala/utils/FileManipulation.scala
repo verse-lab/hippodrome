@@ -20,6 +20,10 @@ class FileManipulation {
     val _ = copyRenameFile(filename, filename + ".orig")
   }
 
+  def revertToOriginalFile(filename: String): Unit = {
+    val _ = copyRenameFile(filename + ".orig", filename)
+  }
+
   def cloneOriginalFileToFix(filename: String) = {
     val path = copyRenameFile(filename, filename + ".fix.java")
     println("path: " + path)

@@ -61,11 +61,7 @@ object RacerDFix {
     val infer   = config.infer
     val options = config.infer_opt
     val output_dir = Seq("--results-dir",config.json_path)
-    val target_files  = if(config.testing) {
-      val fm    = new FileManipulation
-      val files = config.infer_target_files.map( file => fm.cloneOriginalFileToFix(file))
-      files
-    } else config.infer_target_files
+    val target_files  = config.infer_target_files
     val infer_process = Seq(infer).concat(options).concat(output_dir).concat(target_files)
     def fnc(a: Unit) : Unit  = {
        val res = infer_process.!
@@ -114,6 +110,7 @@ object RacerDFix {
     jsonTranslator.printJsonBugsResults(bugsOut)
 
     /* VALIDATON */
+    val ret =
     if(!(config.intellij)) {
       val val_res = infer_process.!
       if (val_res != 0) throw new Exception("Error while running infer: " + infer_process)
@@ -125,13 +122,16 @@ object RacerDFix {
         println("New bugs detected during validation phase. Rerun RacerDFix? (Y/n)")
         val answer_str = if (config.interactive) { readLine() } else if (iteration < config.iterations) "Y" else "n"
         if (answer_str == "Y") runPatchAndFix(config, iteration +1 )
-        else if (answer_str != "n") {
-          println("Unrecognized answer.")
-          return 0;
-        } else if (iteration < config.iterations) return 1 else return 0
-      }
-    }
-    return 1
+        else
+          if (answer_str == "n") 0
+          else  {
+           println("Unrecognized answer.")
+           0;
+         }
+      } else  1
+    } else  1
+   if(config.testing) ast.resetToOrig(config)
+   return ret;
   }
 
   def main(args: Array[String]) = handleInput(args)

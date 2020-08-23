@@ -34,15 +34,20 @@ class ASTManipulation {
     astElem match {
       case None =>
       case Some(astElem) =>
-        if (!config.testing) {
           /* write to file (keep the original one in `filename` and the fix in `filename.fix` */
           if (copy_original) fm.cloneOriginalFile(filename)
           fm.overwriteFile(filename, astElem.rewriter.getText)
-        } else {
-          /* write to file (keep the original one in `filename.orig` and the fix in `filename` */
-          //val fixFile = fm.cloneOriginalFileToFix(filename)
-          fm.overwriteFile(filename, astElem.rewriter.getText)
-        }
+    }
+  }
+
+  def revertFile(filename: String, config: FixConfig) = {
+    val fm = new FileManipulation
+    val astElem = map.get(filename)
+    astElem match {
+      case None =>
+      case Some(_) =>
+        /* write to file (keep the original one in `filename` and the fix in `filename.fix` */
+        fm.revertToOriginalFile(filename)
     }
   }
 
@@ -51,4 +56,9 @@ class ASTManipulation {
     map.foreachEntry[Unit]((filename, _) => dumpToFile(filename, config, copy_original))
   }
 
+  /* TODO: no need for ast here */
+  def resetToOrig (config: FixConfig) = {
+    if(!config.intellij)
+      map.foreachEntry[Unit]((filename, _) => revertFile(filename, config))
+  }
 }

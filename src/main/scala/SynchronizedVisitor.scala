@@ -65,6 +65,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           if ((vars ++ vars_extended).intersect(unprotected_resource).length>0){
             resource = Some(ctx)
             static_ctx = static_mthd
+          } else {
+            this.visitChildren(ctx)
           }
         }
       }
@@ -207,8 +209,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           a.variableDeclaratorId().Identifier().getText + " = " +
           a.variableInitializer().start.getInputStream.getText(interval))
     })
-    variableDeclarator.forEach(m => println("Variable declarator id: "  + m.variableDeclaratorId().getText))
-    variableDeclarator.forEach(m => println("Variable declarator id - identifier: "  + m.variableDeclaratorId().Identifier().getText))
+//    variableDeclarator.forEach(m => println("Variable declarator id: "  + m.variableDeclaratorId().getText))
+//    variableDeclarator.forEach(m => println("Variable declarator id - identifier: "  + m.variableDeclaratorId().Identifier().getText))
     variableDeclarator.forEach(m => ids = ids ++ List(m.variableDeclaratorId().getText))
 
     val declarations    = Globals.print_list(Globals.pr_id, " ", modifiers) + typ + " " + Globals.print_list(Globals.pr_id, ", ", ids) + "; "
