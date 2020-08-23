@@ -31,12 +31,51 @@ class PatchCreationUnitTest {
         }
     }
 
-//    @Test
-//    @throws[Exception]
-//    def runFiles(): Unit = {
-//
-//        handleInput(Array("--testing=true", "--config_file=" + "\"" + "src/test/java-benchmark/airline/CONFIG.json" + "\""))
-//    }
+    /*
+    @Test
+    @throws[Exception]
+    def runAlarmClock(): Unit = {
+        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/alarmclock/CONFIG.json" ))
+    }
+
+    @Test
+    @throws[Exception]
+    def runAirline(): Unit = {
+        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/airline/CONFIG.json" ))
+    }
+
+    @Test
+    @throws[Exception]
+    def runBuggyProgram(): Unit = {
+        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/buggyprogram/CONFIG.json" ))
+    }
+
+    @Test
+    @throws[Exception]
+    def runConsistency(): Unit = {
+        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/consisitency/CONFIG.json" ))
+    }
+
+    @Test
+    @throws[Exception]
+    def runLinkedList(): Unit = {
+        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/linkedlist/CONFIG.json" ))
+    }
+
+    @Test
+    @throws[Exception]
+    def runPingPong(): Unit = {
+        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/pingpong/CONFIG.json" ))
+        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/wronglock2/CONFIG.json" ))
+    }
+
+
+    @Test
+    @throws[Exception]
+    def runWrongLock(): Unit = {
+        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/wronglock2/CONFIG.json" ))
+    }
+  */
 
     @Test
     @throws[Exception]

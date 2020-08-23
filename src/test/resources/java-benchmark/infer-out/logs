@@ -1,0 +1,60 @@
+[94045][environment] CWD = /Users/andrea/git/racerdfix/src/test/java
+[94045][environment] No .inferconfig file found
+[94045][environment] Project root = /Users/andrea/git/racerdfix/src/test/java
+[94045][environment] INFER_ARGS =   @/var/folders/_7/tf3b3q9n6_bfpbrc7y448k7w0000gp/T/args.tmp.0b61cc
+[94045][environment] command line arguments:   /Users/andrea/git/infer-clean/infer/infer/bin/infer
+[94045][environment]                           --racerdfix-only -- javac pingpong/BugThread.java
+[94045][environment]                           pingpong/BuggedProgram.java pingpong/PP.java
+[94045][environment]                           pingpong/PingPong.java
+[94045][environment] Could not retrieve available memory (possibly not on Linux)
+[94045][environment] Active checkers: racerdfix (C/C++/ObjC, Java)
+[94045][environment] Scheduler: file
+[94045][environment] Cores used: 2
+[94045][environment] Infer version v1.0.0-5f73d045f
+[94045][environment] Copyright 2009 - present Facebook. All Rights Reserved.
+[94045][environment] 
+[94045][   progress] Capturing in javac mode...
+[94045][      debug] Current working directory: '/Users/andrea/git/racerdfix/src/test/java'
+[94045][      debug] Trying to execute: javac '-J-Duser.language=en' '@/Users/andrea/git/racerdfix/src/test/java/infer-out/tmp/javac_args.tmp.b0a582' 2>'/Users/andrea/git/racerdfix/src/test/java/infer-out/tmp/javac.tmp.4904da.out'
+[94045][      debug] *** Success. Logs:
+[94045][      debug] Translating 4 source files (4 classes)
+[94045][      debug] Tenv.store: global tenv has size 18936 bytes.
+[94045][      debug] Tenv.store: canonicalized tenv has size 5576 bytes.
+[94045][      debug] done capturing all files
+[94045][environment] Parallel jobs: 2
+[94045][   progress] Found 4 source files to analyze in /Users/andrea/git/racerdfix/src/test/java/infer-out
+[94051][   progress] pingpong/PP.java starting
+[94050][   progress] pingpong/BuggedProgram.java starting
+[94051][   progress] pingpong/PP.java DONE
+[94051][   progress] pingpong/PingPong.java starting
+[94050][   progress] pingpong/BuggedProgram.java DONE
+[94050][   progress] pingpong/BugThread.java starting
+[94050][   progress] pingpong/BugThread.java DONE
+[94051][   progress] pingpong/PingPong.java DONE
+[94045][      debug] Analysis phase finished in 68.809ms
+[94045][      debug] Collected stats:
+[94045][      debug] Backend stats:
+[94045][      debug]   summary_file_try_load= 162
+[94045][      debug]   summary_read_from_disk= 18
+[94045][      debug]   summary_cache_hits= 186 (55%)
+[94045][      debug]   summary_cache_misses= 150
+[94045][      debug]   ondemand_procs_analyzed= 13
+[94045][      debug]   ondemand_local_cache_hits= 35 (38%)
+[94045][      debug]   ondemand_local_cache_misses= 55
+[94045][      debug]   proc_locker_lock_time_user= 0.00000000
+[94045][      debug]   proc_locker_lock_time_sys= 0.00000000
+[94045][      debug]   proc_locker_lock_time_wall= 0.00000000
+[94045][      debug]   proc_locker_unlock_time_user= 0.00000000
+[94045][      debug]   proc_locker_unlock_time_sys= 0.00000000
+[94045][      debug]   proc_locker_unlock_time_wall= 0.00000000
+[94045][      debug]   restart_scheduler_useful_time_user= 0.00000000
+[94045][      debug]   restart_scheduler_useful_time_sys= 0.00000000
+[94045][      debug]   restart_scheduler_useful_time_wall= 0.00000000
+[94045][      debug]   restart_scheduler_total_time_user= 0.00000000
+[94045][      debug]   restart_scheduler_total_time_sys= 0.00000000
+[94045][      debug]   restart_scheduler_total_time_wall= 0.00000000
+[94045][      debug]   scheduler_process_analysis_time_user= 0.02504000
+[94045][      debug]   scheduler_process_analysis_time_sys= 0.01471300
+[94045][      debug]   scheduler_process_analysis_time_wall= 0.06880942
+[94045][      debug]   
+[94045][      debug] 
