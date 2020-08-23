@@ -40,7 +40,7 @@ case class BugIn(val bug_type: String, val qualifier: String, val severity: Stri
         snapshot1_hash, snapshot2_hash, patchStore.map(hash).choiceId, patchStore.map(hash).patches)
     } catch {
       case _ =>        new BugOut(bug_type,qualifier,severity, line, column, proc, proc_start, file, bug_trace, key, hash, bug_type_hum, access,
-        snapshot1_hash, snapshot2_hash, -1, new GroupByIdPatchOptions(HashMap.empty))
+        snapshot1_hash, snapshot2_hash, "-1", new GroupByIdPatchOptions(HashMap.empty))
     }
   }
 }
@@ -49,7 +49,7 @@ case class BugOut(val bug_type: String, val qualifier: String, val severity: Str
                    val proc: String, val proc_start: Int, val file: String,
                    val bug_trace: List[TraceElem], val key: String, val hash: String, val bug_type_hum: String, val access: String,
                    val snapshot1_hash: Option[String], val snapshot2_hash: Option[String],
-                   val patch_choice: Int,
+                   val patch_choice: String,
                    val patches: GroupByIdPatchOptions) extends Bugs
 
 

@@ -121,33 +121,33 @@ case object NoPatch extends Patch {
 case class PTest(val block: PatchBlock) extends Patch {
   def contains(f: PatchBlock => Boolean) = false
 }
-case class PInsert(val id: Int, val block: PatchBlock) extends Patch {
+case class PInsert(val id: String, val block: PatchBlock) extends Patch {
   def contains(f: PatchBlock => Boolean) = {
       f(this.block)
   }
 }
-case class PUpdate(val id: Int, val block: PatchBlock) extends Patch{
+case class PUpdate(val id: String, val block: PatchBlock) extends Patch{
   def contains(f: PatchBlock => Boolean) = {
     f(this.block)
   }
 }
-case class PAnd(val left: Patch, val right: Patch) extends Patch {
+case class PAnd(val id: String, val left: Patch, val right: Patch) extends Patch {
 
   def mkAnd(lst: List[Patch]) = {
     lst match {
       case Nil     => NoPatch
       case x::Nil  => x
-      case _       => lst.dropRight(1).foldRight(lst.last)((fix,acc) => PAnd(fix,acc))
+      case _       => lst.dropRight(1).foldRight(lst.last)((fix,acc) => PAnd(id,fix,acc))
     }
   }
 
   def listOf(): List[Patch] = {
     val left_lst = left match {
-      case PAnd(_,_) => left.asInstanceOf[PAnd].listOf()
+      case PAnd(_,_,_) => left.asInstanceOf[PAnd].listOf()
       case _ => List(left)
     }
     val right_lst = right match {
-      case PAnd(_,_) => right.asInstanceOf[PAnd].listOf()
+      case PAnd(_,_,_) => right.asInstanceOf[PAnd].listOf()
       case _ => List(right)
     }
     left_lst ++ right_lst
@@ -157,23 +157,23 @@ case class PAnd(val left: Patch, val right: Patch) extends Patch {
     this.left.contains(f) || this.right.contains(f)
   }
 }
-case class POr(val left: Patch, val right: Patch) extends Patch {
+case class POr(val id: String, val left: Patch, val right: Patch) extends Patch {
 
   def mkOr(lst: List[Patch]) = {
     lst match {
       case Nil     => NoPatch
       case x::Nil  => x
-      case _       => lst.dropRight(1).foldRight(lst.last)((fix,acc) => POr(fix,acc))
+      case _       => lst.dropRight(1).foldRight(lst.last)((fix,acc) => POr(id,fix,acc))
     }
   }
 
   def listOf(): List[Patch] = {
     val left_lst = left match {
-      case POr(_,_) => left.asInstanceOf[POr].listOf()
+      case POr(_,_,_) => left.asInstanceOf[POr].listOf()
       case _ => List(left)
     }
     val right_lst = right match {
-      case POr(_,_) => right.asInstanceOf[POr].listOf()
+      case POr(_,_,_) => right.asInstanceOf[POr].listOf()
       case _ => List(right)
     }
     left_lst ++ right_lst

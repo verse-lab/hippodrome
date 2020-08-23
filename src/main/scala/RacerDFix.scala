@@ -37,10 +37,10 @@ object RacerDFix {
   /* Generating unique references */
   var patchID_ref = 1
 
-  def patchIDGenerator(): Int = {
+  def patchIDGenerator(): String = {
     val patchID = patchID_ref
     patchID_ref = patchID+ 1
-    patchID
+    patchID.toString
   }
 
   def patchIDGeneratorRange(len: Int): (Int, Int) = {

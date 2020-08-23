@@ -10,9 +10,9 @@ import scala.io.StdIn.readLine
 import scala.collection.mutable.HashMap
 
 /* maps patch ID -> list of individual code modifications */
-class GroupByIdPatchOptions(var map : HashMap[Int, List[PatchBlock]]) {
+class GroupByIdPatchOptions(var map : HashMap[String, List[PatchBlock]]) {
 
-  def update(id: Int, pb: PatchBlock): Unit = {
+  def update(id: String, pb: PatchBlock): Unit = {
     try {
       this.map.update(id, this.map(id) ++ List(pb))
     } catch {
@@ -31,7 +31,7 @@ class GroupByIdPatchOptions(var map : HashMap[Int, List[PatchBlock]]) {
   }
 
   /* returns the cost of the patch with id `patchID` */
-  def getCost(patchID: Int) = {
+  def getCost(patchID: String) = {
     this.map(patchID).foldLeft(Globals.unitCost)((acc,pb) => acc.add(pb.cost))
   }
 
@@ -211,7 +211,7 @@ object ProcessOneBugGroup  {
   /* ************************************************ */
 
   def applyPatch_def(
-                 patch_id: Int,
+                 patch_id: String,
                  patches: GroupByIdPatchOptions,
                  patchStore: PatchStore): Unit = {
     try {
@@ -230,20 +230,6 @@ object ProcessOneBugGroup  {
     }
   }
 
-  def applyPatch_helper(
-                     patch_id_str: String,
-                     patches: GroupByIdPatchOptions,
-                     patchStore: PatchStore): Unit = {
-    try {
-      val patch_id = patch_id_str.toInt
-      applyPatch_def(patch_id, patches, patchStore)
-    } catch {
-      case _: Exception => {println("Invalid patch ID")
-        None
-      }
-    }
-  }
-
   /* debugger */
   def applyPatch( patch_id_str: String,
                   patches: GroupByIdPatchOptions,
@@ -252,14 +238,14 @@ object ProcessOneBugGroup  {
       println("Patch id: " + patch_id_str)
       println("Patches: "  + patches)
     }
-    applyPatch_helper(patch_id_str, patches, patchStore)
+    applyPatch_def(patch_id_str, patches, patchStore)
   }
 
   /* Generates a list of patches corresponding to the list of UPDATE objects (updates) */
   def generateUpdatePatch0(
                             updates: UpdateSync,
                             ast: ASTStoreElem,
-                            id: Option[Int] = None): Patch = {
+                            id: Option[String] = None): Patch = {
     val res     = generateUpdatePatch(updates,ast)
     val patchID = id match {
       case None => RacerDFix.patchIDGenerator
@@ -276,7 +262,7 @@ object ProcessOneBugGroup  {
   def generateInsertPatch0(
                             inserts: InsertSync,
                             ast: ASTStoreElem,
-                            id: Option[Int] = None): Patch = {
+                            id: Option[String] = None): Patch = {
      val res     = generateInsertPatch(inserts,ast)
      val patchID = id match {
        case None => RacerDFix.patchIDGenerator
@@ -293,7 +279,7 @@ object ProcessOneBugGroup  {
   def generateInsertDeclareAndInstPatch0(
                             inserts: InsertDeclareAndInst,
                             ast: ASTStoreElem,
-                            id: Option[Int] = None): Patch = {
+                            id: Option[String] = None): Patch = {
     val res     = generateInsertDeclareAndInstPatch(inserts,ast)
     val patchID = id match {
       case None => RacerDFix.patchIDGenerator
@@ -306,7 +292,7 @@ object ProcessOneBugGroup  {
   }
 
   def generatePatches(fixobj: FixKind,
-                      id: Option[Int] = None): Patch = {
+                      id: Option[String] = None): Patch = {
     fixobj match {
       case NoFix   => NoPatch
       case Test(_) => NoPatch
@@ -315,11 +301,11 @@ object ProcessOneBugGroup  {
       case InsertDeclareAndInst(s,_,_,_,_,_) => generateInsertDeclareAndInstPatch0(fixobj.asInstanceOf[InsertDeclareAndInst],s.ast,id)
       case And(left, right) =>
         val fresh_id =  id match {
-          case None => Some(RacerDFix.patchIDGenerator)
-          case Some(_) => id
+          case None =>    RacerDFix.patchIDGenerator
+          case Some(id) => id
         }
-        new PAnd(generatePatches(left,fresh_id), generatePatches(right,fresh_id))
-      case Or(left, right)  => new POr(generatePatches(left,id), generatePatches(right,id))
+        new PAnd(fresh_id, generatePatches(left, Some(fresh_id)), generatePatches(right,Some(fresh_id)))
+      case Or(left, right)  => new POr(RacerDFix.patchIDGenerator, generatePatches(left,Some(RacerDFix.patchIDGenerator)), generatePatches(right,Some(RacerDFix.patchIDGenerator)))
     }
   }
 
@@ -337,11 +323,11 @@ object ProcessOneBugGroup  {
         groupByIdPatchOptions.update(id,block)
         groupByIdPatchOptions
       }
-      case PAnd(left, right)  => {
+      case PAnd(_,left, right)  => {
         val grp1 = generateGroupPatches(groupByIdPatchOptions,left)
         generateGroupPatches(grp1,right)
       }
-      case POr(left, right)  => {
+      case POr(_,left, right)  => {
         val grp1 = generateGroupPatches(groupByIdPatchOptions,left)
         generateGroupPatches(grp1,right)
       }
@@ -349,7 +335,7 @@ object ProcessOneBugGroup  {
   }
 
   def leastCostlyPatch(groupByIdPatchResult: GroupByIdPatchOptions) = {
-    val patch_id = groupByIdPatchResult.map.foldLeft((None:Option[Int],Globals.maxCost))((acc:(Option[Int],PatchCost),pair) => {
+    val patch_id = groupByIdPatchResult.map.foldLeft((None:Option[String],Globals.maxCost))((acc:(Option[String],PatchCost),pair) => {
       val leastCostlySoFar   = acc._2
       val costOfCurrentPatch = groupByIdPatchResult.getCost(pair._1)
       if (leastCostlySoFar.compare(costOfCurrentPatch) <= 0) acc
@@ -373,7 +359,7 @@ object ProcessOneBugGroup  {
 
     println("************* GENERATE PATCH *************")
     //    if ( true /*csumm1.resource == csumm2.resource*/) {
-    var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, List[PatchBlock]])
+    var empty_map = new GroupByIdPatchOptions(HashMap.empty[String, List[PatchBlock]])
     summs match {
       case Nil =>
       case summ::Nil => {
@@ -381,14 +367,14 @@ object ProcessOneBugGroup  {
         /* `csumm1` is not synchronized */
 
         val patch_id = RacerDFix.patchIDGeneratorRange(0)._2
-        var empty_map = new GroupByIdPatchOptions(HashMap.empty[Int, List[PatchBlock]])
+        var empty_map = new GroupByIdPatchOptions(HashMap.empty[String, List[PatchBlock]])
         val grouped_patches = if (summ.csumm.locks.length == 0) {
           /* ************** INSERTS ***************** */
           /* generate insert objects */
           val inserts1 = generateInsertObjectOnUnprotectedResource(summ)
 
           /* generate insert patches */
-          val patches = generatePatches(inserts1, Some(patch_id))
+          val patches = generatePatches(inserts1)
 
           val grouped_patches1 = generateGroupPatches(empty_map, patches)
           grouped_patches1
@@ -398,7 +384,7 @@ object ProcessOneBugGroup  {
         println(grouped_patches.getText())
 
         //println("************* GENERATE FIX *************")
-        applyPatch_def(patch_id, grouped_patches, patchStore)
+        applyPatch_def(patch_id.toString, grouped_patches, patchStore)
       }
       case _ => {
         /* retrieve possible modifiers e.g. static */
