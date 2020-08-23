@@ -374,7 +374,7 @@ object ProcessOneBugGroup  {
           val inserts1 = generateInsertObjectOnUnprotectedResource(summ)
 
           /* generate insert patches */
-          val patches = generatePatches(inserts1)
+          val patches = generatePatches(inserts1, Some(patch_id.toString))
 
           val grouped_patches1 = generateGroupPatches(empty_map, patches)
           grouped_patches1

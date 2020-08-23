@@ -124,6 +124,10 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     }
   }
 
+  override def visitVariableInitializerList(ctx: Java8Parser.VariableInitializerListContext): Unit = {
+    visitCriticalSection(ctx)
+  }
+
   override def visitFieldAccess(ctx: Java8Parser.FieldAccessContext): Unit = {
     //println("Field Access" + ctx.getText)
     visitCriticalSection(ctx)
