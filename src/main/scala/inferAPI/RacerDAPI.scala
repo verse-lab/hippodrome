@@ -53,8 +53,9 @@ object RacerDAPI {
 
   /* P<0>{(this:B*).myA2} ==> myA2*/
   def resourceVarOfLockString_def(lock: String): String = {
+    val lock_m = lock.replace("->",".")
     val pattern = "(?<=\\).)[^)]+(?=\\})".r
-    pattern.findFirstMatchIn(lock) match {
+    pattern.findFirstMatchIn(lock_m) match {
       case Some(resource) => resource.toString()
       case None => objectOfLockString(lock)
     }
