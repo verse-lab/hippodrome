@@ -199,11 +199,16 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     val variableDeclarator = ctx.localVariableDeclaration().variableDeclaratorList().variableDeclarator()
     ctx.localVariableDeclaration().variableModifier().forEach(m => modifiers = modifiers ++ List(m.getText))
     variableDeclarator.forEach(a => {
-      val a0 = a.start.getStartIndex
-      val a1 = a.stop.getStopIndex
+      val a0 = a.variableInitializer().start.getStartIndex
+      val a1 = a.variableInitializer().stop.getStopIndex
       val interval = new Interval(a0, a1)
-      if (!a.variableInitializer().children.isEmpty)  initializers = initializers ++ List(a.start.getInputStream.getText(interval))
+      if (!a.variableInitializer().children.isEmpty)  initializers = initializers ++
+        List(
+          a.variableDeclaratorId().Identifier().getText + " = " +
+          a.variableInitializer().start.getInputStream.getText(interval))
     })
+    variableDeclarator.forEach(m => println("Variable declarator id: "  + m.variableDeclaratorId().getText))
+    variableDeclarator.forEach(m => println("Variable declarator id - identifier: "  + m.variableDeclaratorId().Identifier().getText))
     variableDeclarator.forEach(m => ids = ids ++ List(m.variableDeclaratorId().getText))
 
     val declarations    = Globals.print_list(Globals.pr_id, " ", modifiers) + typ + " " + Globals.print_list(Globals.pr_id, ", ", ids) + "; "
