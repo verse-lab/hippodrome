@@ -52,8 +52,9 @@ class ASTManipulation {
   }
 
   def dumpAll(config: FixConfig, copy_original: Boolean) = {
-    if(!config.intellij)
-    map.foreachEntry[Unit]((filename, _) => dumpToFile(filename, config, copy_original))
+    if(!config.intellij)  {
+      map.foreachEntry[Unit]((filename, _) => dumpToFile(filename, config, copy_original))
+    }
   }
 
   /* TODO: no need for ast here */
