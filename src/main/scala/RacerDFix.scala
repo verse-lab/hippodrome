@@ -22,6 +22,7 @@ object RacerDFix {
   }
 
   private def handleInput(args: Array[String]): Unit = {
+    println("args: " + args)
     val newConfig = RunConfig(FixConfig(), Globals.def_src_path)
     parser.parse(args, newConfig) match {
       case Some(RunConfig(fixConfig, file)) =>

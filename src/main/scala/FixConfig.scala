@@ -129,9 +129,7 @@ object ArgParser {
           infer_opt = infer_config.infer_opt,
           infer_target_files = infer_config.infer_target_files,
           json_path = infer_config.json_path,
-          prio_files = {
-            println("infer_config prio_files" + infer_config.prio_files)
-            infer_config.prio_files},
+          prio_files = infer_config.prio_files,
           iterations = infer_config.iterations
         )})
     }.text("the config file to setup infers. The default one is " + Globals.config_file)
