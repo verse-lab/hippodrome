@@ -1,10 +1,43 @@
 import org.racerdfix.language.{EmptyTrace, InsertSync, NoFix, Or, PatchBlock, RFSumm, Read, Write}
 import org.junit.Test
+import org.racerdfix.{ArgParser, FixConfig, Globals, RacerDFix, RacerDFixException, RunConfig}
 import org.racerdfix.inferAPI.RacerDAPI
-import org.racerdfix.utils.ASTManipulation
-
+import org.racerdfix.utils.{ASTManipulation, Logging}
+import org.hamcrest.CoreMatchers.is
+import org.hamcrest.MatcherAssert.assertThat
+import org.racerdfix.RacerDFix.runPatchAndFix
 
 class PatchCreationUnitTest {
+
+    private val parser = ArgParser.argsParser
+
+    def parseParams(paramString: Array[String], params: FixConfig): FixConfig = {
+        val newConfig = RunConfig(params, Globals.def_src_path)
+        parser.parse(paramString, newConfig) match {
+            case Some(RunConfig(fixConfig, _)) => fixConfig
+            case None => throw RacerDFixException("Bad argument format.")
+        }
+    }
+
+    private def handleInput(args: Array[String]): Unit = {
+        val newConfig = RunConfig(FixConfig(), Globals.def_src_path)
+        parser.parse(args, newConfig) match {
+            case Some(RunConfig(fixConfig, file)) =>
+                Logging.init(fixConfig)
+                assertThat(RacerDFix.runPatchAndFix(fixConfig,1),is(1))
+                Logging.stop
+            case None =>
+                System.err.println("Bad argument format.")
+        }
+    }
+
+//    @Test
+//    @throws[Exception]
+//    def runFiles(): Unit = {
+//
+//        handleInput(Array("--testing=true", "--config_file=" + "\"" + "src/test/java-benchmark/airline/CONFIG.json" + "\""))
+//    }
+
     @Test
     @throws[Exception]
     def whenDifferentResources(): Unit = {

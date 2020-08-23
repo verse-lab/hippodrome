@@ -40,8 +40,8 @@ class ASTManipulation {
           fm.overwriteFile(filename, astElem.rewriter.getText)
         } else {
           /* write to file (keep the original one in `filename.orig` and the fix in `filename` */
-          val fixFile = fm.cloneOriginalFileToFix(filename)
-          fm.overwriteFile(fixFile, astElem.rewriter.getText)
+          //val fixFile = fm.cloneOriginalFileToFix(filename)
+          fm.overwriteFile(filename, astElem.rewriter.getText)
         }
     }
   }

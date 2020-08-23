@@ -36,7 +36,7 @@ object ConfigProtocol extends DefaultJsonProtocol {
       case JsObject(fields) => {
         val options = fields.get("options").map(w => w.asInstanceOf[JsArray].elements.map(v => jsonToString(v)).toList).getOrElse[List[String]](Nil)
         val files   = fields.get("target_options").map(w => w.asInstanceOf[JsArray].elements.map(v => jsonToString(v)).toList).getOrElse[List[String]](Nil)
-        val prio_files = fields.get("prio_filed").map(w => w.asInstanceOf[JsArray].elements.map(f => jsonToString(f)).toList).getOrElse[List[String]](Nil)
+        val prio_files = fields.get("prio_files").map(w => w.asInstanceOf[JsArray].elements.map(f => jsonToString(f)).toList).getOrElse[List[String]](Nil)
         val iterations = fields.get("iterations") match {
           case None        => Globals.no_iter
           case Some(value) => value.toString().toInt
@@ -393,12 +393,12 @@ class InterpretJson(val config: FixConfig) {
   def getJsonSummaries(): TranslationResult[SummaryIn] = {
     import SummaryProtocol._
     val fm    = new FileManipulation
-    val files = config.prio_files match {
-      case Nil =>  /* all files in dir */
+    val files = { //config.prio_files match {
+      //case Nil =>  /* all files in dir */
           fm.getListOfFiles(config.getJsonSummariesPath)
-      case _   =>  /* just those in prio */
-        fm.getListOfFiles(config.getJsonSummariesPath).filter(p => config.prio_files.contains(p.replace('_','/')) /* infer replaces `/` with `_` */
-        ).map(file =>  fm.getFile(config.getJsonSummariesPath,file))
+    //      case _   =>  /* just those in prio */
+//        fm.getListOfFiles(config.getJsonSummariesPath).filter(p => config.prio_files.contains(p.replace('_','/')) /* infer replaces `/` with `_` */
+//        ).map(file =>  fm.getFile(config.getJsonSummariesPath,file))
     }
     files.foldLeft[TranslationResult[SummaryIn]](new TranslationResult[SummaryIn](Nil))((acc,file) => {
       val src = fm.fileToString(file)

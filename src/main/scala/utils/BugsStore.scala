@@ -6,35 +6,46 @@ import scala.collection.mutable
 import scala.collection.mutable.HashMap
 
 class BugsStore {
-  val map: HashMap[String, List[FBug]] = new mutable.HashMap[String, List[FBug]]
+  val map: HashMap[String, (List[String],List[FBug])] = new mutable.HashMap[String, (List[String],List[FBug])]
 
   /* TODO this is monstrous - need to refactor */
   def update(bug: FBug) = {
     val snapshots = bug.snapshot1 ++ bug.snapshot2
+
+    /* assume all snapshots refer to the same resource. */
     if(snapshots.length > 0){
       try {
-      val key = snapshots.foldLeft[Option[String]](Some(snapshots.head.resource.head))((acc:Option[String],s) => {
-        acc match {
-          case None => None
-          case Some(res) =>  if (s.resource.contains(res)) Some(res) else None
-        }
-      })
-
-      key match {
-        case None =>
-        case Some(key) =>  {
-          try {
-            map.update(key, map(key) ++ List(bug))
-          } catch {
-            case _ => map.update(key, List(bug))
+        val resources = snapshots.map(rfsumm => rfsumm.resource).flatten.distinct
+        /* at least one of resources is key in map */
+        val key = resources.foldLeft[Option[String]](None)( (acc,res) => {
+          /* if the resources is already a key keep it as a key */
+          if (map.contains(res))  Some(res)
+          else {
+            /* if the resources is part of existing resources for a certain `key` return that `key` */
+            acc match {
+              case  None =>
+                map.foldLeft[Option[String]](acc)((acc0,mapElem) => {
+                  val existing_resources = mapElem._2._1
+                  val existing_key  = mapElem._1
+                  if(existing_resources.contains(res)) Some(existing_key)
+                  else acc0
+                })
+              case Some(_) => acc
+            }
           }
+        })
+      key match {
+        case None => map.update(resources.head,(resources,List(bug)))
+        case Some(key) =>
+          val (res,bugs) = map(key)
+          map.update(key, ((res ++ resources).distinct, (bugs ++ List(bug)).distinct ))
         }
       }
-    } catch{
-        case _ => map.update(bug.hash,  List(bug))
+     catch{
+        case _ => map.update(bug.hash,  (Nil,List(bug)))
       }
     }
-    else map.update(bug.hash,  List(bug))
+    else map.update(bug.hash,  (Nil,List(bug)))
   }
 }
 

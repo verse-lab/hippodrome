@@ -3,7 +3,7 @@ package org.racerdfix
 import org.racerdfix.language.{BugIn, Bugs, RFSumm, SummaryIn}
 import org.racerdfix.ProcessOneBugGroup.mainAlgo
 import org.racerdfix.inferAPI.{InterpretJson, TranslationResult}
-import org.racerdfix.utils.{ASTManipulation, BugsMisc, BugsStore, Logging, PatchStore}
+import org.racerdfix.utils.{ASTManipulation, BugsMisc, BugsStore, FileManipulation, Logging, PatchStore}
 
 import scala.io.StdIn.readLine
 import scala.sys.process._
@@ -33,7 +33,7 @@ object RacerDFix {
     }
   }
 
-  /* Generating uniwue references */
+  /* Generating unique references */
   var patchID_ref = 1
 
   def patchIDGenerator(): Int = {
@@ -54,13 +54,17 @@ object RacerDFix {
     (config.prio_files.length > 0 && config.prio_files.contains(bug.asInstanceOf[BugIn].file))
   }
 
-  def runPatchAndFix(config: FixConfig, iteration: Int): Unit = {
+  def runPatchAndFix(config: FixConfig, iteration: Int): Int = {
 
     /* run infer */
     val infer   = config.infer
     val options = config.infer_opt
     val output_dir = Seq("--results-dir",config.json_path)
-    val target_files   = config.infer_target_files
+    val target_files  = if(config.testing) {
+      val fm    = new FileManipulation
+      val files = config.infer_target_files.map( file => fm.cloneOriginalFileToFix(file))
+      files
+    } else config.infer_target_files
     val infer_process = Seq(infer).concat(options).concat(output_dir).concat(target_files)
     def fnc(a: Unit) : Unit  = {
        val res = infer_process.!
@@ -91,13 +95,13 @@ object RacerDFix {
     bugs.foreach(bug => bugsStore.update(bug))
 
     bugsStore.map.foreach( fbugs => {
-      val bugs_str = fbugs._2.foldLeft("")((acc,bug) => acc + ", "  + bug.hash)
+      val bugs_str = fbugs._2._2.foldLeft("")((acc,bug) => acc + ", "  + bug.hash)
       println("**************** BUGS: " + bugs_str + " ************* ")
-      patchStore.bug = fbugs._2.head.hash
+      patchStore.bug = fbugs._2._2.head.hash
       Logging.add("*********************************")
       Logging.add("bugs: " + bugs_str)
 
-      val bugs_group = fbugs._2
+      val bugs_group = fbugs._2._2
       val summs = bugs_group.foldLeft[List[RFSumm]](Nil)((acc,bug) =>  {acc ++ BugsMisc.retrieveSummary(bug)})
       mainAlgo(summs, config, ast, patchStore)
     })
@@ -120,9 +124,13 @@ object RacerDFix {
         println("New bugs detected during validation phase. Rerun RacerDFix? (Y/n)")
         val answer_str = if (config.interactive) { readLine() } else if (iteration < config.iterations) "Y" else "n"
         if (answer_str == "Y") runPatchAndFix(config, iteration +1 )
-        else if (answer_str != "n") println("Unrecognized answer.")
+        else if (answer_str != "n") {
+          println("Unrecognized answer.")
+          return 0;
+        } else if (iteration < config.iterations) return 1 else return 0
       }
     }
+    return 1
   }
 
   def main(args: Array[String]) = handleInput(args)
