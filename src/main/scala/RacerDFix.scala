@@ -58,6 +58,7 @@ object RacerDFix {
   def runPatchAndFix(config: FixConfig, iteration: Int): Int = {
 
     /* run infer */
+    if(config.flag1) println("RacerDFix started!")
     val infer   = config.infer
     val options = config.infer_opt
     val output_dir = Seq("--results-dir",config.json_path)
@@ -84,6 +85,7 @@ object RacerDFix {
     val bugsIn      = new TranslationResult[BugIn](bugsAllPrio.results.filter(b => b.isInstanceOf[BugIn] &&
       Globals.tackled_bug_kinds.contains(b.asInstanceOf[BugIn].bug_type)).map(b => b.asInstanceOf[BugIn]))
     val bugs        = bugsIn.results.map(b => b.racerDToRacerDFix(summaries))
+    if(config.flag1) println("Reading json files completed!")
 
     /* for each bug in `bugs` find a patch and possibly generate a fix */
     val ast = new ASTManipulation
@@ -91,6 +93,7 @@ object RacerDFix {
 
     val bugsStore = new BugsStore
     bugs.foreach(bug => bugsStore.update(bug))
+    if(config.flag1) println("Bug Store updated!")
 
     bugsStore.map.foreach( fbugs => {
       val bugs_str = fbugs._2._2.foldLeft("")((acc,bug) => acc + ", "  + bug.hash)

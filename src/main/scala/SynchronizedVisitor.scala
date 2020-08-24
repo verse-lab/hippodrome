@@ -20,6 +20,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var decl_slice: Option[DeclaratorSlicing] = None
   var variables: mutable.HashMap[String, List[Variable]] = new mutable.HashMap[String,List[Variable]]()
   private var className: String = ""
+  private var config: Option[FixConfig] = None
 
 
   def setFix(init_fix: FixKind): Unit = {
@@ -62,7 +63,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
           val vars = RacerDAPI.refToListOfRef(ctx.getText)
           val vars_extended = vars.map(v => if (cls.length >0 ) cls + "." + v else v)
-          println("LOG INSERT: \n expected vars:" + unprotected_resource + "\n found variables: " + vars_extended)
+          //println("LOG INSERT: \n expected vars:" + unprotected_resource + "\n found variables: " + vars_extended)
           if ((vars ++ vars_extended).intersect(unprotected_resource).length>0){
             resource = Some(ctx)
             static_ctx = static_mthd
@@ -187,9 +188,9 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     fix match {
       case UpdateVolatile(fsumm, cls, line, variable, modifiers, decl_old, decl_new) =>
         val classes = RacerDAPI.classToListOfCls(cls)
-        println("LOG VOLATILE: \n expected cls:" + cls + "\n found classes: " + classes)
-        println("\n expected vars:" + variable + "\n found variables: " + variables_lst)
-        println("\n existing modifiers:" + modifiers_lst)
+//        println("LOG VOLATILE: \n expected cls:" + cls + "\n found classes: " + classes)
+//        println("\n expected vars:" + variable + "\n found variables: " + variables_lst)
+//        println("\n existing modifiers:" + modifiers_lst)
         if (classes.contains(className) && !variables_lst.intersect(variable).isEmpty && !modifiers_lst.contains("volatile")) {
           targetContext = Some(ctx)
           }

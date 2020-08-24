@@ -32,8 +32,10 @@ case class FixConfig(
                       infer: String             = Globals.def_infer,
                       infer_opt: Seq[String]    = Globals.def_infer_options,
                       infer_target_files: Seq[String]  = Globals.def_target_files,
-                      prio_files: List[String]  = Nil  // checks only the bugs in prio_files if the list in non-empty
-
+                      prio_files: List[String]  = Nil,  // checks only the bugs in prio_files if the list in non-empty
+                      // General purpose flags
+                      flag1: Boolean            = false,
+                      flag2: Boolean            = false
   ) extends PrettyPrinting {
 
   val fm = new FileManipulation
@@ -119,6 +121,14 @@ object ArgParser {
     opt[Seq[String]]('f', "infer_target_files").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(infer_target_files = b))
     }.text("the target files to analyse and fix. The default one is " + Globals.def_target_files)
+
+    opt[Boolean]("flag1").action { (b, rc) =>
+      rc.copy(fixConfig = rc.fixConfig.copy(flag1 = b))
+    }.text("Flag used for debugging. Default value is " + false)
+
+    opt[Boolean]("flag2").action { (b, rc) =>
+      rc.copy(fixConfig = rc.fixConfig.copy(flag2 = b))
+    }.text("Flag used for debugging. Default value is " + false)
 
     opt[String]('c', "config_file").action { (b, rc) =>
       rc.copy(fixConfig = {
