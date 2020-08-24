@@ -175,18 +175,18 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
 
   override def visitFieldDeclaration(ctx: Java8Parser.FieldDeclarationContext): Unit =  {
-    var modifiers     = List.empty[String]
+    var modifiers_lst     = List.empty[String]
     var variables_lst = List.empty[String]
-    ctx.fieldModifier().forEach( m => modifiers = modifiers ++ List(m.getText))
+    ctx.fieldModifier().toArray.foreach( m => modifiers_lst = modifiers_lst ++ List(m.asInstanceOf[Java8Parser.FieldModifierContext].getText))
     ctx.variableDeclaratorList().variableDeclarator.forEach( vd => variables_lst = variables_lst ++ List(vd.variableDeclaratorId().Identifier().getText))
-    val vars          = variables_lst.map( v => new Variable(modifiers,ctx.unannType().getText,v))
+    val vars          = variables_lst.map( v => new Variable(modifiers_lst,ctx.unannType().getText,v))
     val existing_vars = variables.getOrElseUpdate(className,Nil)
     variables.update(className,existing_vars ++ vars)
     //println("Field Declarator: " + ctx.getText)
     fix match {
       case UpdateVolatile(fsumm, cls, line, variable, modifiers, decl_old, decl_new) =>
         val classes = RacerDAPI.classToListOfCls(cls)
-        if (classes.contains(className) && !variables_lst.intersect(variable).isEmpty && !modifiers.contains("volatile")) {
+        if (classes.contains(className) && !variables_lst.intersect(variable).isEmpty && !modifiers_lst.contains("volatile")) {
           targetContext = Some(ctx)
           }
       case _ => this.visitChildren(ctx)
