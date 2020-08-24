@@ -93,7 +93,7 @@ object RacerDFix {
 
     bugsStore.map.foreach( fbugs => {
       val bugs_str = fbugs._2._2.foldLeft("")((acc,bug) => acc + ", "  + bug.hash)
-      println("**************** BUGS: " + bugs_str + " ************* ")
+      println("**************** BUGS: " + fbugs._1 + " =>" + bugs_str + " ************* ")
       patchStore.bug = fbugs._2._2.head.hash
       Logging.add("*********************************")
       Logging.add("bugs: " + bugs_str)
