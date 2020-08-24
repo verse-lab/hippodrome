@@ -74,7 +74,8 @@ object RacerDFix {
     val jsonTranslator = new InterpretJson(config)
     val summariesIn = jsonTranslator.getJsonSummaries()
     val norm_and_translate = ((s:SummaryIn) => s.racerDToRacerDFix())
-    val summaries   = summariesIn.results.flatMap(norm_and_translate)
+    val summaries0  = summariesIn.results.flatMap(norm_and_translate)
+    val summaries   = Globals.distinct_eq( (a:RFSumm,b:RFSumm) => a.equals(b), summaries0)
     val bugsInAll   = jsonTranslator.getJsonBugs()
     /* filter out bugs not in prio_files */
     val bugsAllPrio = new TranslationResult[BugIn](bugsInAll.results.filter( b =>

@@ -68,7 +68,6 @@ class SummaryIn(var file: String, val procedure: String, var accesses: List[Acce
     this
   }
 
-
   def racerDToRacerDFix(): List[RFSumm] = {
     this.accesses.foldLeft(List.empty[RFSumm])((acc2, ae) => {
         val cls = RacerDAPI.classNameOfMethodString(procedure)

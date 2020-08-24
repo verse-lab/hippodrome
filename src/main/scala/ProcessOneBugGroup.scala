@@ -97,7 +97,7 @@ object ProcessOneBugGroup  {
         + ("\n" + "+: " + patch) )
         Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
       case None =>
-        println("No patch could be generated for attempt ID: " )
+        println("No UPDATE patch could be generated for attempt ID: " )
         None
     }
   }
@@ -128,7 +128,7 @@ object ProcessOneBugGroup  {
           }
         }
       case None =>
-        println("No patch could be generated for attempt ID: " )
+        println("No VOLATILE_2 patch could be generated for attempt ID: " )
         None
     }
   }
@@ -177,7 +177,7 @@ object ProcessOneBugGroup  {
           + ("\n" + "+: " + patch) )
         Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
       case None =>
-        println("No patch could be generated for attempt ID " )
+        println("No INSERT patch could be generated for attempt ID " )
         None
     }
   }

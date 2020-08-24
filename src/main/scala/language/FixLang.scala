@@ -1,7 +1,8 @@
 package org.racerdfix.language
 
 import org.antlr.v4.runtime.{Token, TokenStreamRewriter}
-import org.racerdfix.utils.{ASTStoreElem}
+import org.racerdfix.Globals
+import org.racerdfix.utils.ASTStoreElem
 
 
 /* ******************************************************** */
@@ -203,9 +204,21 @@ sealed trait Trace {
       case NonEmptyTrace(trace) => trace.length
     }
   }
+  def equals(that: Trace) = {
+    (this,that) match {
+      case (EmptyTrace,EmptyTrace) => true
+      case (NonEmptyTrace(_), NonEmptyTrace(_)) => this.asInstanceOf[NonEmptyTrace].equals(that.asInstanceOf[NonEmptyTrace])
+      case (_,_) => false
+    }
+  }
 }
 case object EmptyTrace extends Trace
-case class  NonEmptyTrace(val trace:List[String]) extends Trace
+case class  NonEmptyTrace(val trace:List[String]) extends Trace {
+  override def equals(that: Trace) : Boolean = {
+    if(!(that.isInstanceOf[NonEmptyTrace])) false
+    else Globals.eq_list(((a:String,b: String) => a == b), this.trace, that.asInstanceOf[NonEmptyTrace].trace)
+  }
+}
 
 class Lock(val obj: String, val cls: String, val resource: String) {
   def equals(obj: Lock): Boolean = this.obj == obj.obj && this.cls == obj.cls && this.resource == obj.resource
@@ -213,8 +226,21 @@ class Lock(val obj: String, val cls: String, val resource: String) {
 
 /* raw racerdfix snapshot */
 class RFSumm(val filename: String, val cls: String, val resource: List[String], val access: AccessKind, val locks: List[Lock], val line: Int, val trace: Trace, val hash: String){
+
   def getCost(cost: RFSumm => Int ) = cost(this)
+
+  def equals(that: RFSumm) = {
+    this.filename == that.filename &&
+    this.cls      == that.cls &&
+    Globals.eq_set(((a:String,b:String) => a == b), this.resource, that.resource) &&
+    this.access   == that.access &&
+    Globals.eq_set(((a:Lock, b: Lock) => a.equals(b)), this.locks, that.locks) &&
+    this.line     == that.line &&
+    this.trace.equals(that.trace) &&
+    this.hash     == that.hash
+  }
 }
+
 /* racerdfix snapshot */
 class FSumm(var ast: ASTStoreElem, val csumm: RFSumm)
 /* racerdfix bug */

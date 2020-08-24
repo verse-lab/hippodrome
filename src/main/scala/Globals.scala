@@ -71,4 +71,23 @@ object Globals {
   }
 
   def pr_id(str: String): String = str
+
+  def eq_list[A](eq_fn: (A,A) => Boolean, lst1: List[A], lst2: List[A]) : Boolean = {
+    if(!(lst1.length == lst2.length)) false
+    else lst1.zip(lst2).forall( a => eq_fn(a._1,a._2))
+  }
+
+  def contains_eq[A](eq: (A,A) => Boolean, lst: List[A], elem: A): Boolean = {
+    lst.exists( a => eq(a, elem))
+  }
+
+  def eq_set[A](eq: (A,A) => Boolean, lst1: List[A], lst2: List[A]) : Boolean = {
+    lst1.forall( a => contains_eq(eq, lst2, a)) &&
+    lst2.forall( a => contains_eq(eq, lst1, a))
+  }
+
+  def distinct_eq[A](eq: (A,A) => Boolean, lst: List[A]) : List[A] = {
+    lst.foldLeft(List[A]())((acc,elem) => if (contains_eq(eq,acc,elem)) acc else acc ++ List(elem))
+  }
+
 }
