@@ -371,7 +371,11 @@ object ProcessOneBugGroup  {
           case None =>    RacerDFix.patchIDGenerator
           case Some(id) => id
         }
-        new PAnd(fresh_id, generatePatches(left, Some(fresh_id)), generatePatches(right,Some(fresh_id)))
+        (generatePatches(left, Some(fresh_id)), generatePatches(right,Some(fresh_id))) match {
+          case (NoPatch, _) => NoPatch
+          case (_,NoPatch)  => NoPatch
+          case (p1, p2)     => new PAnd(fresh_id, p1, p2)
+        }
       case Or(left, right)  => new POr(RacerDFix.patchIDGenerator, generatePatches(left,Some(RacerDFix.patchIDGenerator)), generatePatches(right,Some(RacerDFix.patchIDGenerator)))
     }
   }
