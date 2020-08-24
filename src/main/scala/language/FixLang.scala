@@ -207,18 +207,14 @@ sealed trait Trace {
   def equals(that: Trace): Boolean = {
     (this,that) match {
       case (EmptyTrace,EmptyTrace) => true
-      case (NonEmptyTrace(_), NonEmptyTrace(_)) => this.asInstanceOf[NonEmptyTrace].equals(that.asInstanceOf[NonEmptyTrace])
+      case (NonEmptyTrace(trace1), NonEmptyTrace(trace2)) =>
+        Globals.eq_list(((a:String,b: String) => a == b), trace1, trace2)
       case (_,_) => false
     }
   }
 }
 case object EmptyTrace extends Trace
-case class  NonEmptyTrace(val trace:List[String]) extends Trace {
-  override def equals(that: Trace) : Boolean = {
-    if(!(that.isInstanceOf[NonEmptyTrace])) false
-    else Globals.eq_list(((a:String,b: String) => a == b), this.trace, that.asInstanceOf[NonEmptyTrace].trace)
-  }
-}
+case class  NonEmptyTrace(val trace:List[String]) extends Trace
 
 class Lock(val obj: String, val cls: String, val resource: String) {
   def equals(obj: Lock): Boolean = this.obj == obj.obj && this.cls == obj.cls && this.resource == obj.resource

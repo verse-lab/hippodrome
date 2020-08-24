@@ -82,7 +82,7 @@ object RacerDFix {
     if(config.flag1) println("Reading summaries!")
     val summaries0  = summariesIn.results.flatMap(norm_and_translate)
     if(config.flag1) println("Reading summaries!")
-    val summaries   = Globals.distinct_eq( (a:RFSumm,b:RFSumm) => a.equals(b), summaries0)
+    val summaries   = summaries0 //Globals.distinct_eq( (a:RFSumm,b:RFSumm) => a.equals(b), summaries0)
     if(config.flag1) println("End reading summaries!")
     if(config.flag1) println("Reading bugs json!")
     val bugsInAll   = jsonTranslator.getJsonBugs()

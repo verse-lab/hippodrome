@@ -1,6 +1,6 @@
 package  org.racerdfix.language
 
-import org.racerdfix.GroupByIdPatchOptions
+import org.racerdfix.{Globals, GroupByIdPatchOptions}
 import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.utils.PatchStore
 
@@ -31,7 +31,10 @@ case class BugIn(val bug_type: String, val qualifier: String, val severity: Stri
       case None => Nil
       case Some(str)  => summaries.filter(sum => sum.hash == str)
     }
-    new FBug(summ1, summ2, hash)
+    new FBug(
+      Globals.distinct_eq( (a:RFSumm,b:RFSumm) => a.equals(b), summ1),
+      Globals.distinct_eq( (a:RFSumm,b:RFSumm) => a.equals(b), summ2),
+      hash)
   }
 
   def toBugOut(patchStore: PatchStore): BugOut = {
