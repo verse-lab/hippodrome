@@ -355,7 +355,7 @@ object ProcessOneBugGroup  {
       case Test(_) => NoPatch
       case InsertSync(s,_,_,_,_)  => generateInsertPatch0(fixobj.asInstanceOf[InsertSync],s.ast,id)
       case UpdateSync(s,_,_,_,_)  => generateUpdatePatch0(fixobj.asInstanceOf[UpdateSync],s.ast,id)
-      case UpdateVolatile(s, cls, line, variable, modifiers, decl_old, decl_new) => generateUpdateToVolatilePatch0(fixobj.asInstanceOf[UpdateVolatile],s.ast,id)
+      case UpdateVolatile(s, _, _, _, _, _, _) => generateUpdateToVolatilePatch0(fixobj.asInstanceOf[UpdateVolatile],s.ast,id)
       case InsertDeclareAndInst(s,_,_,_,_,_) => generateInsertDeclareAndInstPatch0(fixobj.asInstanceOf[InsertDeclareAndInst],s.ast,id)
       case And(left, right) =>
         val fresh_id =  id match {

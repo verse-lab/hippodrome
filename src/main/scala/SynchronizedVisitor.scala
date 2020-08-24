@@ -185,10 +185,9 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     //println("Field Declarator: " + ctx.getText)
     fix match {
       case UpdateVolatile(fsumm, cls, line, variable, modifiers, decl_old, decl_new) =>
-        if (className == cls && !variables_lst.intersect(variable).isEmpty && !modifiers.contains("volatile")) {
+        val classes = RacerDAPI.classToListOfCls(cls)
+        if (classes.contains(className) && !variables_lst.intersect(variable).isEmpty && !modifiers.contains("volatile")) {
           targetContext = Some(ctx)
-//          if (ctx.fieldModifier().isEmpty) targetContext = Some (ctx.unannType())
-//          else targetContext = Some (ctx.fieldModifier(ctx.fieldModifier().size() - 1 ))
           }
       case _ => this.visitChildren(ctx)
     }
