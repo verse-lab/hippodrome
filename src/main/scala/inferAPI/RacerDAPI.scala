@@ -217,7 +217,8 @@ object RacerDAPI {
 
   /* "A.B.C" => ["C","B.C","A.B.C"] */
   def classToListOfCls(sp0: String) = {
-    val sp    = sp0.replaceAll("\\$[0-9]","")
+    val sp1   = sp0.replaceAll("\\$[0-9]","")
+    val sp    = sp1.replaceAll("\\$",".")
     val lst   = sp.split(Array('.')).toList
     val vars  = lst.foldRight((Nil:List[String],""))((str,acc:(List[String],String)) => {
       val vr = acc._2 match {
