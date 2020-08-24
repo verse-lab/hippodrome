@@ -1,6 +1,6 @@
 package org.racerdfix
 
-import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, NoFix, NoPatch, Or, PAnd, PInsert, POr, PTest, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, Test, UpdateSync, Variable}
+import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, NoFix, NoPatch, Or, PAnd, PInsert, POr, PTest, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, Test, UpdateSync, UpdateVolatile, Variable}
 import org.antlr.v4.runtime.TokenStreamRewriter
 import org.racerdfix.inferAPI.RacerDAPI
 import utils.{ASTManipulation, ASTStoreElem, Logging, PatchStore}
@@ -94,6 +94,31 @@ object ProcessOneBugGroup  {
     }
   }
 
+
+  def generateUpdateToVolatile(update: UpdateVolatile,
+                          ast: ASTStoreElem): Option[PatchBlock] ={
+    val syncVisitor = new SynchronizedVisitor
+    val rewriter    = new TokenStreamRewriter(ast.tokens)
+    syncVisitor.setFix(update)
+    syncVisitor.visit(ast.tree)
+    val sblock = syncVisitor.getTargetCtx
+    val modifiers = syncVisitor.getModifiers
+    None
+//    sblock match {
+//      case Some(sblock) =>
+//        val (oldcode,patch) = syncVisitor.updateSynchronizedStatement(rewriter,sblock,update)
+//        //        println("Patch ID: " + id)
+//        val description = (
+//          "Replace (UPDATE) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
+//            + ("\n" + "-: " + oldcode)
+//            + ("\n" + "+: " + patch) )
+//        Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
+//      case None =>
+//        println("No patch could be generated for attempt ID: " )
+//        None
+//    }
+  }
+
   /* ************************************************ */
   /*                       INSERT                     */
   /* ************************************************ */
@@ -119,6 +144,7 @@ object ProcessOneBugGroup  {
     And(declareObj,insert1)
   }
 
+
   def generateInsertPatch_def(insert: InsertSync,
                               ast: ASTStoreElem): Option[PatchBlock] = {
     val syncVisitor = new SynchronizedVisitor
@@ -126,7 +152,7 @@ object ProcessOneBugGroup  {
     syncVisitor.setFix(insert)
     syncVisitor.visit(ast.tree)
     val modifiers = syncVisitor.getModifiers
-    val sblock = syncVisitor.getResourceStatement
+    val sblock = syncVisitor.getTargetCtx
     val sdecl  = syncVisitor.getDeclSlice
     sblock match {
       case Some(sblock) =>
@@ -375,6 +401,9 @@ object ProcessOneBugGroup  {
 
           /* generate insert patches */
           val patches = generatePatches(inserts1, Some(patch_id.toString))
+
+          /* generate volatile */
+          //val update =  generateUpdateToVolatile(summ)
 
           val grouped_patches1 = generateGroupPatches(empty_map, patches)
           grouped_patches1

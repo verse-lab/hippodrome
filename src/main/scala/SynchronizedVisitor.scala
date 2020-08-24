@@ -5,7 +5,7 @@ import org.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
 import org.antlr.v4.runtime.{CommonTokenStream, ParserRuleContext, TokenStreamRewriter}
 import org.antlr.v4.runtime.misc.Interval
 import org.racerdfix.inferAPI.RacerDAPI
-import org.racerdfix.language.{DeclaratorSlicing, FixKind, InsertDeclareAndInst, InsertSync, NoFix, Test, UpdateSync, Variable}
+import org.racerdfix.language.{DeclaratorSlicing, FixKind, InsertDeclareAndInst, InsertSync, NoFix, Test, UpdateSync, UpdateVolatile, Variable}
 
 import scala.collection.mutable
 
@@ -13,7 +13,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var fix: FixKind = NoFix
   private var sblock: Option[Java8Parser.SynchronizedStatementContext] = None
   private var resource: Option[Any] = None
-  private var resourceStatement: Option[ParserRuleContext] = None
+  private var tergetContext: Option[ParserRuleContext] = None
   private var classStmt: Option[Java8Parser.ClassDeclarationContext] = None
   private var static_mthd: Boolean = false
   private var static_ctx: Boolean = false
@@ -27,7 +27,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   def getSynchronizedBlock = sblock
-  def getResourceStatement = resourceStatement
+  def getTargetCtx = tergetContext
   def getClassStatement = classStmt
   def getClassStart = classStmt match {
     case Some(cls) => Some (cls.normalClassDeclaration().classBody().start )
@@ -100,7 +100,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           case None =>
           case Some(_) =>
             resource = None
-            resourceStatement = Some(ctx)
+            tergetContext = Some(ctx)
         }}
       case Some(_) =>
     }
@@ -173,16 +173,24 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     this.visitChildren(ctx)
   }
 
+
   override def visitFieldDeclaration(ctx: Java8Parser.FieldDeclarationContext): Unit =  {
     var modifiers     = List.empty[String]
     var variables_lst = List.empty[String]
     ctx.fieldModifier().forEach( m => modifiers = modifiers ++ List(m.getText))
-    ctx.variableDeclaratorList().variableDeclarator.forEach( vd => variables_lst = variables_lst ++ List(vd.variableDeclaratorId().getText))
+    ctx.variableDeclaratorList().variableDeclarator.forEach( vd => variables_lst = variables_lst ++ List(vd.variableDeclaratorId().Identifier().getText))
     val vars          = variables_lst.map( v => new Variable(modifiers,ctx.unannType().getText,v))
     val existing_vars = variables.getOrElseUpdate(className,Nil)
     variables.update(className,existing_vars ++ vars)
     //println("Field Declarator: " + ctx.getText)
-    this.visitChildren(ctx)
+    fix match {
+      case UpdateVolatile(fsumm, cls, line, variable, modifiers, decl_old, decl_new) =>
+        if (className == cls && variables_lst.contains(variable) && !modifiers.contains("volatile")) {
+          if (ctx.fieldModifier().isEmpty) resource = Some (ctx.unannType())
+          else resource = Some (ctx.fieldModifier(ctx.fieldModifier().size() - 1 ))
+          }
+      case _ => this.visitChildren(ctx)
+    }
   }
 
   override def visitVariableDeclarator(ctx: Java8Parser.VariableDeclaratorContext): Unit = {
@@ -233,7 +241,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           case None =>
           case Some(_) =>
             resource = None
-            resourceStatement = Some(ctx)
+            tergetContext = Some(ctx)
             decl_slice = Some (sliceDeclaratorStatement(ctx))
         }}
       case Some(_) =>
@@ -324,4 +332,17 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     (ctx.start.getInputStream.getText(interval),rewriter.getText(ctx.getSourceInterval))
   }
 
+  def updateListOfModifiers(rewriter: TokenStreamRewriter,
+                                  ctx: Java8Parser.FieldModifierContext, fix: UpdateVolatile): (String,String) = {
+    val a = ctx.start.getStartIndex
+    val b = ctx.stop.getStopIndex
+    val interval = new Interval(a, b)
+
+    //    println("ctx:" + ctx.start.getInputStream.getText(interval))
+
+    val stop  = ctx.stop
+
+    rewriter.insertAfter(stop, ctx.VOLATILE())
+    (ctx.start.getInputStream.getText(interval),rewriter.getText(ctx.getSourceInterval))
+  }
 }

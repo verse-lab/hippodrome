@@ -11,6 +11,7 @@ import org.racerdfix.utils.{ASTStoreElem}
 sealed trait FixKind
 case object NoFix extends FixKind
 case class Test(lines: Int) extends FixKind
+case class UpdateVolatile(val fsumm: FSumm, cls: String, line: Int, variable: String, modifiers: List[String], decl_old: String, decl_new: String) extends FixKind
 case class UpdateSync(val fsumm: FSumm, cls: String, line: Int, lock_old: String, lock_new: String) extends FixKind
 case class InsertSync(val fsumm: FSumm, cls: String, line: Int, resource: List[String], lock: String) extends FixKind
 case class InsertDeclare(val fsumm: FSumm, cls: String, line: Int, typ: String, variable: String) extends FixKind
