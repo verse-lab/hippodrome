@@ -49,7 +49,10 @@ class GroupByIdPatchOptions(var map : HashMap[String, List[PatchBlock]]) {
           (this.map.exists(patch_inner => patch_inner._1 != patch._1 && patch_inner._2.exists(pb_inner => pb_inner.subsumes(pb))))||
           /* remove components which are subsumed by other patches' for a different bug group */
           patchStore.map.exists((bug_grp) => bug_grp._2.patches.map(bug_grp._2.choiceId).exists(p => p.subsumes(pb)))
-          ) acc
+          ) {
+          println(" Removing redundant patch component: \n ######### " + pb.description + "\n ######### ")
+          acc
+        }
         else acc ++ List(pb)})
       this.map.update(patch._1,filtered_patch)})
     }
