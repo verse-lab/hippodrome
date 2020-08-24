@@ -53,7 +53,8 @@ object RacerDAPI {
   }
 
   /* P<0>{(this:B*).myA2} ==> myA2*/
-  def resourceVarOfLockString_def(lock: String): String = {
+  def resourceVarOfLockString_def(lock0: String): String = {
+    val lock   = lock0.replaceAll("\\$[0-9]","")
     val lock_m = lock.replace("->",".")
     val pattern = "(?<=\\).)[^)]+(?=\\})".r
     pattern.findFirstMatchIn(lock_m) match {
@@ -202,7 +203,8 @@ object RacerDAPI {
   }
 
   /* "A.B.C" => ["A","A.B","A.B.C"] */
-  def refToListOfRef(sp: String) = {
+  def refToListOfRef(sp0: String) = {
+    val sp    = sp0.replaceAll("\\$[0-9]","")
     val lst   = sp.split(Array('.')).toList
     val vars  = lst.foldLeft((Nil:List[String],""))((acc:(List[String],String),str) => {
       val vr = acc._2 match {
@@ -214,7 +216,8 @@ object RacerDAPI {
   }
 
   /* "A.B.C" => ["C","B.C","A.B.C"] */
-  def classToListOfCls(sp: String) = {
+  def classToListOfCls(sp0: String) = {
+    val sp    = sp0.replaceAll("\\$[0-9]","")
     val lst   = sp.split(Array('.')).toList
     val vars  = lst.foldRight((Nil:List[String],""))((str,acc:(List[String],String)) => {
       val vr = acc._2 match {
