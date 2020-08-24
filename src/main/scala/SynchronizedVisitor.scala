@@ -186,8 +186,9 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     fix match {
       case UpdateVolatile(fsumm, cls, line, variable, modifiers, decl_old, decl_new) =>
         if (className == cls && !variables_lst.intersect(variable).isEmpty && !modifiers.contains("volatile")) {
-          if (ctx.fieldModifier().isEmpty) targetContext = Some (ctx.unannType())
-          else targetContext = Some (ctx.fieldModifier(ctx.fieldModifier().size() - 1 ))
+          targetContext = Some(ctx)
+//          if (ctx.fieldModifier().isEmpty) targetContext = Some (ctx.unannType())
+//          else targetContext = Some (ctx.fieldModifier(ctx.fieldModifier().size() - 1 ))
           }
       case _ => this.visitChildren(ctx)
     }
@@ -333,37 +334,57 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   def updateListOfModifiers(rewriter: TokenStreamRewriter,
-                                  ctx: Java8Parser.FieldModifierContext, fix: UpdateVolatile): (String,String) = {
+                                  ctx: Java8Parser.FieldDeclarationContext, fix: UpdateVolatile): (String,String) = {
     val a = ctx.start.getStartIndex
     val b = ctx.stop.getStopIndex
     val interval = new Interval(a, b)
 
-    //    println("ctx:" + ctx.start.getInputStream.getText(interval))
+    val typ       = ctx.unannType()
 
-    val stop  = ctx.stop
+    var modifiers_str: List[String] = Nil
+    ctx.fieldModifier().forEach( m => modifiers_str = modifiers_str ++ List(m.getText))
 
-    rewriter.insertAfter(stop, " volatile ")
 
-    //println("VOLATILE: " + rewriter.getText())
+    var target_field: Option[Java8Parser.VariableDeclaratorContext] = None
+    var rest_field: List[Java8Parser.VariableDeclaratorContext]     = Nil
+    val fields    = ctx.variableDeclaratorList()
+    fields.variableDeclarator().forEach( vd => {
+      if (fix.variable.contains(vd.variableDeclaratorId().Identifier().getText)) target_field = Some(vd)
+      else rest_field = rest_field ++ List(vd)
+    } )
 
-    (ctx.start.getInputStream.getText(interval),rewriter.getText(ctx.getSourceInterval))
+    def string_of_VD (vd: Java8Parser.VariableDeclaratorContext) = {
+      val a0 = vd.start.getStartIndex
+      val a1 = vd.stop.getStopIndex
+      val interval = new Interval(a0, a1)
+      vd.start.getInputStream.getText(interval)
+    }
+
+    val volatile_declaration = target_field match {
+      case None     => ""
+      case Some(vd) => {
+        Globals.print_list(Globals.pr_id, " ", (modifiers_str ++ List("volatile")).distinct) +
+          " " + typ.getText +
+          " " + string_of_VD(vd) +
+          "; "
+      }
+    }
+
+    val rest_declarations = rest_field match {
+      case Nil => ""
+      case _   =>
+        Globals.print_list(Globals.pr_id, " ", modifiers_str) +
+          " " + typ.getText +
+          " " + Globals.print_list(string_of_VD, ", ", rest_field) +
+          "; "
+    }
+
+
+    rewriter.replace(ctx.start, ctx.stop, volatile_declaration + rest_declarations)
+
+    //println("VOLATILE: " + volatile_declaration + rest_declarations)
+
+    (ctx.start.getInputStream.getText(interval), volatile_declaration + rest_declarations)
   }
 
-  def updateListOfModifiers(rewriter: TokenStreamRewriter,
-                            ctx: Java8Parser.UnannTypeContext, fix: UpdateVolatile): (String,String) = {
-    val a = ctx.start.getStartIndex
-    val b = ctx.stop.getStopIndex
-    val interval = new Interval(a, b)
-
-    //    println("ctx:" + ctx.start.getInputStream.getText(interval))
-
-    val start  = ctx.start
-
-    rewriter.insertBefore(start, "volatile ")
-
-    //println("VOLATILE: " + rewriter.getText())
-   // println("VOLATILE: " + rewriter.getText(ctx.getSourceInterval))
-
-    (ctx.start.getInputStream.getText(interval),rewriter.getText(ctx.getSourceInterval))
-  }
 }

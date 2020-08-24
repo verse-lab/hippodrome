@@ -2,6 +2,7 @@ package org.racerdfix
 
 import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, NoFix, NoPatch, Or, PAnd, PInsert, POr, PTest, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, Test, UpdateSync, UpdateVolatile, Variable}
 import org.antlr.v4.runtime.TokenStreamRewriter
+import org.racerdfix.antlr.Java8Parser
 import org.racerdfix.antlr.Java8Parser.{FieldModifierContext, UnannTypeContext}
 import org.racerdfix.inferAPI.RacerDAPI
 import utils.{ASTManipulation, ASTStoreElem, Logging, PatchStore}
@@ -113,14 +114,13 @@ object ProcessOneBugGroup  {
     sblock match {
       case Some(sblock) =>
         try {
-          val (oldcode, patch) = if (sblock.isInstanceOf[FieldModifierContext]) syncVisitor.updateListOfModifiers(rewriter, sblock.asInstanceOf[FieldModifierContext], update)
-          else syncVisitor.updateListOfModifiers(rewriter, sblock.asInstanceOf[UnannTypeContext], update)
+          val (oldcode, patch) = syncVisitor.updateListOfModifiers(rewriter, sblock.asInstanceOf[Java8Parser.FieldDeclarationContext], update)
           //        println("Patch ID: " + id)
           val description = (
             "Replace (UPDATE) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
               + ("\n" + "-: " + oldcode)
               + ("\n" + "+: " + patch))
-          Some(new PatchBlock(ast.rewriter, InsAfter, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
+          Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
         } catch {
           case _ => {
             println("No VOLATILE patch could be generated (check the type of sblock)")
@@ -422,8 +422,6 @@ object ProcessOneBugGroup  {
       case Nil =>
       case summ::Nil => {
         /* UNPROTECTED WRITE */
-        /* `csumm1` is not synchronized */
-
         val patch_id = RacerDFix.patchIDGeneratorRange(0)._2
         var empty_map = new GroupByIdPatchOptions(HashMap.empty[String, List[PatchBlock]])
         val grouped_patches = if (summ.csumm.locks.length == 0) {
@@ -564,6 +562,5 @@ object ProcessOneBugGroup  {
  * TODO re-implement the cost function and choose a patch accordingly
  * TODO check how to avoid insertion of new lines with rewriter
  * TODO create a set of variables for all possible combinations: {this.A, A} ... what about the fields access?
- * TODO slice the variable declaration for INSERT
  * TODO: throw an exception when one patch_component cannot be created
  * */
