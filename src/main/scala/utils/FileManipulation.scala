@@ -55,9 +55,16 @@ class FileManipulation {
   }
 
   def getListOfFiles(dir: String): List[String] = {
-    val file = new File(dir)
-    file.listFiles.filter(_.isFile)
-      .map(_.getPath).toList
+    try {
+      val file = new File(dir)
+      file.listFiles.filter(_.isFile)
+        .map(_.getPath).toList
+    } catch {
+      case _ => {
+        println( "Check that your " + dir + " is valid!" )
+        Nil
+      }
+    }
   }
 
 }
