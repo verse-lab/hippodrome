@@ -5,7 +5,8 @@ import org.racerdfix.language.{EmptyTrace, Lock, NonEmptyTrace, Read, Unk, Write
 object RacerDAPI {
 
   /* P<0>{(this:B*).myA2} ==> B */
-  def classNameOfLockString_def(lock: String): String = {
+  def classNameOfLockString_def(lock0: String): String = {
+    val lock = lock0.replaceAll("\\$[0-9]","")
     val pattern = "(?<=\\()[^)]+(?=\\))".r
     pattern.findFirstMatchIn(lock) match {
       case Some(cls_reg) =>
@@ -88,7 +89,8 @@ object RacerDAPI {
   }
 
 
-  def varOfResource_def(resource: String): List[String] = {
+  def varOfResource_def(resource0: String): List[String] = {
+    val resource = resource0.replaceAll("\\$[0-9]","")
     /* this->myA2 ==> myA2*/
     val pattern1 = "(?<=->)[^)]+".r
     def replace_arrow(str: String) = str.replace("->",".")
