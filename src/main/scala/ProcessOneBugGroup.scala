@@ -2,6 +2,7 @@ package org.racerdfix
 
 import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, NoFix, NoPatch, Or, PAnd, PInsert, POr, PTest, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, Test, UpdateSync, UpdateVolatile, Variable}
 import org.antlr.v4.runtime.TokenStreamRewriter
+import org.racerdfix.antlr.Java8Parser.{FieldModifierContext, UnannTypeContext}
 import org.racerdfix.inferAPI.RacerDAPI
 import utils.{ASTManipulation, ASTStoreElem, Logging, PatchStore}
 
@@ -71,6 +72,12 @@ object ProcessOneBugGroup  {
     )
   }
 
+  /* Generates a list of UPDATE objects meant to update the locks in
+* `form_summ` with locks in `to_summ` */
+  def generateUpdateToVolatileObject(summ: FSumm): UpdateVolatile = {
+    UpdateVolatile(summ,summ.csumm.cls,summ.csumm.line,summ.csumm.resource,Nil,"","")
+  }
+
   def generateUpdatePatch(update: UpdateSync,
                           ast: ASTStoreElem): Option[PatchBlock] ={
     val syncVisitor = new SynchronizedVisitor
@@ -95,28 +102,35 @@ object ProcessOneBugGroup  {
   }
 
 
-  def generateUpdateToVolatile(update: UpdateVolatile,
+  def generateUpdateToVolatilePatch(update: UpdateVolatile,
                           ast: ASTStoreElem): Option[PatchBlock] ={
     val syncVisitor = new SynchronizedVisitor
     val rewriter    = new TokenStreamRewriter(ast.tokens)
     syncVisitor.setFix(update)
     syncVisitor.visit(ast.tree)
-    val sblock = syncVisitor.getTargetCtx
+    val sblock    = syncVisitor.getTargetCtx
     val modifiers = syncVisitor.getModifiers
-    None
-//    sblock match {
-//      case Some(sblock) =>
-//        val (oldcode,patch) = syncVisitor.updateSynchronizedStatement(rewriter,sblock,update)
-//        //        println("Patch ID: " + id)
-//        val description = (
-//          "Replace (UPDATE) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
-//            + ("\n" + "-: " + oldcode)
-//            + ("\n" + "+: " + patch) )
-//        Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
-//      case None =>
-//        println("No patch could be generated for attempt ID: " )
-//        None
-//    }
+    sblock match {
+      case Some(sblock) =>
+        try {
+          val (oldcode, patch) = if (sblock.isInstanceOf[FieldModifierContext]) syncVisitor.updateListOfModifiers(rewriter, sblock.asInstanceOf[FieldModifierContext], update)
+          else syncVisitor.updateListOfModifiers(rewriter, sblock.asInstanceOf[UnannTypeContext], update)
+          //        println("Patch ID: " + id)
+          val description = (
+            "Replace (UPDATE) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
+              + ("\n" + "-: " + oldcode)
+              + ("\n" + "+: " + patch))
+          Some(new PatchBlock(ast.rewriter, InsAfter, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
+        } catch {
+          case _ => {
+            println("No VOLATILE patch could be generated (check the type of sblock)")
+            None
+          }
+        }
+      case None =>
+        println("No patch could be generated for attempt ID: " )
+        None
+    }
   }
 
   /* ************************************************ */
@@ -317,6 +331,23 @@ object ProcessOneBugGroup  {
     }
   }
 
+
+  /* Generates a list of patches corresponding to the list of INSERT objects (inserts) */
+  def generateUpdateToVolatilePatch0(
+                                          update: UpdateVolatile,
+                                          ast: ASTStoreElem,
+                                          id: Option[String] = None): Patch = {
+    val res     = generateUpdateToVolatilePatch(update,ast)
+    val patchID = id match {
+      case None => RacerDFix.patchIDGenerator
+      case Some (id) => id
+    }
+    res match {
+      case None => NoPatch
+      case Some(ptc) => PInsert(patchID, ptc)
+    }
+  }
+
   def generatePatches(fixobj: FixKind,
                       id: Option[String] = None): Patch = {
     fixobj match {
@@ -324,6 +355,7 @@ object ProcessOneBugGroup  {
       case Test(_) => NoPatch
       case InsertSync(s,_,_,_,_)  => generateInsertPatch0(fixobj.asInstanceOf[InsertSync],s.ast,id)
       case UpdateSync(s,_,_,_,_)  => generateUpdatePatch0(fixobj.asInstanceOf[UpdateSync],s.ast,id)
+      case UpdateVolatile(s, cls, line, variable, modifiers, decl_old, decl_new) => generateUpdateToVolatilePatch0(fixobj.asInstanceOf[UpdateVolatile],s.ast,id)
       case InsertDeclareAndInst(s,_,_,_,_,_) => generateInsertDeclareAndInstPatch0(fixobj.asInstanceOf[InsertDeclareAndInst],s.ast,id)
       case And(left, right) =>
         val fresh_id =  id match {
@@ -403,17 +435,32 @@ object ProcessOneBugGroup  {
           val patches = generatePatches(inserts1, Some(patch_id.toString))
 
           /* generate volatile */
-          //val update =  generateUpdateToVolatile(summ)
+          val update =  generateUpdateToVolatileObject(summ)
+          val aux_patches = generatePatches(update, Some(RacerDFix.patchIDGenerator()))
 
           val grouped_patches1 = generateGroupPatches(empty_map, patches)
-          grouped_patches1
+          val grouped_patches  = generateGroupPatches(grouped_patches1, aux_patches)
+
+          grouped_patches
         } else empty_map
 
         grouped_patches.removeRedundant(patchStore)
         println(grouped_patches.getText())
 
-        //println("************* GENERATE FIX *************")
-        applyPatch_def(patch_id.toString, grouped_patches, patchStore)
+        if (config.interactive) {
+          println("Choose a patch <enter patch id>")
+          val patch_id_str = readLine()
+
+          println("************* GENERATE FIX *************")
+          applyPatch(patch_id_str, grouped_patches, patchStore)
+        } else {
+          val patch_id = leastCostlyPatch(grouped_patches)
+          println("Applying Patch ID " + patch_id)
+          patch_id match {
+            case None =>
+            case Some(id) => applyPatch_def(id, grouped_patches, patchStore)
+          }
+        }
       }
       case _ => {
         /* retrieve possible modifiers e.g. static */
@@ -453,6 +500,7 @@ object ProcessOneBugGroup  {
             case None      => {
               /* CREATE new lock object */
               val varName = Globals.base_obj_id + RacerDFix.patchIDGenerator
+              /* TODO below assumes that all bugs are in the same class */
               val declareObj = InsertDeclareAndInst(summs.head,summs.head.csumm.cls,summs.head.csumm.line, Globals.def_obj_typ, varName, modifiers)
               (declareObj, new Lock("this",summs.head.csumm.cls,varName))
             }
@@ -468,8 +516,15 @@ object ProcessOneBugGroup  {
           /* generate inserts patches */
           val insert_patches = generatePatches(insert)
 
+
+          /* generate volatile */
+          val update =  generateUpdateToVolatileObject(summs.head)
+          val aux_patches = generatePatches(update, Some(RacerDFix.patchIDGenerator()))
+
           /* group patches based on their ID */
-          val patches = generateGroupPatches(empty_map, insert_patches)
+          val patches0 = generateGroupPatches(empty_map, insert_patches)
+          val patches  = generateGroupPatches(patches0, aux_patches)
+
           /* remove redundant patches */
           patches.removeRedundant(patchStore)
           patches
@@ -488,12 +543,12 @@ object ProcessOneBugGroup  {
           println(grouped_patches.getText())
           /* apply the patch with the least cost */
           val patch_id = leastCostlyPatch(grouped_patches)
+          println("Applying Patch ID " + patch_id)
           patch_id match {
             case None =>
             case Some(id) => applyPatch_def(id, grouped_patches, patchStore)
           }
         }
-        //}
       }
     }
   }

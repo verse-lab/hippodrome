@@ -13,7 +13,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var fix: FixKind = NoFix
   private var sblock: Option[Java8Parser.SynchronizedStatementContext] = None
   private var resource: Option[Any] = None
-  private var tergetContext: Option[ParserRuleContext] = None
+  private var targetContext: Option[ParserRuleContext] = None
   private var classStmt: Option[Java8Parser.ClassDeclarationContext] = None
   private var static_mthd: Boolean = false
   private var static_ctx: Boolean = false
@@ -27,7 +27,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   def getSynchronizedBlock = sblock
-  def getTargetCtx = tergetContext
+  def getTargetCtx = targetContext
   def getClassStatement = classStmt
   def getClassStart = classStmt match {
     case Some(cls) => Some (cls.normalClassDeclaration().classBody().start )
@@ -100,7 +100,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           case None =>
           case Some(_) =>
             resource = None
-            tergetContext = Some(ctx)
+            targetContext = Some(ctx)
         }}
       case Some(_) =>
     }
@@ -185,9 +185,9 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     //println("Field Declarator: " + ctx.getText)
     fix match {
       case UpdateVolatile(fsumm, cls, line, variable, modifiers, decl_old, decl_new) =>
-        if (className == cls && variables_lst.contains(variable) && !modifiers.contains("volatile")) {
-          if (ctx.fieldModifier().isEmpty) resource = Some (ctx.unannType())
-          else resource = Some (ctx.fieldModifier(ctx.fieldModifier().size() - 1 ))
+        if (className == cls && !variables_lst.intersect(variable).isEmpty && !modifiers.contains("volatile")) {
+          if (ctx.fieldModifier().isEmpty) targetContext = Some (ctx.unannType())
+          else targetContext = Some (ctx.fieldModifier(ctx.fieldModifier().size() - 1 ))
           }
       case _ => this.visitChildren(ctx)
     }
@@ -241,7 +241,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           case None =>
           case Some(_) =>
             resource = None
-            tergetContext = Some(ctx)
+            targetContext = Some(ctx)
             decl_slice = Some (sliceDeclaratorStatement(ctx))
         }}
       case Some(_) =>
@@ -342,7 +342,28 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
     val stop  = ctx.stop
 
-    rewriter.insertAfter(stop, ctx.VOLATILE())
+    rewriter.insertAfter(stop, " volatile ")
+
+    //println("VOLATILE: " + rewriter.getText())
+
+    (ctx.start.getInputStream.getText(interval),rewriter.getText(ctx.getSourceInterval))
+  }
+
+  def updateListOfModifiers(rewriter: TokenStreamRewriter,
+                            ctx: Java8Parser.UnannTypeContext, fix: UpdateVolatile): (String,String) = {
+    val a = ctx.start.getStartIndex
+    val b = ctx.stop.getStopIndex
+    val interval = new Interval(a, b)
+
+    //    println("ctx:" + ctx.start.getInputStream.getText(interval))
+
+    val start  = ctx.start
+
+    rewriter.insertBefore(start, "volatile ")
+
+    //println("VOLATILE: " + rewriter.getText())
+   // println("VOLATILE: " + rewriter.getText(ctx.getSourceInterval))
+
     (ctx.start.getInputStream.getText(interval),rewriter.getText(ctx.getSourceInterval))
   }
 }

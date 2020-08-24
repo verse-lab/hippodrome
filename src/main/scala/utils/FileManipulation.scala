@@ -61,7 +61,7 @@ class FileManipulation {
         .map(_.getPath).toList
     } catch {
       case _ => {
-        println( "Check that your " + dir + " is valid!" )
+        println( "Check that your " + dir + " contains the json summaries with method accesses!" )
         Nil
       }
     }
