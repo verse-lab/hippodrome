@@ -51,7 +51,7 @@ class GroupByIdPatchOptions(var map : HashMap[String, List[PatchBlock]]) {
           patchStore.map.exists((bug_grp) => bug_grp._2.patches.map(bug_grp._2.choiceId).exists(p => p.subsumes(pb)))
           ) {
           println(" Removing redundant patch component: \n ######### " + pb.description + "\n ######### ")
-          Logging.add(" Removing redundant patch component: \n ######### " + pb.description + "\n ######### ")
+          Logging.add(" Removing redundant patch component from patch " + patch._1 + ": \n ######### " + pb.description + "\n ######### ")
           acc
         }
         else acc ++ List(pb)})
@@ -102,6 +102,7 @@ object ProcessOneBugGroup  {
         Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
       case None =>
         println("No UPDATE patch could be generated for attempt ID: " )
+        Logging.add("No UPDATE patch could be generated -- " + update.line + " " + update.lock_new)
         None
     }
   }
@@ -128,11 +129,13 @@ object ProcessOneBugGroup  {
         } catch {
           case _ => {
             println("No VOLATILE patch could be generated (check the type of sblock)")
+            Logging.add("No VOLATILE patch could be generated -- " + update.line + " " + update.variable)
             None
           }
         }
       case None =>
         println("No VOLATILE_2 patch could be generated. " )
+        Logging.add("No VOLATILE_2 patch could be generated -- " + update.line + " " + update.variable)
         None
     }
   }
@@ -182,6 +185,7 @@ object ProcessOneBugGroup  {
         Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
       case None =>
         println("No INSERT patch could be generated for attempt ID " )
+        Logging.add("No INSERT patch could be generated -- " + insert.line + " " + insert.resource + " " + insert.lock)
         None
     }
   }
@@ -218,6 +222,7 @@ object ProcessOneBugGroup  {
         Some(new PatchBlock(ast.rewriter, InsAfter, patch, start, start, description, Globals.defCost, modifiers))
       case (_,_ )=>
         println("No InsertDeclareAndInst patch could be generated. " )
+        Logging.add("No InsertDeclareAndInst patch could be generated -- " + insert.line + " " + insert.variable)
         None
     }
   }

@@ -110,6 +110,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
   override def visitClassDeclaration(ctx: Java8Parser.ClassDeclarationContext): Unit = {
     try {
+      val className_prev = className
       className = ctx.normalClassDeclaration().Identifier().getText
       variables.update(className, Nil)
       fix match {
@@ -118,9 +119,11 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           if (classes.contains(ctx.normalClassDeclaration().Identifier().getText)) {
             classStmt = Some(ctx)
           }
+          this.visitChildren(ctx)
         }
         case _ => this.visitChildren(ctx)
       }
+      className = className_prev
     } catch {
       case _: NullPointerException =>
     }

@@ -133,6 +133,7 @@ object RacerDFix {
       } else  1
     } else  1
    if(config.testing) ast.resetToOrig(config)
+    println(" End of RacerDFix execution. ")
    return ret;
   }
 
