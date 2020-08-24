@@ -51,6 +51,7 @@ class GroupByIdPatchOptions(var map : HashMap[String, List[PatchBlock]]) {
           patchStore.map.exists((bug_grp) => bug_grp._2.patches.map(bug_grp._2.choiceId).exists(p => p.subsumes(pb)))
           ) {
           println(" Removing redundant patch component: \n ######### " + pb.description + "\n ######### ")
+          Logging.add(" Removing redundant patch component: \n ######### " + pb.description + "\n ######### ")
           acc
         }
         else acc ++ List(pb)})
