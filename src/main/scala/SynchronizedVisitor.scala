@@ -118,7 +118,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           val classes = RacerDAPI.classToListOfCls(cls)
           /* TODO need to rethink this */
           //val classname_ext = if (className_prev == "") ctx.normalClassDeclaration().Identifier().getText else className_prev + "$" + ctx.normalClassDeclaration().Identifier().getText
-          if (classes.contains(ctx.normalClassDeclaration().Identifier().getText)) {
+          if (classes.contains(ctx.normalClassDeclaration().Identifier().getText) && classStmt == None) {
             classStmt = Some(ctx)
           }
         }
