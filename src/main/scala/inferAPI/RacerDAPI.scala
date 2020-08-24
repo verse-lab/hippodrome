@@ -140,7 +140,7 @@ object RacerDAPI {
 
   def varOfResource(resource: String): List[String] = {
     val result = varOfResource_def(resource)
-    if (true) {
+    if (false) {
       println("inp1: " + resource)
       println("out:  " + result)
     }

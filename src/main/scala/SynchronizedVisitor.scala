@@ -116,13 +116,15 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
       fix match {
         case InsertDeclareAndInst(_, cls, line, _, _, _) => {
           val classes = RacerDAPI.classToListOfCls(cls)
-          if (classes.contains(ctx.normalClassDeclaration().Identifier().getText)) {
+          /* TODO need to rethink this */
+          val classname_ext = if (className_prev == "") ctx.normalClassDeclaration().Identifier().getText else className_prev + "$" + ctx.normalClassDeclaration().Identifier().getText
+          if (classes.contains(classname_ext)) {
             classStmt = Some(ctx)
           }
-          this.visitChildren(ctx)
         }
-        case _ => this.visitChildren(ctx)
+        case _ =>
       }
+      this.visitChildren(ctx)
       className = className_prev
     } catch {
       case _: NullPointerException =>
