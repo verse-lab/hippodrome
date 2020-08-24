@@ -175,8 +175,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
 
   override def visitFieldDeclaration(ctx: Java8Parser.FieldDeclarationContext): Unit =  {
-    var modifiers_lst     = List.empty[String]
-    var variables_lst = List.empty[String]
+    var modifiers_lst  = List.empty[String]
+    var variables_lst  = List.empty[String]
     ctx.fieldModifier().toArray.foreach( m => modifiers_lst = modifiers_lst ++ List(m.asInstanceOf[Java8Parser.FieldModifierContext].getText))
     ctx.variableDeclaratorList().variableDeclarator.forEach( vd => variables_lst = variables_lst ++ List(vd.variableDeclaratorId().Identifier().getText))
     val vars          = variables_lst.map( v => new Variable(modifiers_lst,ctx.unannType().getText,v))
@@ -186,6 +186,9 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     fix match {
       case UpdateVolatile(fsumm, cls, line, variable, modifiers, decl_old, decl_new) =>
         val classes = RacerDAPI.classToListOfCls(cls)
+        println("LOG VOLATILE: \n expected cls:" + cls + "\n found classes: " + classes)
+        println("\n expected vars:" + variable + "\n found variables: " + variables_lst)
+        println("\n existing modifiers:" + modifiers_lst)
         if (classes.contains(className) && !variables_lst.intersect(variable).isEmpty && !modifiers_lst.contains("volatile")) {
           targetContext = Some(ctx)
           }

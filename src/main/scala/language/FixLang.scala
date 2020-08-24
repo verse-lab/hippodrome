@@ -204,7 +204,7 @@ sealed trait Trace {
       case NonEmptyTrace(trace) => trace.length
     }
   }
-  def equals(that: Trace) = {
+  def equals(that: Trace): Boolean = {
     (this,that) match {
       case (EmptyTrace,EmptyTrace) => true
       case (NonEmptyTrace(_), NonEmptyTrace(_)) => this.asInstanceOf[NonEmptyTrace].equals(that.asInstanceOf[NonEmptyTrace])

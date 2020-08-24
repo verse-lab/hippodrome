@@ -121,7 +121,17 @@ object RacerDAPI {
     } catch  {
       case  _ => resource2
     }
-    resource3
+
+    /* buggyprogram.BuggyProgram.history => history */
+    val resource4 = try {
+      resource3.foldLeft[List[String]](Nil)((acc,res) => {
+        classToListOfCls(res.toString()).head :: acc
+      })
+    } catch {
+      case _ => resource3
+    }
+
+    resource4.distinct
   }
 
   def varOfResource(resource: String): List[String] = {

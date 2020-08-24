@@ -128,7 +128,7 @@ object ProcessOneBugGroup  {
           }
         }
       case None =>
-        println("No VOLATILE_2 patch could be generated for attempt ID: " )
+        println("No VOLATILE_2 patch could be generated. " )
         None
     }
   }
