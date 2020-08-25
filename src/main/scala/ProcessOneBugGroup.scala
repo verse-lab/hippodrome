@@ -3,7 +3,6 @@ package org.racerdfix
 import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, NoFix, NoPatch, Or, PAnd, PInsert, POr, PTest, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, Test, UpdateSync, UpdateVolatile, Variable}
 import org.antlr.v4.runtime.TokenStreamRewriter
 import org.racerdfix.antlr.Java8Parser
-import org.racerdfix.antlr.Java8Parser.{FieldModifierContext, UnannTypeContext}
 import org.racerdfix.inferAPI.RacerDAPI
 import utils.{ASTManipulation, ASTStoreElem, Logging, PatchStore}
 
@@ -125,7 +124,7 @@ object ProcessOneBugGroup  {
             "Replace (UPDATE) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
               + ("\n" + "-: " + oldcode)
               + ("\n" + "+: " + patch))
-          Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
+          Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.volatileCost, modifiers))
         } catch {
           case _ => {
             println("No VOLATILE patch could be generated (check the type of sblock)")
@@ -160,8 +159,9 @@ object ProcessOneBugGroup  {
     *   a reference type. */
     val modifiers = generateTestPatch(new Test(summ.csumm.line),summ.ast).block.modifiers.distinct
     val varName = Globals.base_obj_id + RacerDFix.patchIDGenerator
-    val declareObj = InsertDeclareAndInst(summ, summ.csumm.cls,summ.csumm.line, Globals.def_obj_typ, varName, modifiers)
-    val insert1 = InsertSync(summ,summ.csumm.cls,summ.csumm.line,summ.csumm.resource,varName)
+    val vb      = new Variable(summ.csumm.resource.cls,modifiers, Globals.def_obj_typ, varName, List(varName))
+    val declareObj = InsertDeclareAndInst(summ, summ.csumm.line, vb, modifiers)
+    val insert1 = InsertSync(summ,summ.csumm.cls,summ.csumm.line,summ.csumm.resource,vb)
     And(declareObj,insert1)
   }
 
@@ -365,7 +365,7 @@ object ProcessOneBugGroup  {
       case InsertSync(s,_,_,_,_)  => generateInsertPatch0(fixobj.asInstanceOf[InsertSync],s.ast,id)
       case UpdateSync(s,_,_,_,_)  => generateUpdatePatch0(fixobj.asInstanceOf[UpdateSync],s.ast,id)
       case UpdateVolatile(s, _, _, _, _, _, _) => generateUpdateToVolatilePatch0(fixobj.asInstanceOf[UpdateVolatile],s.ast,id)
-      case InsertDeclareAndInst(s,_,_,_,_,_) => generateInsertDeclareAndInstPatch0(fixobj.asInstanceOf[InsertDeclareAndInst],s.ast,id)
+      case InsertDeclareAndInst(s,_,_,_) => generateInsertDeclareAndInstPatch0(fixobj.asInstanceOf[InsertDeclareAndInst],s.ast,id)
       case And(left, right) =>
         val fresh_id =  id match {
           case None =>    RacerDFix.patchIDGenerator
@@ -446,7 +446,7 @@ object ProcessOneBugGroup  {
           val patches = generatePatches(inserts1, Some(patch_id.toString))
 
           /* generate volatile */
-          val update =  generateUpdateToVolatileObject(summ)
+          val update      = generateUpdateToVolatileObject(summ)
           val aux_patches = generatePatches(update, Some(RacerDFix.patchIDGenerator()))
 
           val grouped_patches1 = generateGroupPatches(empty_map, patches)
@@ -481,7 +481,7 @@ object ProcessOneBugGroup  {
         def getStaticVars(cls: String): List[Variable] = variables_store.getOrElseUpdate(cls,Nil).filter(v => v.isStatic())
         def isLockStatic(lck: Lock) = {
           val static_vars = getStaticVars(lck.cls)
-          static_vars.exists( p => RacerDAPI.refToListOfRef(lck.resource).contains(p.id))
+          static_vars.exists( p => RacerDAPI.refToListOfRef(lck.resource.id).contains(p.id))
         }
 
         val existing_locks      = summs.foldLeft[List[Lock]](Nil)((acc,summ) => {
@@ -512,8 +512,9 @@ object ProcessOneBugGroup  {
               /* CREATE new lock object */
               val varName = Globals.base_obj_id + RacerDFix.patchIDGenerator
               /* TODO below assumes that all bugs are in the same class */
-              val declareObj = InsertDeclareAndInst(summs.head,summs.head.csumm.cls,summs.head.csumm.line, Globals.def_obj_typ, varName, modifiers)
-              (declareObj, new Lock("this",summs.head.csumm.cls,varName))
+              val varb    = new Variable(summs.head.csumm.resource.cls,modifiers,Globals.def_obj_typ,varName,List(varName))
+              val declareObj = InsertDeclareAndInst(summs.head,summs.head.csumm.line, varb, modifiers)
+              (declareObj, new Lock("this",summs.head.csumm.resource.cls,varb))
             }
           }
         }

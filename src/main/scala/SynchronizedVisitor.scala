@@ -72,7 +72,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           }
         }
       }
-      case InsertDeclareAndInst(_,cls,line,_,_,_) =>  {
+      case InsertDeclareAndInst(_,line,_,_) =>  {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
           resource = Some(ctx)
           static_ctx = static_mthd
@@ -114,12 +114,12 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
       className = ctx.normalClassDeclaration().Identifier().getText
       variables.update(className, Nil)
       fix match {
-        case InsertDeclareAndInst(_, cls, line, _, _, _) => {
-          val classes = RacerDAPI.classToListOfCls(cls)
+        case InsertDeclareAndInst(_, _, vb, _) => {
+          val classes = RacerDAPI.classToListOfCls(vb.cls)
           /* TODO need to rethink this */
           //val classname_ext = if (className_prev == "") ctx.normalClassDeclaration().Identifier().getText else className_prev + "$" + ctx.normalClassDeclaration().Identifier().getText
           if (classes.contains(ctx.normalClassDeclaration().Identifier().getText) && classStmt == None) {
-            println(" Expected " + "(" + ctx.start.getLine + ")" + " : " + cls + ", extended to: " + classes)
+            println(" Expected " + "(" + ctx.start.getLine + ")" + " : " + vb.cls + ", extended to: " + classes)
             println(" Found: " + ctx.normalClassDeclaration().Identifier().getText + " or  " + className)
             classStmt = Some(ctx)
           }
@@ -286,13 +286,13 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
     decl_slice match {
       case None => {
-        rewriter.insertBefore(ctx.start, "synchronized(" + fix.lock + ") { ")
+        rewriter.insertBefore(ctx.start, "synchronized(" + fix.lock.id + ") { ")
         rewriter.insertAfter(ctx.stop, " } ")
       }
       case Some(sdecl) => {
         val decl = sdecl.declarations
         val init = sdecl.initializations
-        val new_init = "synchronized(" + fix.lock + ") { " + init + " } "
+        val new_init = "synchronized(" + fix.lock.id + ") { " + init + " } "
         rewriter.replace(ctx.start, ctx.stop, decl + " " + new_init)
       }
     }
@@ -315,7 +315,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     //    println("ctx:" + ctx.start.getInputStream.getText(interval))
 
     // only work for object now, since it has no arguments
-    val textToInsert = fix.modifiers.foldLeft("")((acc,a) => acc + " " + a) + " " + fix.typ + " " + fix.variable + " = " + " new " + fix.typ + "(); "
+    val textToInsert = fix.modifiers.foldLeft("")((acc,a) => acc + " " + a) + " " + fix.variable.typ + " " + fix.variable.id + " = " + " new " + fix.variable.typ + "(); "
     rewriter.insertAfter(ctx.normalClassDeclaration.classBody().start, textToInsert)
 
     //val rinterval = new Interval(ctx.getSourceInterval.a,ctx.getSourceInterval.a)

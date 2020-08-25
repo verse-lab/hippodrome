@@ -13,17 +13,15 @@ sealed trait FixKind
 case object NoFix extends FixKind
 case class Test(lines: Int) extends FixKind
 case class UpdateVolatile(val fsumm: FSumm, cls: String, line: Int, variable: Variable, modifiers: List[String], decl_old: String, decl_new: String) extends FixKind
-case class UpdateSync(val fsumm: FSumm, cls: String, line: Int, lock_old: String, lock_new: String) extends FixKind
-case class InsertSync(val fsumm: FSumm, cls: String, line: Int, resource: Variable, lock: String) extends FixKind
+case class UpdateSync(val fsumm: FSumm, cls: String, line: Int, lock_old: Variable, lock_new: Variable) extends FixKind
+case class InsertSync(val fsumm: FSumm, cls: String, line: Int, resource: Variable, lock: Variable) extends FixKind
 case class InsertDeclare(val fsumm: FSumm, cls: String, line: Int, typ: String, variable: String) extends FixKind
-case class InsertDeclareAndInst(val fsumm: FSumm, cls: String, line: Int, typ: String, variable: String, modifiers: List[String]) extends FixKind {
+case class InsertDeclareAndInst(val fsumm: FSumm, line: Int, variable: Variable, modifiers: List[String]) extends FixKind {
   def clone( fsumm: FSumm = this.fsumm,
-             cls: String = this.cls,
              line: Int = this.line,
-             typ: String = this.typ,
-             variable: String = this.variable,
+             variable: Variable = this.variable,
              modifiers: List[String] = this.modifiers) = {
-    new InsertDeclareAndInst(fsumm,cls,line,typ,variable,modifiers)
+    new InsertDeclareAndInst(fsumm,line,variable,modifiers)
   }
 }
 case class And(left: FixKind, right: FixKind) extends FixKind {
@@ -222,8 +220,8 @@ sealed trait Trace {
 case object EmptyTrace extends Trace
 case class  NonEmptyTrace(val trace:List[String]) extends Trace
 
-class Lock(val obj: String, val cls: String, val resource: String) {
-  def equals(obj: Lock): Boolean = this.obj == obj.obj && this.cls == obj.cls && this.resource == obj.resource
+class Lock(val obj: String, val cls: String, val resource: Variable) {
+  def equals(obj: Lock): Boolean = this.obj == obj.obj && this.cls == obj.cls && this.resource.equals_loose(obj.resource)
 }
 
 /* raw racerdfix snapshot */

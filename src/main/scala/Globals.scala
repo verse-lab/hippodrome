@@ -21,12 +21,14 @@ object Globals {
   val VERSION_STRING    = s"v$VERSION"
 
   /* Cost related values */
-  val defCostValue              = 0
-  val defUnitValue              = 0
+  val defCostValue              = 1
+  val defUnitValue              = 1
   val maxCostValue              = Int.MaxValue
+  val defVolatileValue          = maxCostValue
   val maxCost                   = new PatchCost(maxCostValue)
   val defCost                   = new PatchCost(defCostValue)
   val unitCost                  = new PatchCost(defUnitValue)
+  val volatileCost              = new PatchCost(defVolatileValue)
 
   /* default files and paths */
   val results_out_dir           = "src/main/misc/infer-out/"
