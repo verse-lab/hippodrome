@@ -31,51 +31,62 @@ class PatchCreationUnitTest {
         }
     }
 
-    /*
-    @Test
-    @throws[Exception]
-    def runAlarmClock(): Unit = {
-        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/alarmclock/CONFIG.json" ))
-    }
+//    @Test
+//    @throws[Exception]
+//    def runAlarmClock(): Unit = {
+//        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/alarmclock/CONFIG.json" ))
+//    }
+//
+//    @Test
+//    @throws[Exception]
+//    def runAirline(): Unit = {
+//        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/airline/CONFIG.json" ))
+//    }
+//
+//    @Test
+//    @throws[Exception]
+//    def runBuggyProgram(): Unit = {
+//        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/buggyprogram/CONFIG.json" ))
+//    }
+//
+//    @Test
+//    @throws[Exception]
+//    def runConsistency(): Unit = {
+//        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/consisitency/CONFIG.json" ))
+//    }
+//
+//    @Test
+//    @throws[Exception]
+//    def runLinkedList(): Unit = {
+//        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/linkedlist/CONFIG.json" ))
+//    }
+//
+//    @Test
+//    @throws[Exception]
+//    def runPingPong(): Unit = {
+//        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/pingpong/CONFIG.json" ))
+//    }
+//
+//
+//    @Test
+//    @throws[Exception]
+//    def runWrongLock(): Unit = {
+//        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/wronglock2/CONFIG.json" ))
+//    }
+//
+//
+//    @Test
+//    @throws[Exception]
+//    def runNestedClasses1(): Unit = {
+//        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/nestedclasses1/CONFIG.json" ))
+//    }
+//
+//    @Test
+//    @throws[Exception]
+//    def runNestedClasses2(): Unit = {
+//        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/nestedclasses2/CONFIG.json" ))
+//    }
 
-    @Test
-    @throws[Exception]
-    def runAirline(): Unit = {
-        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/airline/CONFIG.json" ))
-    }
-
-    @Test
-    @throws[Exception]
-    def runBuggyProgram(): Unit = {
-        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/buggyprogram/CONFIG.json" ))
-    }
-
-    @Test
-    @throws[Exception]
-    def runConsistency(): Unit = {
-        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/consisitency/CONFIG.json" ))
-    }
-
-    @Test
-    @throws[Exception]
-    def runLinkedList(): Unit = {
-        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/linkedlist/CONFIG.json" ))
-    }
-
-    @Test
-    @throws[Exception]
-    def runPingPong(): Unit = {
-        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/pingpong/CONFIG.json" ))
-        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/wronglock2/CONFIG.json" ))
-    }
-
-
-    @Test
-    @throws[Exception]
-    def runWrongLock(): Unit = {
-        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/wronglock2/CONFIG.json" ))
-    }
-  */
 
     @Test
     @throws[Exception]
@@ -83,9 +94,9 @@ class PatchCreationUnitTest {
         val filename = "src/test/java/RacyFalseNeg.java"
         val lock1 = RacerDAPI.lockOfString("P<0>{(this:B*).myA2}")
         val lock2 = RacerDAPI.lockOfString("P<0>{(this:B*).myA1}")
-        val csumm1 = new RFSumm(filename, "B", List("this->myA->f"), Read, List(lock1), 30, EmptyTrace, "")
-        val csumm2 = new RFSumm(filename, "B", List("this->myA"), Write, List(lock2), 24, EmptyTrace, "")
-        val ast = new ASTManipulation
+//        val csumm1 = new RFSumm(filename, "B", List("this->myA->f"), Read, List(lock1), 30, EmptyTrace, "")
+//        val csumm2 = new RFSumm(filename, "B", List("this->myA"), Write, List(lock2), 24, EmptyTrace, "")
+//        val ast = new ASTManipulation
 
 //        val (summ1, summ2) = translateRawSnapshotsToSnapshots(csumm1, Some(csumm2), ast)
 //
@@ -130,9 +141,9 @@ class PatchCreationUnitTest {
     @throws[Exception]
     def whenSameResources(): Unit = {
         val filename = "src/test/java/RacyFalseNeg.java"
-        val csumm1 = new RFSumm(filename, "B",List("this->myA->f"), Read, List(), 30, EmptyTrace, "" )
-        val csumm2 = new RFSumm(filename,"B", List("this->myA"), Write, List(), 24, EmptyTrace, "" )
-        val ast = new ASTManipulation
+//        val csumm1 = new RFSumm(filename, "B",List("this->myA->f"), Read, List(), 30, EmptyTrace, "" )
+//        val csumm2 = new RFSumm(filename,"B", List("this->myA"), Write, List(), 24, EmptyTrace, "" )
+//        val ast = new ASTManipulation
 
 //                assertThat(patches1.size, is(1))
 //                assertThat(patches2.size, is(1))
