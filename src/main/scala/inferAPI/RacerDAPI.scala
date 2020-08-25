@@ -1,6 +1,6 @@
 package org.racerdfix.inferAPI
 
-import org.racerdfix.language.{EmptyTrace, Lock, NonEmptyTrace, Read, Unk, Write}
+import org.racerdfix.language.{EmptyTrace, Lock, NonEmptyTrace, Read, Unk, Variable, Write}
 
 object RacerDAPI {
 
@@ -90,7 +90,7 @@ object RacerDAPI {
   }
 
 
-  def varOfResource_def(resource0: String, cls: String): List[String] = {
+  def varOfResource_def(resource0: String, cls: String): Variable = {
     val cls_lst = cls.split("\\$")
     val resource = resource0.replaceAll("\\$[0-9]","");;
     /* this->myA2 ==> myA2*/
@@ -135,11 +135,22 @@ object RacerDAPI {
     } catch {
       case _ => resource3
     }
-
-    resource4.distinct.map(replace_arrow)
+    /* for cls.cls$X get the X'th element from cls_lst */
+    val aliases = resource4.distinct.map(replace_arrow)
+    val id      =  aliases.foldLeft(resource0)((acc,v) => if (v.length < acc.length) v else acc )
+    val cls0    =
+      try {
+        val pattern = "((?<=\\$)[0-9]+)".r
+        val possible_idx = pattern.findAllIn(resource0).toList
+        val idx = possible_idx(possible_idx.length - 1).toInt
+        cls_lst(idx)
+      } catch {
+        case _ => cls
+      }
+    new Variable( cls = cls0 , id = id, aliases= aliases)
   }
 
-  def varOfResource(resource: String, cls: String = ""): List[String] = {
+  def varOfResource(resource: String, cls: String = ""): Variable = {
     val result = varOfResource_def(resource,cls)
     if (false) {
       println("inp1: " + resource)

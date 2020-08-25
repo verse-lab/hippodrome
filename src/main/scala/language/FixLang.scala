@@ -112,12 +112,10 @@ class PatchBlock(var rewriter: TokenStreamRewriter, val kind: RewriteKind, val p
       that.stop.getStopIndex < this.stop.getStopIndex
   }
 
-  def overlaps(that: PatchBlock, loop: Boolean = true): Boolean = {
+  def overlaps(that: PatchBlock): Boolean = {
     this.kind == Replace && that.kind == Replace &&
-    this.start.getStartIndex <= that.start.getStartIndex &&
-    that.start.getStartIndex <= this.stop.getStopIndex &&
-    this.stop.getStopIndex <= that.stop.getStopIndex ||
-    loop && that.overlaps(this,false)
+      !(this.stop.getStopIndex < that.start.getStartIndex ||
+    that.stop.getStopIndex < this.start.getStartIndex)
   }
 
 }
