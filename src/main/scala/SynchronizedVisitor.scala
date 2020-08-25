@@ -64,7 +64,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           val vars = RacerDAPI.refToListOfRef(ctx.getText)
           val vars_extended = vars.map(v => if (cls.length >0 ) cls + "." + v else v)
           //println("LOG INSERT: \n expected vars:" + unprotected_resource + "\n found variables: " + vars_extended)
-          if ((vars ++ vars_extended).intersect(unprotected_resource).length>0){
+          if ((vars ++ vars_extended).intersect(unprotected_resource.allAliases()).length>0){
             resource = Some(ctx)
             static_ctx = static_mthd
           } else {
@@ -188,7 +188,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     var variables_lst  = List.empty[String]
     ctx.fieldModifier().toArray.foreach( m => modifiers_lst = modifiers_lst ++ List(m.asInstanceOf[Java8Parser.FieldModifierContext].getText))
     ctx.variableDeclaratorList().variableDeclarator.forEach( vd => variables_lst = variables_lst ++ List(vd.variableDeclaratorId().Identifier().getText))
-    val vars          = variables_lst.map( v => new Variable(modifiers_lst,ctx.unannType().getText,v))
+    val vars          = variables_lst.map( v => new Variable(className,modifiers_lst,ctx.unannType().getText,v))
     val existing_vars = variables.getOrElseUpdate(className,Nil)
     variables.update(className,existing_vars ++ vars)
     //println("Field Declarator: " + ctx.getText)
@@ -198,7 +198,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 //        println("LOG VOLATILE: \n expected cls:" + cls + "\n found classes: " + classes)
 //        println("\n expected vars:" + variable + "\n found variables: " + variables_lst)
 //        println("\n existing modifiers:" + modifiers_lst)
-        if (classes.contains(className) && !variables_lst.intersect(variable).isEmpty && !modifiers_lst.contains("volatile")) {
+        if (classes.contains(className) && !variables_lst.intersect(variable.allAliases()).isEmpty && !modifiers_lst.contains("volatile")) {
           targetContext = Some(ctx)
           }
       case _ => this.visitChildren(ctx)
@@ -360,7 +360,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     var rest_field: List[Java8Parser.VariableDeclaratorContext]     = Nil
     val fields    = ctx.variableDeclaratorList()
     fields.variableDeclarator().forEach( vd => {
-      if (fix.variable.contains(vd.variableDeclaratorId().Identifier().getText)) target_field = Some(vd)
+      if (fix.variable.allAliases().contains(vd.variableDeclaratorId().Identifier().getText)) target_field = Some(vd)
       else rest_field = rest_field ++ List(vd)
     } )
 

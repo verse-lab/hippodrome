@@ -15,7 +15,7 @@ class BugsStore {
     /* assume all snapshots refer to the same resource. */
     if(snapshots.length > 0){
       try {
-        val resources = snapshots.map(rfsumm => rfsumm.resource).flatten.distinct
+        val resources = snapshots.map(rfsumm => rfsumm.resource.allAliases()).flatten.distinct
         /* at least one of resources is key in map */
         val key = resources.foldLeft[Option[String]](None)( (acc,res) => {
           /* if the resources is already a key keep it as a key */

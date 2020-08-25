@@ -83,7 +83,7 @@ class SummaryIn(var file: String, val procedure: String, var accesses: List[Acce
         val line = ae.loc
         val trace = RacerDAPI.traceOfListOfStrings(ae.trace)
         val hash = ae.hash
-        (new RFSumm(file, cls, resource, access, locks, line, trace, hash)) :: acc2
+        (new RFSumm(file, cls, new Variable(cls,id="",aliases = resource), access, locks, line, trace, hash)) :: acc2
       })
   }
 }

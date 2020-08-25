@@ -90,8 +90,9 @@ object RacerDAPI {
   }
 
 
-  def varOfResource_def(resource0: String): List[String] = {
-    val resource = resource0.replaceAll("\\$[0-9]","")
+  def varOfResource_def(resource0: String, cls: String): List[String] = {
+    val cls_lst = cls.split("\\$")
+    val resource = resource0.replaceAll("\\$[0-9]","");;
     /* this->myA2 ==> myA2*/
     val pattern1 = "(?<=->)[^)]+".r
     def replace_arrow(str: String) = str.replace("->",".")
@@ -138,8 +139,8 @@ object RacerDAPI {
     resource4.distinct.map(replace_arrow)
   }
 
-  def varOfResource(resource: String): List[String] = {
-    val result = varOfResource_def(resource)
+  def varOfResource(resource: String, cls: String = ""): List[String] = {
+    val result = varOfResource_def(resource,cls)
     if (false) {
       println("inp1: " + resource)
       println("out:  " + result)

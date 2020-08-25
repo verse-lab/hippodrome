@@ -12,9 +12,9 @@ import org.racerdfix.utils.ASTStoreElem
 sealed trait FixKind
 case object NoFix extends FixKind
 case class Test(lines: Int) extends FixKind
-case class UpdateVolatile(val fsumm: FSumm, cls: String, line: Int, variable: List[String], modifiers: List[String], decl_old: String, decl_new: String) extends FixKind
+case class UpdateVolatile(val fsumm: FSumm, cls: String, line: Int, variable: Variable, modifiers: List[String], decl_old: String, decl_new: String) extends FixKind
 case class UpdateSync(val fsumm: FSumm, cls: String, line: Int, lock_old: String, lock_new: String) extends FixKind
-case class InsertSync(val fsumm: FSumm, cls: String, line: Int, resource: List[String], lock: String) extends FixKind
+case class InsertSync(val fsumm: FSumm, cls: String, line: Int, resource: Variable, lock: String) extends FixKind
 case class InsertDeclare(val fsumm: FSumm, cls: String, line: Int, typ: String, variable: String) extends FixKind
 case class InsertDeclareAndInst(val fsumm: FSumm, cls: String, line: Int, typ: String, variable: String, modifiers: List[String]) extends FixKind {
   def clone( fsumm: FSumm = this.fsumm,
@@ -221,14 +221,14 @@ class Lock(val obj: String, val cls: String, val resource: String) {
 }
 
 /* raw racerdfix snapshot */
-class RFSumm(val filename: String, val cls: String, val resource: List[String], val access: AccessKind, val locks: List[Lock], val line: Int, val trace: Trace, val hash: String){
+class RFSumm(val filename: String, val cls: String, val resource: Variable, val access: AccessKind, val locks: List[Lock], val line: Int, val trace: Trace, val hash: String){
 
   def getCost(cost: RFSumm => Int ) = cost(this)
 
   def equals(that: RFSumm) = {
     this.filename == that.filename &&
     this.cls      == that.cls &&
-    Globals.eq_set(((a:String,b:String) => a == b), this.resource, that.resource) &&
+    this.resource.equals(that.resource) &&
     this.access   == that.access &&
     Globals.eq_set(((a:Lock, b: Lock) => a.equals(b)), this.locks, that.locks) &&
     this.line     == that.line &&
@@ -245,8 +245,30 @@ class FBug(val snapshot1: List[RFSumm], val snapshot2: List[RFSumm], val hash: S
 /**/
 class DeclaratorSlicing(val declarations: String, val initializations: String)
 
-class Variable(modifiers: List[String], typ: String, val id: String){
+class Variable(val cls: String, val modifiers: List[String] = Nil, val typ: String = "", val id: String, val aliases: List[String] = Nil){
   def isStatic() = {
     this.modifiers.contains("static")
+  }
+
+  def equals(that: Variable): Boolean = {
+    this.cls == that.cls &&
+    Globals.eq_set(((a:String,b:String) => a == b), this.modifiers, that.modifiers) &&
+    this.typ == that.typ &&
+    this.id  == that.id  &&
+    Globals.eq_set(((a:String,b:String) => a == b), this.id::this.aliases, that.id::that.aliases)
+  }
+
+  def equals_loose(that: Variable): Boolean = {
+    this.cls == that.cls &&
+      this.id  == that.id  &&
+      Globals.eq_set(((a:String,b:String) => a == b), this.id::this.aliases, that.id::that.aliases)
+  }
+
+  def isIn(lst : List[Variable]) : Boolean = {
+    lst.contains((v:Variable) => this.equals(v))
+  }
+
+  def allAliases(): List[String] = {
+    (this.id :: this.aliases).distinct
   }
 }
