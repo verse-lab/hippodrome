@@ -46,9 +46,9 @@ class GroupByIdPatchOptions(var map : HashMap[String, List[PatchBlock]]) {
           /* remove duplicated/redundant patch components from within the same patch for the same bug group*/
           acc.exists(pb_acc => pb_acc.equals(pb) || pb_acc.subsumes(pb)) ||
           /* remove components which are subsumed by other patches' for the same bug group */
-          (this.map.exists(patch_inner => patch_inner._1 != patch._1 && patch_inner._2.exists(pb_inner => pb_inner.subsumes(pb))))||
+          (this.map.exists(patch_inner => patch_inner._1 != patch._1 && patch_inner._2.exists(pb_inner => pb_inner.subsumes(pb) || pb_inner.overlaps(pb))))||
           /* remove components which are subsumed by other patches' for a different bug group */
-          patchStore.map.exists((bug_grp) => bug_grp._2.patches.map(bug_grp._2.choiceId).exists(p => p.subsumes(pb)))
+          patchStore.map.exists((bug_grp) => bug_grp._2.patches.map(bug_grp._2.choiceId).exists(p => p.subsumes(pb) || p.overlaps(pb)))
           ) {
           println(" Removing redundant patch component: \n ######### " + pb.description + "\n ######### ")
           Logging.add(" Removing redundant patch component from patch " + patch._1 + ": \n ######### " + pb.description + "\n ######### ")
