@@ -119,6 +119,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           /* TODO need to rethink this */
           //val classname_ext = if (className_prev == "") ctx.normalClassDeclaration().Identifier().getText else className_prev + "$" + ctx.normalClassDeclaration().Identifier().getText
           if (classes.contains(ctx.normalClassDeclaration().Identifier().getText) && classStmt == None) {
+            println(" Expected: " + cls + ", extended to: " + classes)
+            println(" Found: " + ctx.normalClassDeclaration().Identifier().getText + " or  " + className)
             classStmt = Some(ctx)
           }
         }
