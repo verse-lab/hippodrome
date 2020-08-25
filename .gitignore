@@ -1,0 +1,17 @@
+*.class
+*.log
+
+*.orig
+
+target/
+
+log.txt
+
+infer-out/
+
+# IntelliJ
+/out/
+.idea/
+
+CONFIG.json
+

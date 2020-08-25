@@ -481,7 +481,8 @@ object ProcessOneBugGroup  {
         def getStaticVars(cls: String): List[Variable] = variables_store.getOrElseUpdate(cls,Nil).filter(v => v.isStatic())
         def isLockStatic(lck: Lock) = {
           val static_vars = getStaticVars(lck.cls)
-          static_vars.exists( p => RacerDAPI.refToListOfRef(lck.resource.id).contains(p.id))
+//          static_vars.exists( p => RacerDAPI.refToListOfRef(lck.resource.id).contains(p.id))
+          static_vars.exists( p => lck.resource.allAliases.contains(p.id))
         }
 
         val existing_locks      = summs.foldLeft[List[Lock]](Nil)((acc,summ) => {

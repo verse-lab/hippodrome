@@ -47,7 +47,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
       case UpdateSync(_,cls, line, lock_old, lock_new) => {
         val block = ctx.block()
         if (Globals.getRealLineNo(block.getStart.getLine) <= line && line <= Globals.getRealLineNo(block.getStop.getLine)) {
-          if (lock_old== ctx.expression().getText)
+          if (lock_old.allAliases.contains(ctx.expression().getText))
             sblock = Some (ctx)
         }
       }
@@ -119,8 +119,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           /* TODO need to rethink this */
           //val classname_ext = if (className_prev == "") ctx.normalClassDeclaration().Identifier().getText else className_prev + "$" + ctx.normalClassDeclaration().Identifier().getText
           if (classes.contains(ctx.normalClassDeclaration().Identifier().getText) && classStmt == None) {
-            println(" Expected " + "(" + ctx.start.getLine + ")" + " : " + vb.cls + ", extended to: " + classes)
-            println(" Found: " + ctx.normalClassDeclaration().Identifier().getText + " or  " + className)
+//            println(" Expected " + "(" + ctx.start.getLine + ")" + " : " + vb.cls + ", extended to: " + classes)
+//            println(" Found: " + ctx.normalClassDeclaration().Identifier().getText + " or  " + className)
             classStmt = Some(ctx)
           }
         }
