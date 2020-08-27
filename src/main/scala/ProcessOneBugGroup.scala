@@ -185,7 +185,7 @@ object ProcessOneBugGroup  {
         Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
       case None =>
         println("No INSERT patch could be generated for attempt ID " )
-        Logging.add("No INSERT patch could be generated -- " + insert.line + " " + insert.resource + " " + insert.lock)
+        Logging.add("No INSERT patch could be generated -- " + insert.line + " " + insert.resource + " on " + insert.lock)
         None
     }
   }
@@ -221,7 +221,7 @@ object ProcessOneBugGroup  {
         Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
       case None =>
         println("No INSERT patch could be generated for attempt ID " )
-        Logging.add("No Merge patch could be generated -- " + insert1.line + " " + insert1.resource + " " + insert1.lock + " , " +
+        Logging.add("No Merge patch could be generated -- " + insert1.line + " " + insert1.resource + " on " + insert1.lock + " , " +
           insert2.line + " " + insert2.resource + " " + insert2.lock)
         None
     }
@@ -262,7 +262,7 @@ object ProcessOneBugGroup  {
                 new_acc ++ List(Some(new PatchBlock(ast.rewriter, Replace, patch, start.start, stop.stop, description, Globals.defCost, modifiers)))
               case _ =>
                 println("No INSERT patch could be generated for attempt ID " )
-                Logging.add("No Merge patch could be generated -- " + ins.line + " " + ins.resource + " " + ins.lock + " , " )
+                Logging.add("No Merge patch could be generated -- " + ins.line + " " + ins.resource + " on lock " + ins.lock + " , " )
                 acc ++ List (generateInsertPatch_def(ins,ast) )
             }
           }
@@ -303,7 +303,7 @@ object ProcessOneBugGroup  {
         Some(new PatchBlock(ast.rewriter, InsAfter, patch, start, start, description, Globals.defCost, modifiers))
       case (_,_ )=>
         println("No InsertDeclareAndInst patch could be generated. " )
-        Logging.add("No InsertDeclareAndInst patch could be generated -- " + insert.line + " " + insert.variable)
+        Logging.add("No InsertDeclareAndInst patch could be generated -- " + insert.line + " " + insert.variable.toString )
         None
     }
   }

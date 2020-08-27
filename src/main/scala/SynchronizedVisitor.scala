@@ -271,16 +271,20 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 //    println("Resource" + ctx.getText)
   }
 
+  /* TODO terrible for performance to call both */
   override def visitMethodInvocation(ctx: Java8Parser.MethodInvocationContext): Unit = {
     visitCriticalSection_def(ctx, ctx.Identifier().getText)
+    visitCriticalSection(ctx)
   }
 
   override def visitMethodInvocation_lf_primary(ctx: Java8Parser.MethodInvocation_lf_primaryContext): Unit = {
     visitCriticalSection_def(ctx, ctx.Identifier().getText)
+    visitCriticalSection(ctx)
   }
 
   override def visitMethodInvocation_lfno_primary(ctx: Java8Parser.MethodInvocation_lfno_primaryContext): Unit = {
     visitCriticalSection_def(ctx, ctx.Identifier().getText)
+    visitCriticalSection(ctx)
   }
 
   override def visitMethodDeclaration(ctx: Java8Parser.MethodDeclarationContext): Unit = {

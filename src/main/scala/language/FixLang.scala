@@ -281,4 +281,8 @@ class Variable(val cls: String, val modifiers: List[String] = Nil, val typ: Stri
   def allAliases(): List[String] = {
     (this.id :: this.aliases).distinct
   }
+
+  override def toString(): String = {
+    "Variable("  + this.cls + ", " + typ  + " , " + id + " , {" +  Globals.print_list(Globals.pr_id,", ", this.aliases ) + "}"
+  }
 }
