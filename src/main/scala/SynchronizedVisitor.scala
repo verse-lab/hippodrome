@@ -73,7 +73,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
           val vars = RacerDAPI.refToListOfRef(identifier)
           val vars_extended = vars.map(v => if (cls.length >0 ) cls + "." + v else v)
           //println("LOG INSERT: \n expected vars:" + unprotected_resource + "\n found variables: " + vars_extended)
-          if ((vars ++ vars_extended).intersect(unprotected_resource.allAliases()).length>0){
+//          if ((vars ++ vars_extended).intersect(unprotected_resource.allAliases()).length>0){
+          if ((unprotected_resource.allAliases()).exists(vr => Globals.contains_eq((a:String,b:String) => a == b,vars ++ vars_extended,vr))){
             resource = Some(ctx)
             static_ctx = static_mthd
           } else {
