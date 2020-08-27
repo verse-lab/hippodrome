@@ -3,5 +3,5 @@
   "json_path": "./infer-out/",
   "target_options": ["--", "javac", "src/test/resources/java-benchmark/pingpong/BuggedProgram.java"],
   "prio_files":  [],
-  "iterations": 3
+  "iterations": 5
 }

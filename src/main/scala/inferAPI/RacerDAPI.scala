@@ -279,4 +279,19 @@ object RacerDAPI {
       (acc._1 ++ List(vr), vr)})
     vars._1
   }
+
+  def procedureOfString(proc: String) = {
+    val lst   = proc.split(Array('.')).toList
+    val procedure = lst.foldLeft[Option[String]](None)((acc,str) => if(str.contains('(')) {
+      val pattern = "[^)]+(?=\\()".r
+      acc match {
+        case None    => pattern.findFirstMatchIn(str).map(str => str.toString())
+        case Some(_) => acc
+      }
+    } else acc)
+    procedure match {
+      case None      => proc
+      case Some(str) => str
+    }
+  }
 }

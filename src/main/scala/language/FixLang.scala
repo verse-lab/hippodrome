@@ -16,6 +16,9 @@ case class UpdateVolatile(val fsumm: FSumm, cls: String, line: Int, variable: Va
 case class UpdateSync(val fsumm: FSumm, cls: String, line: Int, lock_old: Variable, lock_new: Variable) extends FixKind
 case class InsertSync(val fsumm: FSumm, cls: String, line: Int, resource: Variable, lock: Variable) extends FixKind
 case class InsertDeclare(val fsumm: FSumm, cls: String, line: Int, typ: String, variable: String) extends FixKind
+case class MergeFixes(val fixes: List[InsertSync]) extends FixKind
+case class MergeTwoInserts(val ins1: InsertSync, val ins2: InsertSync) extends FixKind
+case class MergePatchWithInserts(val patch: PatchBlock, val ins2: InsertSync) extends FixKind
 case class InsertDeclareAndInst(val fsumm: FSumm, line: Int, variable: Variable, modifiers: List[String]) extends FixKind {
   def clone( fsumm: FSumm = this.fsumm,
              line: Int = this.line,
@@ -225,13 +228,14 @@ class Lock(val obj: String, val cls: String, val resource: Variable) {
 }
 
 /* raw racerdfix snapshot */
-class RFSumm(val filename: String, val cls: String, val resource: Variable, val access: AccessKind, val locks: List[Lock], val line: Int, val trace: Trace, val hash: String){
+class RFSumm(val filename: String, val cls: String, val procedure: String, val resource: Variable, val access: AccessKind, val locks: List[Lock], val line: Int, val trace: Trace, val hash: String){
 
   def getCost(cost: RFSumm => Int ) = cost(this)
 
   def equals(that: RFSumm) = {
     this.filename == that.filename &&
     this.cls      == that.cls &&
+    this.procedure== that.procedure &&
     this.resource.equals(that.resource) &&
     this.access   == that.access &&
     Globals.eq_set(((a:Lock, b: Lock) => a.equals(b)), this.locks, that.locks) &&

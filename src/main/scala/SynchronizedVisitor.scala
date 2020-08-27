@@ -5,7 +5,7 @@ import org.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
 import org.antlr.v4.runtime.{CommonTokenStream, ParserRuleContext, TokenStreamRewriter}
 import org.antlr.v4.runtime.misc.Interval
 import org.racerdfix.inferAPI.RacerDAPI
-import org.racerdfix.language.{DeclaratorSlicing, FixKind, InsertDeclareAndInst, InsertSync, NoFix, Test, UpdateSync, UpdateVolatile, Variable}
+import org.racerdfix.language.{DeclaratorSlicing, FixKind, InsertDeclareAndInst, InsertSync, MergeFixes, MergePatchWithInserts, MergeTwoInserts, NoFix, Test, UpdateSync, UpdateVolatile, Variable}
 
 import scala.collection.mutable
 
@@ -13,6 +13,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   private var fix: FixKind = NoFix
   private var sblock: Option[Java8Parser.SynchronizedStatementContext] = None
   private var resource: Option[Any] = None
+  private var resource1: Option[Any] = None
+  private var resource2: Option[Any] = None
   private var targetContext: Option[ParserRuleContext] = None
   private var classStmt: Option[Java8Parser.ClassDeclarationContext] = None
   private var static_mthd: Boolean = false
@@ -95,18 +97,82 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
   /* capture the inner most statement which contains the culprit resource */
   override def visitStatement(ctx: Java8Parser.StatementContext): Unit = {
-    //println("VISIT STATEMENT " + ctx.getText)
+    // println("VISIT STATEMENT " + ctx.getText)
     resource match {
       case None      => { this.visitChildren(ctx)
         resource match {
           case None =>
-          case Some(_) =>
+          case Some(_) => {
             resource = None
             targetContext = Some(ctx)
-        }}
+        }}}
       case Some(_) =>
     }
   }
+
+  /* capture the inner most statement which contains the culprit resource */
+  override def visitBlockStatements(ctx: Java8Parser.BlockStatementsContext): Unit = {
+    //println("VISIT BOLCK STATEMENTs " + ctx.getText)
+    fix match{
+      case MergeTwoInserts(ins1,ins2) => {
+        setFix(ins1)
+        this.visitChildren(ctx)
+        targetContext match {
+          case Some(ctx1) => {
+            val targetContext1 = ctx1
+            targetContext = None
+            setFix(ins2)
+            this.visitChildren(ctx)
+            targetContext match {
+              case Some(ctx2) => {
+                /* this statements block contains both insertion locations */
+                /*  need to repeat the process  */
+                val targetContext2 = ctx2
+                targetContext = None
+                /* iterate through this whole process again until we hit the inner most block statements that contains both inserts */
+                /*****/
+                setFix(MergeTwoInserts(ins1,ins2))
+                this.visitChildren(ctx)
+                /*****/
+                targetContext match {
+                  case None    => targetContext = Some(ctx)
+                  case Some(_) =>
+                }
+              }
+              case  None =>
+            }
+          }
+          case None =>
+        }
+      }
+      case MergePatchWithInserts(patch,ins) => {
+        if (ctx.start.getStartIndex <= patch.start.getStartIndex ){
+          setFix(ins)
+          this.visitChildren(ctx)
+          targetContext match {
+            case Some(ctx2) => {
+              /* this statements block contains both insertion locations */
+              /*  need to repeat the process  */
+              val targetContext2 = ctx2
+              targetContext = None
+              /* iterate through this whole process again until we hit the inner most block statements that contains both inserts */
+              /*****/
+              setFix(MergePatchWithInserts(patch,ins))
+              this.visitChildren(ctx)
+              /*****/
+              targetContext match {
+                case None    => targetContext = Some(ctx)
+                case Some(_) =>
+              }
+            }
+            case None =>
+          }
+        }
+      }
+      case _ => this.visitChildren(ctx)
+    }
+  }
+
 
   override def visitClassDeclaration(ctx: Java8Parser.ClassDeclarationContext): Unit = {
     try {

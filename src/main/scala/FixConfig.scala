@@ -20,6 +20,7 @@ case class FixConfig(
                       intellij:    Boolean      = false,
                       log:         Boolean      = true,
                       iterations:  Int          = Globals.no_iter,
+                      atomicity:   Boolean      = false,
                       // Files
                       json_path: String         = Globals.results_out_dir,
                       json_bugs:   String       = Globals.json_bugs_file,
@@ -81,6 +82,10 @@ object ArgParser {
     opt[Boolean]( "intellij").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(intellij = b))
     }.text("runs RacerDFix in IntelliJ mode - runs infer only once")
+
+    opt[Boolean]( "atomicity").action { (b, rc) =>
+      rc.copy(fixConfig = rc.fixConfig.copy(atomicity = b))
+    }.text("aims to fix atomicity violations [in Beta]")
 
     opt[Int]("interations").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(iterations = b))

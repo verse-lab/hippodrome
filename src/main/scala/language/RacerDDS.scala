@@ -73,10 +73,11 @@ class SummaryIn(var file: String, val procedure: String, var accesses: List[Acce
 
   def racerDToRacerDFix(): List[RFSumm] = {
     this.accesses.foldLeft(List.empty[RFSumm])((acc2, ae) => {
-        val cls = RacerDAPI.classNameOfMethodString(procedure)
+        val cls      = RacerDAPI.classNameOfMethodString(procedure)
+        val proc     = RacerDAPI.procedureOfString(procedure)
         val resource = RacerDAPI.varOfResource(ae.elem.access.exp,cls)
-        val access = RacerDAPI.accessKindOfString(ae.elem.access.kind)
-        val locks = ae.elem.locks.map(l => RacerDAPI.lockOfString(l)).filter(l => {
+        val access   = RacerDAPI.accessKindOfString(ae.elem.access.kind)
+        val locks    = ae.elem.locks.map(l => RacerDAPI.lockOfString(l)).filter(l => {
           if (l == "") println("REMOVING EMPTY LOCK")
           l.resource != ""
         })
@@ -84,7 +85,7 @@ class SummaryIn(var file: String, val procedure: String, var accesses: List[Acce
         val trace = RacerDAPI.traceOfListOfStrings(ae.trace)
         val hash = ae.hash
         /* TODO fix id below replace cls and id */
-        (new RFSumm(file, cls, resource, access, locks, line, trace, hash)) :: acc2
+        (new RFSumm(file, cls, proc, resource, access, locks, line, trace, hash)) :: acc2
       })
   }
 }

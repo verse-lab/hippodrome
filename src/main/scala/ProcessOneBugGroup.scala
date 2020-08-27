@@ -1,6 +1,6 @@
 package org.racerdfix
 
-import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, NoFix, NoPatch, Or, PAnd, PInsert, POr, PTest, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, Test, UpdateSync, UpdateVolatile, Variable}
+import org.racerdfix.language.{And, FSumm, FixKind, InsAfter, InsBefore, InsertDeclareAndInst, InsertSync, Lock, MergeFixes, MergePatchWithInserts, MergeTwoInserts, NoFix, NoPatch, Or, PAnd, PInsert, POr, PTest, PUpdate, Patch, PatchBlock, PatchCost, RFSumm, Replace, Test, UpdateSync, UpdateVolatile, Variable}
 import org.antlr.v4.runtime.TokenStreamRewriter
 import org.racerdfix.antlr.Java8Parser
 import org.racerdfix.inferAPI.RacerDAPI
@@ -201,6 +201,87 @@ object ProcessOneBugGroup  {
     res
   }
 
+  def generateMergedPatchForTwoInserts_def(insert1: InsertSync,
+                              insert2: InsertSync,
+                              ast: ASTStoreElem): Option[PatchBlock] = {
+    val syncVisitor = new SynchronizedVisitor
+    val rewriter    = new TokenStreamRewriter(ast.tokens)
+    syncVisitor.setFix(MergeTwoInserts(insert1,insert2))
+    syncVisitor.visit(ast.tree)
+    val modifiers = syncVisitor.getModifiers.distinct
+    val sblock = syncVisitor.getTargetCtx
+    val sdecl  = syncVisitor.getDeclSlice
+    sblock match {
+      case Some(sblock) =>
+        val (oldcode,patch) = syncVisitor.insertSynchronizedStatement(rewriter,sblock,insert1,sdecl)
+        val description = (
+          "Replace (INSERT) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
+            + ("\n" + "-: " + oldcode)
+            + ("\n" + "+: " + patch) )
+        Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
+      case None =>
+        println("No INSERT patch could be generated for attempt ID " )
+        Logging.add("No Merge patch could be generated -- " + insert1.line + " " + insert1.resource + " " + insert1.lock + " , " +
+          insert2.line + " " + insert2.resource + " " + insert2.lock)
+        None
+    }
+  }
+
+  def generateMergedPatch_def(lst: MergeFixes): List[Option[PatchBlock] ]= {
+
+    val patches     = lst.fixes.foldLeft(List.empty[Option[PatchBlock]])((acc,ins) => {
+      val ast         = ins.fsumm.ast
+      val syncVisitor = new SynchronizedVisitor
+      val rewriter    = new TokenStreamRewriter(ast.tokens)
+      if(acc.isEmpty) List(generateInsertPatch_def(ins,ast))
+      else {
+        val patch = acc(acc.length-1)
+        val new_acc = acc.dropRight(1)
+        patch match {
+          case None => {
+            /* just generate the patch for ins and ignore this none */
+            generateInsertPatch_def(ins,ast) match {
+              case None => new_acc
+              case Some(patch) => new_acc ++ List(Some(patch))
+            }
+          }
+          case Some(patch) => {
+            /* merge the patch with the insert */
+            syncVisitor.setFix(MergePatchWithInserts(patch,ins))
+            syncVisitor.visit(ast.tree)
+            val modifiers = syncVisitor.getModifiers.distinct
+            val sblock = syncVisitor.getTargetCtx
+            val sdecl  = syncVisitor.getDeclSlice
+            sblock match {
+              case Some(sblock) =>
+                val (oldcode,patch) = syncVisitor.insertSynchronizedStatement(rewriter,sblock,ins,sdecl)
+                val description = (
+                  "Replace (INSERT) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
+                    + ("\n" + "-: " + oldcode)
+                    + ("\n" + "+: " + patch) )
+                new_acc ++ List(Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers)))
+              case None =>
+                println("No INSERT patch could be generated for attempt ID " )
+                Logging.add("No Merge patch could be generated -- " + ins.line + " " + ins.resource + " " + ins.lock + " , " )
+                acc ++ List (generateInsertPatch_def(ins,ast) )
+            }
+          }
+        }
+      }
+    })
+    patches
+  }
+
+  /* debugger */
+  def generateMergedPatch(lst: MergeFixes): List[Option[PatchBlock] ]= {
+    val res = generateMergedPatch_def(lst)
+    if(true) {
+      println(lst)
+      println("out: " + Globals.print_list(Globals.getTextOpt[PatchBlock],",", res))
+    }
+    res
+  }
+
 
   def generateInsertDeclareAndInstPatch_def(insert: InsertDeclareAndInst,
                               ast: ASTStoreElem): Option[PatchBlock] = {
@@ -325,6 +406,32 @@ object ProcessOneBugGroup  {
 
 
   /* Generates a list of patches corresponding to the list of INSERT objects (inserts) */
+  def generateMergePatch0(
+                            inserts: MergeFixes,
+                            id: Option[String] = None): Patch = {
+    val res     = generateMergedPatch_def(inserts)
+    val patchID = id match {
+      case None => RacerDFix.patchIDGenerator
+      case Some (id) => id
+    }
+
+    def patchBlockToPatch(patch: Option[PatchBlock]) = {
+      patch match {
+        case None => NoPatch
+        case Some(patch) => PInsert(patchID, patch)
+      }
+    }
+
+    res match {
+      case Nil    => NoPatch
+      case x::Nil => patchBlockToPatch(x)
+      case x::xs  => {
+        xs.foldLeft(patchBlockToPatch(x))((acc,p) => PAnd(patchID,acc,patchBlockToPatch(p)))
+      }
+    }
+  }
+
+  /* Generates a list of patches corresponding to the list of INSERT objects (inserts) */
   def generateInsertDeclareAndInstPatch0(
                             inserts: InsertDeclareAndInst,
                             ast: ASTStoreElem,
@@ -362,6 +469,7 @@ object ProcessOneBugGroup  {
     fixobj match {
       case NoFix   => NoPatch
       case Test(_) => NoPatch
+      case MergeFixes(lst) => generateMergePatch0(fixobj.asInstanceOf[MergeFixes],id)
       case InsertSync(s,_,_,_,_)  => generateInsertPatch0(fixobj.asInstanceOf[InsertSync],s.ast,id)
       case UpdateSync(s,_,_,_,_)  => generateUpdatePatch0(fixobj.asInstanceOf[UpdateSync],s.ast,id)
       case UpdateVolatile(s, _, _, _, _, _, _) => generateUpdateToVolatilePatch0(fixobj.asInstanceOf[UpdateVolatile],s.ast,id)
@@ -524,10 +632,70 @@ object ProcessOneBugGroup  {
           /* ************** INSERTS ***************** */
           /* generate insert objects */
           // println("LOCK: " + lock.resource)
-          val insert = summs.foldLeft(fix_aux:FixKind)((acc,p) => new And(acc,(generateInsertObjects(p,lock))))
+          val insert = summs.foldLeft(fix_aux:FixKind)((acc,p) =>
+            new And(acc,(generateInsertObjects(p,lock))))
 
+          def compatibleForMerging(f1: FixKind, f2: FixKind): Boolean = {
+            (f1,f2) match {
+              case (InsertSync(fsum1,cls1,_,_,lock1), InsertSync(fsum2,cls2,_,_,lock2)) =>
+                if(fsum1.csumm.procedure == fsum2.csumm.procedure && cls1 == cls2 && lock1.equals_loose(lock2))
+                  true
+                else false
+              case (MergeFixes(lst), InsertSync(_,_,_,_,_)) =>
+                if(lst.isEmpty) true
+                else compatibleForMerging(lst(lst.length-1),f2)
+              case _ => false
+            }
+          }
+
+          /* order sensitive - MergeFixes must be the first */
+          def mergeFixes(f1: FixKind, f2: FixKind): List[FixKind] = {
+            (f1,f2) match {
+              case (InsertSync(fsum1,cls1,_,_,lock1), InsertSync(fsum2,cls2,_,_,lock2)) =>
+                if(compatibleForMerging(f1,f2))
+                  List(MergeFixes(List(f1.asInstanceOf[InsertSync],f2.asInstanceOf[InsertSync])))
+                else List(f1,f2)
+              case (MergeFixes(lst), InsertSync(_,_,_,_,_)) =>
+                if(lst.isEmpty) List(f2)
+                else if(compatibleForMerging(lst(lst.length-1),f2)) List(MergeFixes(lst ++ List(f2.asInstanceOf[InsertSync])))
+                else List(f1,f2)
+              case _ => List(f1,f2)
+            }
+          }
+
+          val inserts = {
+            if(!config.atomicity) insert
+            else {
+              val insert_lst = insert.asInstanceOf[And].listOf()
+              val insert_lst1 = insert_lst.sortBy(f => try {
+                (f.asInstanceOf[InsertSync].fsumm.csumm.procedure, f.asInstanceOf[InsertSync].fsumm.csumm.line)
+              } catch {
+                case _ => ("", 0)
+              })
+              val insert_lst2 = insert_lst1.foldLeft(List.empty[FixKind])((acc, fix) => {
+                acc match {
+                  case Nil => List(fix)
+                  case _ => {
+                    val last_fix = acc(acc.length - 1)
+                    val new_acc = acc.dropRight(1)
+                    /* possibly merge fixes */
+                    val fixes = mergeFixes(last_fix, fix)
+                    new_acc ++ fixes
+                  }
+                }
+              })
+              val inserts = insert_lst2 match {
+                case Nil => NoFix
+                case x :: Nil => x
+                case x :: xs => xs.foldLeft(x)((acc, fix) => And(acc, fix))
+              }
+              inserts
+              /* sort the above based on method and merge patches belonging to the same method */
+              /* me}rge objects which are \delta apart or which are within the same method */
+            }
+          }
           /* generate inserts patches */
-          val insert_patches = generatePatches(insert)
+          val insert_patches = generatePatches(inserts)
 
 
           /* generate volatile */
