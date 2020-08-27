@@ -242,7 +242,7 @@ object ProcessOneBugGroup  {
             /* just generate the patch for ins and ignore this none */
             generateInsertPatch_def(ins,ast) match {
               case None => new_acc
-              case Some(patch) => new_acc ++ List(Some(patch))
+              case Some(fresh_patch) => new_acc ++ List(Some(fresh_patch))
             }
           }
           case Some(patch) => {
@@ -250,17 +250,17 @@ object ProcessOneBugGroup  {
             syncVisitor.setFix(MergePatchWithInserts(patch,ins))
             syncVisitor.visit(ast.tree)
             val modifiers = syncVisitor.getModifiers.distinct
-            val sblock = syncVisitor.getTargetCtx
+            val sblock = syncVisitor.getSurroundingStmt
             val sdecl  = syncVisitor.getDeclSlice
             sblock match {
-              case Some(sblock) =>
-                val (oldcode,patch) = syncVisitor.insertSynchronizedStatement(rewriter,sblock,ins,sdecl)
+              case (Some(start), Some(stop)) =>
+                val (oldcode,patch) = syncVisitor.insertSynchronizedStatement(rewriter,start,ins,sdecl, start_ctx = Some(start), stop_ctx = Some(stop))
                 val description = (
-                  "Replace (INSERT) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
+                  "Replace (INSERT) lines: " + Globals.getRealLineNo(start.start.getLine) + " - " + Globals.getRealLineNo(stop.stop.getLine)
                     + ("\n" + "-: " + oldcode)
                     + ("\n" + "+: " + patch) )
-                new_acc ++ List(Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers)))
-              case None =>
+                new_acc ++ List(Some(new PatchBlock(ast.rewriter, Replace, patch, start.start, stop.stop, description, Globals.defCost, modifiers)))
+              case _ =>
                 println("No INSERT patch could be generated for attempt ID " )
                 Logging.add("No Merge patch could be generated -- " + ins.line + " " + ins.resource + " " + ins.lock + " , " )
                 acc ++ List (generateInsertPatch_def(ins,ast) )
@@ -670,7 +670,7 @@ object ProcessOneBugGroup  {
               val insert_lst1 = insert_lst.sortBy(f => try {
                 (f.asInstanceOf[InsertSync].fsumm.csumm.procedure, f.asInstanceOf[InsertSync].fsumm.csumm.line)
               } catch {
-                case _ => ("", 0)
+                case _ => ("", 0) // if not an insert then it's not grouped
               })
               val insert_lst2 = insert_lst1.foldLeft(List.empty[FixKind])((acc, fix) => {
                 acc match {

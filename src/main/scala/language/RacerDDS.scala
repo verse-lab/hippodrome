@@ -31,7 +31,17 @@ case class BugIn(val bug_type: String, val qualifier: String, val severity: Stri
       case None => Nil
       case Some(str)  => summaries.filter(sum => sum.hash == str)
     }
+    /*
+    class FBug(val file: String, val cls: String, val proc: String,
+               val bug_trace: List[TraceElem],
+           val snapshot1: List[RFSumm], val snapshot2: List[RFSumm], val hash: String)
+
+    * */
     new FBug(
+      file,
+      RacerDAPI.classNameOfMethodString(proc),
+      RacerDAPI.procedureOfString(proc),
+      bug_trace,
       Globals.distinct_eq( (a:RFSumm,b:RFSumm) => a.equals(b), summ1),
       Globals.distinct_eq( (a:RFSumm,b:RFSumm) => a.equals(b), summ2),
       hash)

@@ -101,8 +101,9 @@ object RacerDFix {
       Logging.add("bugs: " + bugs_str)
 
       val bugs_group = fbugs._2._2
-      val summs = bugs_group.foldLeft[List[RFSumm]](Nil)((acc,bug) =>  {acc ++ BugsMisc.retrieveSummary(bug)})
-      mainAlgo(summs, config, ast, patchStore)
+      val summs = bugs_group.foldLeft[List[RFSumm]](Nil)((acc,bug) =>  {acc ++ BugsMisc.retrieveSummary(config,bug)})
+      val summs_distinct = Globals.distinct_eq((a:RFSumm,b:RFSumm) => a.equals(b),summs)
+      mainAlgo(summs_distinct, config, ast, patchStore)
     })
 
     /* Write the fixes to files */

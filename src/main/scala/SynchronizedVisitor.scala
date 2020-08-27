@@ -2,8 +2,10 @@ package org.racerdfix
 
 import com.sun.jndi.toolkit.dir.HierMemDirCtx
 import org.racerdfix.antlr.{Java8BaseVisitor, Java8Parser}
-import org.antlr.v4.runtime.{CommonTokenStream, ParserRuleContext, TokenStreamRewriter}
+import org.antlr.v4.runtime.{CommonTokenStream, ParserRuleContext, Token, TokenStreamRewriter}
 import org.antlr.v4.runtime.misc.Interval
+import org.antlr.v4.runtime.tree.ParseTree
+import org.racerdfix.antlr.Java8Parser.BlockStatementContext
 import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.language.{DeclaratorSlicing, FixKind, InsertDeclareAndInst, InsertSync, MergeFixes, MergePatchWithInserts, MergeTwoInserts, NoFix, Test, UpdateSync, UpdateVolatile, Variable}
 
@@ -23,6 +25,9 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   var variables: mutable.HashMap[String, List[Variable]] = new mutable.HashMap[String,List[Variable]]()
   private var className: String = ""
   private var config: Option[FixConfig] = None
+  private var start_stmt: Option[BlockStatementContext] = None
+  private var stop_stmt:  Option[BlockStatementContext] = None
+
 
 
   def setFix(init_fix: FixKind): Unit = {
@@ -43,6 +48,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     variables.getOrElseUpdate(cls,Nil)
   }
 
+  def getSurroundingStmt = (start_stmt,stop_stmt)
 
   override def visitSynchronizedStatement(ctx: Java8Parser.SynchronizedStatementContext): Unit = {
     fix match {
@@ -59,11 +65,12 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     this.visitChildren(ctx)
   }
 
-  def visitCriticalSection(ctx: ParserRuleContext) = {
+
+  def visitCriticalSection_def(ctx: ParserRuleContext, identifier: String) = {
     fix match {
       case InsertSync(_,cls, line, unprotected_resource, lock_new) => {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
-          val vars = RacerDAPI.refToListOfRef(ctx.getText)
+          val vars = RacerDAPI.refToListOfRef(identifier)
           val vars_extended = vars.map(v => if (cls.length >0 ) cls + "." + v else v)
           //println("LOG INSERT: \n expected vars:" + unprotected_resource + "\n found variables: " + vars_extended)
           if ((vars ++ vars_extended).intersect(unprotected_resource.allAliases()).length>0){
@@ -87,6 +94,10 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
       }
       case _ => this.visitChildren(ctx)
     }
+  }
+
+  def visitCriticalSection(ctx: ParserRuleContext) = {
+    visitCriticalSection_def(ctx, ctx.getText)
   }
 
   override def visitExpressionName(ctx: Java8Parser.ExpressionNameContext): Unit = {
@@ -146,28 +157,65 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
         }
       }
       case MergePatchWithInserts(patch,ins) => {
-        if (ctx.start.getStartIndex <= patch.start.getStartIndex ){
-          setFix(ins)
-          this.visitChildren(ctx)
-          targetContext match {
-            case Some(ctx2) => {
-              /* this statements block contains both insertion locations */
-              /*  need to repeat the process  */
-              val targetContext2 = ctx2
-              targetContext = None
-              /* iterate through this whole process again until we hit the inner most block statements that contains both inserts */
-              /*****/
-              setFix(MergePatchWithInserts(patch,ins))
-              this.visitChildren(ctx)
-              /*****/
-              targetContext match {
-                case None    => targetContext = Some(ctx)
-                case Some(_) =>
-              }
+        //(Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine))
+//        val v1 = ctx.start.getStartIndex
+//        val v2 = ctx.stop.getStopIndex
+//        val v3 = patch.start.getStartIndex
+//        val v4 = patch.stop.getStopIndex
+//
+//        println("" + v1.toString + " <= " + v3.toString  + " && " + v4.toString + " <= " + v2.toString + " " +
+//                  ((ctx.start.getTokenIndex <= patch.start.getTokenIndex) &&  (patch.stop.getTokenIndex <= ctx.start.getTokenIndex)))
+        //          ((ctx.start.getLine <= patch.start.getLine) &&  (patch.stop.getLine <= ctx.start.getLine)))
+
+
+//        var start_stmt: Option[BlockStatementContext] = None
+//        var stop_stmt:  Option[BlockStatementContext] = None
+
+        def visitStatementsForMergingBlocks(ctx_lst: List[BlockStatementContext]): Unit = {
+          ctx_lst match {
+            case Nil    =>
+            case x::Nil => {
+              val start = x.start.getLine
+              val stop  = x.stop.getLine
+              if ((start <= patch.start.getLine) &&  (patch.stop.getLine <= stop))
+                start_stmt = Some(x)
+              if (Globals.getRealLineNo(start) <= ins.line & ins.line <= Globals.getRealLineNo(stop))
+                stop_stmt  = Some(x)
             }
-            case None =>
+            case x::xs  => {
+              val stop  = x.stop.getLine
+              val start = x.start.getLine
+              if ((start <= patch.start.getLine)) start_stmt = Some(x)
+              if (ins.line >= Globals.getRealLineNo(stop)) stop_stmt = Some(x)
+              visitStatementsForMergingBlocks(xs)
+            }
           }
         }
+
+        visitStatementsForMergingBlocks(ctx.blockStatement().toArray.toList.map(x => x.asInstanceOf[BlockStatementContext]))
+
+//        if (((ctx.start.getLine <= patch.start.getLine) &&  (patch.stop.getLine <= ctx.start.getLine))){
+//          setFix(ins)
+//          this.visitChildren(ctx)
+//          targetContext match {
+//            case Some(ctx2) => {
+//              /* this statements block contains both insertion locations */
+//              /*  need to repeat the process  */
+//              val targetContext2 = ctx2
+//              targetContext = None
+//              /* iterate through this whole process again until we hit the inner most block statements that contains both inserts */
+//              /*****/
+//              setFix(MergePatchWithInserts(patch,ins))
+//              this.visitChildren(ctx)
+//              /*****/
+//              targetContext match {
+//                case None    => targetContext = Some(ctx)
+//                case Some(_) =>
+//              }
+//            }
+//            case None =>
+//          }
+//        }
       }
       case _ => this.visitChildren(ctx)
     }
@@ -224,15 +272,15 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   }
 
   override def visitMethodInvocation(ctx: Java8Parser.MethodInvocationContext): Unit = {
-    visitCriticalSection(ctx)
+    visitCriticalSection_def(ctx, ctx.Identifier().getText)
   }
 
   override def visitMethodInvocation_lf_primary(ctx: Java8Parser.MethodInvocation_lf_primaryContext): Unit = {
-    visitCriticalSection(ctx)
+    visitCriticalSection_def(ctx, ctx.Identifier().getText)
   }
 
   override def visitMethodInvocation_lfno_primary(ctx: Java8Parser.MethodInvocation_lfno_primaryContext): Unit = {
-    visitCriticalSection(ctx)
+    visitCriticalSection_def(ctx, ctx.Identifier().getText)
   }
 
   override def visitMethodDeclaration(ctx: Java8Parser.MethodDeclarationContext): Unit = {
@@ -343,33 +391,45 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
   def insertSynchronizedStatement(rewriter: TokenStreamRewriter,
                                   ctx: ParserRuleContext, fix: InsertSync,
-                                  decl_slice: Option[DeclaratorSlicing] = None): (String,String) = {
-    val a = ctx.start.getStartIndex
-    val b = ctx.stop.getStopIndex
+                                  decl_slice: Option[DeclaratorSlicing] = None,
+                                  start_ctx: Option[ParserRuleContext] = None, stop_ctx: Option[ParserRuleContext] = None): (String,String) = {
+    val ctxs = {
+      (start_ctx,stop_ctx) match {
+        case (Some(start),Some(stop)) => (start,stop)
+        case _ => (ctx, ctx)
+      }
+    }
+    val start = ctxs._1
+    val stop  = ctxs._2
+
+    val a = start.start.getStartIndex
+    val b = stop.stop.getStopIndex
+
     val interval = new Interval(a, b)
 
-//    println("ctx:" + ctx.start.getInputStream.getText(interval))
+//    println("start:" + start.getInputStream.getText(interval))
+
 
     decl_slice match {
       case None => {
-        rewriter.insertBefore(ctx.start, "synchronized(" + fix.lock.id + ") { ")
-        rewriter.insertAfter(ctx.stop, " } ")
+        rewriter.insertBefore(start.start, "synchronized(" + fix.lock.id + ") { ")
+        rewriter.insertAfter(stop.stop, " } ")
       }
       case Some(sdecl) => {
         val decl = sdecl.declarations
         val init = sdecl.initializations
         val new_init = "synchronized(" + fix.lock.id + ") { " + init + " } "
-        rewriter.replace(ctx.start, ctx.stop, decl + " " + new_init)
+        rewriter.replace(start.start, stop.stop, decl + " " + new_init)
       }
     }
 
-    val rinterval = new Interval(ctx.getSourceInterval.a,ctx.getSourceInterval.b+1)
+    val rinterval = new Interval(start.getSourceInterval.a,stop.getSourceInterval.b+1)
 
 //    println("ctx: " + ctx.start.getInputStream.getText(interval)  + "#####")
 //    println("rewriter:" + rewriter.getText())
 //    println("rewriter:" + rewriter.getText(rinterval) + "#####")
 
-    (ctx.start.getInputStream.getText(interval),rewriter.getText(rinterval))
+    (start.start.getInputStream.getText(interval),rewriter.getText(rinterval))
   }
 
   def insertInsertDeclareAndInstStatement(rewriter: TokenStreamRewriter,

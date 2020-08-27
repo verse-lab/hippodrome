@@ -185,7 +185,8 @@ object RacerDAPI {
       case _ => if(aliases2.length > 0) aliases2.head
       else resource0
      }
-    new Variable( cls = cls0 , id = id, aliases = aliases3)
+    val aliases4 = aliases3 ++ {if (id.startsWith("this.")) List(id.drop(5)) else Nil}
+    new Variable( cls = cls0 , id = id, aliases = aliases4)
   }
 
   def varOfResource(resource: String, cls: String = ""): Variable = {
@@ -240,6 +241,27 @@ object RacerDAPI {
     result
   }
 
+  /* "B.<init>()" => "<init>" */
+  /* "B.goo(int)" => "goo" */
+  def nameOfMethodOfString_def(method: String): String ={
+    val lst   = method.split(Array('.')).toList
+    if(lst.length > 0) {
+      val meth =  lst(lst.length - 1).toString
+      classNameOfMethodString_def(meth)
+    }
+    else method
+  }
+
+  def nameOfMethodFromString(method: String): String = {
+    val result = classNameOfMethodString_def(method)
+    if (false) {
+      println("inp1: " + method)
+      println("out:  " + result)
+    }
+    result
+  }
+
+
   def accessKindOfString(str: String) = {
     if (str == "Read") Read
     else if (str == "Write") Write
@@ -293,5 +315,23 @@ object RacerDAPI {
       case None      => proc
       case Some(str) => str
     }
+  }
+
+  /* "call to int Account.getBalance()" ==> Account.getBalance()*/
+  def resourceFromDescription(desc: String, cls: String): Variable = {
+    val lst   = desc.split(Array(' ')).toList
+    if(desc.contains("call")) {
+      val mthd = nameOfMethodOfString_def(lst(lst.length - 1))
+      new Variable(cls,Nil,"",mthd,Nil)
+    }
+    else if(desc.containsSlice("access")) {
+      val pattern = "(?<=\\`)[^)]+(?=\\`)".r
+      pattern.findFirstMatchIn(desc) match {
+        case Some(str) => {
+          varOfResource(str.toString(),cls)
+        }
+        case None => new Variable(cls,Nil,"",desc,Nil)
+      }
+    } else new Variable(cls,Nil,"",desc,Nil)
   }
 }
