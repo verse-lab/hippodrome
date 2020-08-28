@@ -1,0 +1,7 @@
+{"infer":"/Users/andrea/git/infer-clean/infer/infer/bin/infer",
+  "options":["--racerdfix-only", "--starvation"],
+  "json_path": "./infer-out/",
+  "target_options": ["--", "javac", "src/test/resources/java-benchmark/datarace/CustomerInfo.java", "src/test/resources/java-benchmark/datarace/Account.java"],
+  "prio_files":  [],
+  "iterations": 1
+}
