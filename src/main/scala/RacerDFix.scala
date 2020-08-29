@@ -21,7 +21,7 @@ object RacerDFix {
     }
   }
 
-  private def handleInput(args: Array[String]): Unit = {
+  private def handleInput(args: Array[String]): Int = {
     args.foreach( str => println("args: " + str))
     val newConfig = RunConfig(FixConfig(), Globals.def_src_path)
     parser.parse(args, newConfig) match {
@@ -32,7 +32,7 @@ object RacerDFix {
         res
       case None =>
         System.err.println("Bad argument format.")
-        0
+        1
     }
   }
 
@@ -135,13 +135,13 @@ object RacerDFix {
               readLine()
             } else if (iteration < config.iterations) "Y" else "n"
             if (answer_str == "Y") runPatchAndFix(config, iteration + 1)
-            else if (answer_str == "n") 0
+            else if (answer_str == "n") 1
             else {
               println("Unrecognized answer.")
-              0;
+              1
             }
-          } else 1
-        } else 1
+          } else 0
+        } else 0
       }
     catch {
       case exc => throw exc
@@ -152,7 +152,9 @@ object RacerDFix {
    return ret;
   }
 
-  def main(args: Array[String]): Int =  handleInput(args)
-
+  def main(args: Array[String]): Unit = {
+    val res = handleInput(args)
+    System.exit(res)
+  }
 
 }
