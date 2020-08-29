@@ -27,10 +27,12 @@ object RacerDFix {
     parser.parse(args, newConfig) match {
       case Some(RunConfig(fixConfig, file)) =>
         Logging.init(fixConfig)
-        runPatchAndFix(fixConfig, 1)
+        val res = runPatchAndFix(fixConfig, 1)
         Logging.stop
+        res
       case None =>
         System.err.println("Bad argument format.")
+        0
     }
   }
 
@@ -150,5 +152,7 @@ object RacerDFix {
    return ret;
   }
 
-  def main(args: Array[String]) = handleInput(args)
+  def main(args: Array[String]): Int =  handleInput(args)
+
+
 }
