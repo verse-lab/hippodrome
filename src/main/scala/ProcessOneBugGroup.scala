@@ -45,11 +45,12 @@ class GroupByIdPatchOptions(var map : HashMap[String, List[PatchBlock]]) {
           /* remove duplicated/redundant patch components from within the same patch for the same bug group*/
           acc.exists(pb_acc => pb_acc.equals(pb) || pb_acc.subsumes(pb)) ||
           /* remove components which are subsumed by other patches' for the same bug group */
-          //(this.map.exists(patch_inner => patch_inner._1 != patch._1 && patch_inner._2.exists(pb_inner => pb_inner.subsumes(pb) || pb_inner.overlaps(pb))))||
+          /* pb_inner.equals(pb)  || pb_inner.overlaps(pb)*/
+          (this.map.exists(patch_inner => patch_inner._1 != patch._1 && patch_inner._2.exists(pb_inner => pb_inner.equals(pb))))||
           /* remove components which are subsumed by other patches' for a different bug group */
           patchStore.map.exists((bug_grp) => bug_grp._2.patches.map(bug_grp._2.choiceId).exists(p => p.subsumes(pb) || p.overlaps(pb)))
           ) {
-          println(" Removing redundant or overlapping patch component: \n ######### " + pb.description + "\n ######### ")
+          //println(" Removing redundant or overlapping patch component: \n ######### " + pb.description + "\n ######### ")
           Logging.add(" Removing redundant or overlapping patch component from patch " + patch._1 + ": \n ######### " + pb.description + "\n ######### ")
           acc
         }
@@ -513,6 +514,7 @@ object ProcessOneBugGroup  {
     }
   }
 
+/*
   def leastCostlyPatch(groupByIdPatchResult: GroupByIdPatchOptions) = {
     val patch_id = groupByIdPatchResult.map.foldLeft((None:Option[String],Globals.maxCost))((acc:(Option[String],PatchCost),pair) => {
       val leastCostlySoFar   = acc._2
@@ -522,6 +524,24 @@ object ProcessOneBugGroup  {
     })
     patch_id._1
   }
+*/
+
+  def leastCostlyPatch(groupByIdPatchResult: GroupByIdPatchOptions) = {
+    val patch_id = groupByIdPatchResult.map.foldLeft((None:Option[String]))((acc:(Option[String]),pair) => {
+      try {
+        acc match {
+          case None => Some(pair._1)
+          case Some(id) => if (id.toInt <= pair._1.toInt) acc else Some(pair._1)
+        }
+      } catch {
+        case _ => {
+          println("Found ID which is not Int. ")
+          acc
+        }}
+    })
+    patch_id
+  }
+
 
   def translateRawSnapshotsToSnapshots(csumms: List[RFSumm], ast: ASTManipulation): List[FSumm] = {
     csumms.map(csumm => {
@@ -530,6 +550,73 @@ object ProcessOneBugGroup  {
       summ
     })
   }
+
+  /* ******************************** */
+  /*  Functions for merging patches   */
+  /* ******************************** */
+  def compatibleForMerging(f1: FixKind, f2: FixKind): Boolean = {
+    (f1,f2) match {
+      case (InsertSync(fsum1,cls1,_,_,lock1), InsertSync(fsum2,cls2,_,_,lock2)) =>
+        if(fsum1.csumm.procedure == fsum2.csumm.procedure && cls1 == cls2 && lock1.equals_loose(lock2))
+          true
+        else false
+      case (MergeFixes(lst), InsertSync(_,_,_,_,_)) =>
+        if(lst.isEmpty) true
+        else compatibleForMerging(lst(lst.length-1),f2)
+      case _ => false
+    }
+  }
+
+  /* order sensitive - MergeFixes must be the first */
+  def mergeFixes(f1: FixKind, f2: FixKind): List[FixKind] = {
+    (f1,f2) match {
+      case (InsertSync(fsum1,cls1,_,_,lock1), InsertSync(fsum2,cls2,_,_,lock2)) =>
+        if(compatibleForMerging(f1,f2))
+          List(MergeFixes(List(f1.asInstanceOf[InsertSync],f2.asInstanceOf[InsertSync])))
+        else List(f1,f2)
+      case (MergeFixes(lst), InsertSync(_,_,_,_,_)) =>
+        if(lst.isEmpty) List(f2)
+        else if(compatibleForMerging(lst(lst.length-1),f2)) List(MergeFixes(lst ++ List(f2.asInstanceOf[InsertSync])))
+        else List(f1,f2)
+      case _ => List(f1,f2)
+    }
+  }
+
+  def possiblyMergeFixes(fix: FixKind) = {
+    val insert_lst = fix.asInstanceOf[And].listOf()
+    val insert_lst1 = insert_lst.sortBy(f => try {
+      (f.asInstanceOf[InsertSync].fsumm.csumm.procedure, f.asInstanceOf[InsertSync].fsumm.csumm.line)
+    } catch {
+      case _ => ("", 0) // if not an insert then it's not grouped
+    })
+    val insert_lst2 = insert_lst1.foldLeft(List.empty[FixKind])((acc, fix) => {
+      acc match {
+        case Nil => List(fix)
+        case _ => {
+          val last_fix = acc(acc.length - 1)
+          val new_acc = acc.dropRight(1)
+          /* possibly merge fixes */
+          val fixes = mergeFixes(last_fix, fix)
+          new_acc ++ fixes
+        }
+      }
+    })
+    val inserts = insert_lst2 match {
+      case Nil => NoFix
+      case x :: Nil => x
+      case x :: xs => xs.foldLeft(x)((acc, fix) => And(acc, fix))
+    }
+    inserts
+  }
+
+  def possiblyMergeFixesOpt(fixes: FixKind): FixKind = {
+    fixes match {
+      case Or(p1,p2) => new Or(possiblyMergeFixesOpt(p1),possiblyMergeFixesOpt(p2))
+      case And(_,_ ) => possiblyMergeFixes(fixes)
+      case _         => fixes
+    }
+  }
+  /**/
 
   def mainAlgo_def(csumms: List[RFSumm], config: FixConfig, ast: ASTManipulation, patchStore: PatchStore): Unit = {
     /* ******** */
@@ -597,38 +684,10 @@ object ProcessOneBugGroup  {
           val locks = summ.csumm.locks.filter( lck => (atLeastOneStatic &&  isLockStatic((lck)) || !atLeastOneStatic ))
           acc ++ locks
         })
-        //val existing_locks_filt = existing_locks.filter( lck => if(atLeastOneStatic && ))
-        val existing_locks_ext  = existing_locks.map( lock => (lock,summs.count( p => p.csumm.locks.exists(lck => lck.equals(lock)))))
-        /* TODO start from a new object */
-        val candidate_lock     = existing_locks_ext.foldLeft[Option[(Lock,Int)]](None)((acc,lck_ext) => {
-          acc match {
-            case None => {
-              Some(lck_ext)
-            }
-            case Some (lck_0) => {
-              if (lck_ext._2 < lck_0._2) {
-                Some(lck_0)
-              } else {
-                Some(lck_ext)
-              }
-            }
-          }
-        })
-        val (fix_aux,lock) = {
-          candidate_lock match {
-            case Some(lck) => (NoFix, lck._1)
-            case None      => {
-              /* CREATE new lock object */
-              val varName = Globals.base_obj_id + RacerDFix.patchIDGenerator
-              /* TODO below assumes that all bugs are in the same class */
-              val varb    = new Variable(summs.head.csumm.resource.cls,modifiers,Globals.def_obj_typ,varName,List(varName))
-              val declareObj = InsertDeclareAndInst(summs.head,summs.head.csumm.line, varb, modifiers)
-              (declareObj, new Lock("this",summs.head.csumm.resource.cls,varb))
-            }
-          }
-        }
 
-        val candidate_locks = existing_locks_ext.sortBy(lck => lck._2)
+        val existing_locks_ext  = existing_locks.map( lock => (lock,summs.count( p => p.csumm.locks.exists(lck => lck.equals(lock)))))
+
+        val candidate_locks = existing_locks_ext.sortBy(lck => -lck._2)
 
         def create_new_lock : (FixKind, Lock)=   {
           /* CREATE new lock object */
@@ -647,73 +706,22 @@ object ProcessOneBugGroup  {
           // println("LOCK: " + lock.resource)
           val insert = locks.foldLeft(NoFix.asInstanceOf[FixKind])( (fxk, lck) => {
             val ptch =
-            summs.foldLeft(fix_aux: FixKind)((acc, p) =>
-              new And(lck._1, new And(acc, (generateInsertObjects(p, lck._2)))))
+            summs.foldLeft(lck._1: FixKind)((acc, p) =>
+              new And(acc, (generateInsertObjects(p, lck._2))))
             new Or(fxk,ptch)
           })
-
-          def compatibleForMerging(f1: FixKind, f2: FixKind): Boolean = {
-            (f1,f2) match {
-              case (InsertSync(fsum1,cls1,_,_,lock1), InsertSync(fsum2,cls2,_,_,lock2)) =>
-                if(fsum1.csumm.procedure == fsum2.csumm.procedure && cls1 == cls2 && lock1.equals_loose(lock2))
-                  true
-                else false
-              case (MergeFixes(lst), InsertSync(_,_,_,_,_)) =>
-                if(lst.isEmpty) true
-                else compatibleForMerging(lst(lst.length-1),f2)
-              case _ => false
-            }
-          }
-
-          /* order sensitive - MergeFixes must be the first */
-          def mergeFixes(f1: FixKind, f2: FixKind): List[FixKind] = {
-            (f1,f2) match {
-              case (InsertSync(fsum1,cls1,_,_,lock1), InsertSync(fsum2,cls2,_,_,lock2)) =>
-                if(compatibleForMerging(f1,f2))
-                  List(MergeFixes(List(f1.asInstanceOf[InsertSync],f2.asInstanceOf[InsertSync])))
-                else List(f1,f2)
-              case (MergeFixes(lst), InsertSync(_,_,_,_,_)) =>
-                if(lst.isEmpty) List(f2)
-                else if(compatibleForMerging(lst(lst.length-1),f2)) List(MergeFixes(lst ++ List(f2.asInstanceOf[InsertSync])))
-                else List(f1,f2)
-              case _ => List(f1,f2)
-            }
-          }
 
           val inserts = {
             if(!config.atomicity) insert
             else {
-              val insert_lst = insert.asInstanceOf[And].listOf()
-              val insert_lst1 = insert_lst.sortBy(f => try {
-                (f.asInstanceOf[InsertSync].fsumm.csumm.procedure, f.asInstanceOf[InsertSync].fsumm.csumm.line)
-              } catch {
-                case _ => ("", 0) // if not an insert then it's not grouped
-              })
-              val insert_lst2 = insert_lst1.foldLeft(List.empty[FixKind])((acc, fix) => {
-                acc match {
-                  case Nil => List(fix)
-                  case _ => {
-                    val last_fix = acc(acc.length - 1)
-                    val new_acc = acc.dropRight(1)
-                    /* possibly merge fixes */
-                    val fixes = mergeFixes(last_fix, fix)
-                    new_acc ++ fixes
-                  }
-                }
-              })
-              val inserts = insert_lst2 match {
-                case Nil => NoFix
-                case x :: Nil => x
-                case x :: xs => xs.foldLeft(x)((acc, fix) => And(acc, fix))
-              }
+              val inserts = possiblyMergeFixesOpt(insert)
               inserts
               /* sort the above based on method and merge patches belonging to the same method */
-              /* me}rge objects which are \delta apart or which are within the same method */
+              /* merge objects which are \delta apart or which are within the same method */
             }
           }
           /* generate inserts patches */
           val insert_patches = generatePatches(inserts)
-
 
           /* generate volatile */
           val update =  generateUpdateToVolatileObject(summs.head)
