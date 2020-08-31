@@ -20,7 +20,23 @@ import com.facebook.infer.annotation.*;
     
                            protected void haha(int x) {  
                                 myA1.f = x;
-                           }  
+                           }
+
+                               @ThreadSafe
+                               class Test4{
+                                   A myA4 = new A();
+
+
+                                   public void haz(A a) {
+                                       myA4 = myA1;
+                                   }
+
+
+                                   protected void haha(int x) {
+                                       synchronized (myA) { myA4.f = x; }
+                                   }
+
+                               }
                         } 
   
   
@@ -35,4 +51,4 @@ import com.facebook.infer.annotation.*;
                        }  
               
     
-                       class A { int f = 0; int i_myAThread = 1; }    
+                       class A { int f = 0; }

@@ -45,7 +45,7 @@ class GroupByIdPatchOptions(var map : HashMap[String, List[PatchBlock]]) {
           /* remove duplicated/redundant patch components from within the same patch for the same bug group*/
           acc.exists(pb_acc => pb_acc.equals(pb) || pb_acc.subsumes(pb)) ||
           /* remove components which are subsumed by other patches' for the same bug group */
-          (this.map.exists(patch_inner => patch_inner._1 != patch._1 && patch_inner._2.exists(pb_inner => pb_inner.subsumes(pb) || pb_inner.overlaps(pb))))||
+          //(this.map.exists(patch_inner => patch_inner._1 != patch._1 && patch_inner._2.exists(pb_inner => pb_inner.subsumes(pb) || pb_inner.overlaps(pb))))||
           /* remove components which are subsumed by other patches' for a different bug group */
           patchStore.map.exists((bug_grp) => bug_grp._2.patches.map(bug_grp._2.choiceId).exists(p => p.subsumes(pb) || p.overlaps(pb)))
           ) {
@@ -628,12 +628,29 @@ object ProcessOneBugGroup  {
           }
         }
 
+        val candidate_locks = existing_locks_ext.sortBy(lck => lck._2)
+
+        def create_new_lock : (FixKind, Lock)=   {
+          /* CREATE new lock object */
+          val varName = Globals.base_obj_id + RacerDFix.patchIDGenerator
+          /* TODO below assumes that all bugs are in the same class */
+          val varb    = new Variable(summs.head.csumm.resource.cls,modifiers,Globals.def_obj_typ,varName,List(varName))
+          val declareObj = InsertDeclareAndInst(summs.head,summs.head.csumm.line, varb, modifiers)
+          (declareObj, new Lock("this",summs.head.csumm.resource.cls,varb))
+        }
+
+        val locks = candidate_locks.map(lck => (NoFix.asInstanceOf[FixKind],lck._1)) ++ List(create_new_lock)
+
         val grouped_patches = {
           /* ************** INSERTS ***************** */
           /* generate insert objects */
           // println("LOCK: " + lock.resource)
-          val insert = summs.foldLeft(fix_aux:FixKind)((acc,p) =>
-            new And(acc,(generateInsertObjects(p,lock))))
+          val insert = locks.foldLeft(NoFix.asInstanceOf[FixKind])( (fxk, lck) => {
+            val ptch =
+            summs.foldLeft(fix_aux: FixKind)((acc, p) =>
+              new And(lck._1, new And(acc, (generateInsertObjects(p, lck._2)))))
+            new Or(fxk,ptch)
+          })
 
           def compatibleForMerging(f1: FixKind, f2: FixKind): Boolean = {
             (f1,f2) match {
