@@ -23,6 +23,8 @@ class GroupByIdPatchOptions(var map : HashMap[String, List[PatchBlock]]) {
     }
   }
 
+  def emptyMap() = HashMap.empty[String, List[PatchBlock]]
+
   def getText(): String = {
     map.foldLeft("")((acc, x) => acc + (
       "\n" +
@@ -40,13 +42,13 @@ class GroupByIdPatchOptions(var map : HashMap[String, List[PatchBlock]]) {
     /* filter redundant components for each patch */
     this.map.foreach(patch => {
       val patch_components = patch._2
-      val filtered_patch   = patch_components.foldLeft[List[PatchBlock]](Nil)((acc,pb) => {
+      val filtered_patch = patch_components.foldLeft[List[PatchBlock]](Nil)((acc, pb) => {
         if (
-          /* remove duplicated/redundant patch components from within the same patch for the same bug group*/
-          acc.exists(pb_acc => pb_acc.equals(pb) || pb_acc.subsumes(pb)) ||
+        /* remove duplicated/redundant patch components from within the same patch for the same bug group*/
+        acc.exists(pb_acc => pb_acc.equals(pb) || pb_acc.subsumes(pb)) ||
           /* remove components which are subsumed by other patches' for the same bug group */
           /* pb_inner.equals(pb)  || pb_inner.overlaps(pb)*/
-          (this.map.exists(patch_inner => patch_inner._1 != patch._1 && patch_inner._2.exists(pb_inner => pb_inner.equals(pb))))||
+          (this.map.exists(patch_inner => patch_inner._1 != patch._1 && patch_inner._2.exists(pb_inner => pb_inner.equals(pb)))) ||
           /* remove components which are subsumed by other patches' for a different bug group */
           patchStore.map.exists((bug_grp) => bug_grp._2.patches.map(bug_grp._2.choiceId).exists(p => p.subsumes(pb) || p.overlaps(pb)))
           ) {
@@ -54,9 +56,20 @@ class GroupByIdPatchOptions(var map : HashMap[String, List[PatchBlock]]) {
           Logging.add(" Removing redundant or overlapping patch component from patch " + patch._1 + ": \n ######### " + pb.description + "\n ######### ")
           acc
         }
-        else acc ++ List(pb)})
-      this.map.update(patch._1,filtered_patch)})
-    }
+          else acc ++ List(pb)
+      })
+      this.map.update(patch._1, filtered_patch)
+    })
+
+    /* remove empty fixes */
+    this.map.foreach(patch => {
+      val patch_components = patch._2
+      patch_components match {
+        case Nil => this.map.remove(patch._1)
+        case _ =>
+      }
+    })
+  }
 }
 
 
@@ -349,11 +362,12 @@ object ProcessOneBugGroup  {
       val patches0 = patches.map(patch_id)
       patchStore.update(patch_id, patches)
       patches0.foreach( x => {
-        val rewriter = x.rewriter
+        val rewriter = x.rewriter.rewriter
+        val label    = RacerDFix.labelIDGenerator()
         x.kind match{
-          case Replace   => rewriter.replace(x.start, x.stop, x.patch)
-          case InsBefore => rewriter.insertBefore(x.start,x.patch)
-          case InsAfter  => rewriter.insertAfter(x.stop,x.patch)
+          case Replace   => rewriter.replace( x.start, x.stop, x.patch)
+          case InsBefore => rewriter.insertBefore( x.start,x.patch)
+          case InsAfter  => rewriter.insertAfter( x.stop,x.patch)
         }
       })
     } catch {

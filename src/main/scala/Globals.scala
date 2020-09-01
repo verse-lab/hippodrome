@@ -61,6 +61,7 @@ object Globals {
   /* MISC */
   val base_obj_id = "objR"
   val def_obj_typ = "Object"
+  val label_def   = "L"
 
   def print_list[A](printer: A => String, separator: String, lst: List[A], last: Boolean = false) = {
     def helper(lst: List[A]): String =

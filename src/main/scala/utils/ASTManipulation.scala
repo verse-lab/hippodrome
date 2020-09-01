@@ -9,7 +9,9 @@ import scala.collection.mutable
 import scala.io.Source
 
 class FileModif(val filename: String, val rewriter: TokenStreamRewriter)
-class ASTStoreElem(val tokens: CommonTokenStream, val tree: CompilationUnitContext, var rewriter: TokenStreamRewriter)
+class PatchLabel(val labels: List[String])
+class RewriterExt(var rewriter: TokenStreamRewriter, var instructions: mutable.Stack[PatchLabel] = new mutable.Stack[PatchLabel]())
+class ASTStoreElem(val tokens: CommonTokenStream, val tree: CompilationUnitContext, var rewriter: RewriterExt)
 
 class ASTManipulation {
   val map = new mutable.HashMap[String,ASTStoreElem]()
@@ -25,7 +27,7 @@ class ASTManipulation {
     val java8Parser = new Java8Parser(tokens)
     val tree = java8Parser.compilationUnit
     val rewriter = new TokenStreamRewriter(tokens)
-    new ASTStoreElem(tokens, tree, rewriter)
+    new ASTStoreElem(tokens, tree, new RewriterExt(rewriter))
   }
 
   def dumpToFile(filename: String, config: FixConfig, copy_original: Boolean) = {
@@ -36,7 +38,7 @@ class ASTManipulation {
       case Some(astElem) =>
           /* write to file (keep the original one in `filename` and the fix in `filename.fix` */
           if (copy_original) fm.cloneOriginalFile(filename)
-          fm.overwriteFile(filename, astElem.rewriter.getText)
+          fm.overwriteFile(filename, astElem.rewriter.rewriter.getText)
     }
   }
 

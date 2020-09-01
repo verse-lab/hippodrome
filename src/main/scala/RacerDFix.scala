@@ -1,6 +1,6 @@
 package org.racerdfix
 
-import org.racerdfix.language.{BugIn, Bugs, RFSumm, SummaryIn}
+import org.racerdfix.language.{BugIn, Bugs, FBug, RFSumm, SummaryIn}
 import org.racerdfix.ProcessOneBugGroup.mainAlgo
 import org.racerdfix.inferAPI.{InterpretJson, TranslationResult}
 import org.racerdfix.utils.{ASTManipulation, BugsMisc, BugsStore, FileManipulation, Logging, PatchStore}
@@ -38,12 +38,20 @@ object RacerDFix {
 
   /* Generating unique references */
   var patchID_ref = 1
+  var labelID_ref = 1
 
   def patchIDGenerator(): String = {
     val patchID = patchID_ref
     patchID_ref = patchID+ 1
     patchID.toString
   }
+
+  def labelIDGenerator(): String = {
+    val labelID = labelID_ref
+    labelID_ref = labelID+ 1
+    Globals.label_def + labelID.toString
+  }
+
 
   def patchIDGeneratorRange(len: Int): (Int, Int) = {
     val patchID_start = patchID_ref
@@ -55,6 +63,21 @@ object RacerDFix {
   def shouldBePatched(config: FixConfig, bug: BugIn) = {
     config.prio_files.length == 0 ||
     (config.prio_files.length > 0 && config.prio_files.contains(bug.asInstanceOf[BugIn].file))
+  }
+
+  def patchOneCluster(config: FixConfig, bugs: (String, (scala.List[String], scala.List[FBug])), patchStore: PatchStore, ast: ASTManipulation) = {
+    /* set a CHECKPOINT to return to in case of invalid patch */
+    //val ast_clone = ast.
+    val bugs_str = bugs._2._2.foldLeft("")((acc,bug) => acc + ", "  + bug.hash)
+    println("**************** BUGS: " + bugs._1 + " =>" + bugs_str + " ************* ")
+    patchStore.bug = bugs._2._2.head.hash
+    Logging.add("*********************************")
+    Logging.add("bugs: " + bugs_str)
+
+    val bugs_group = bugs._2._2
+    val summs = bugs_group.foldLeft[List[RFSumm]](Nil)((acc,bug) =>  {acc ++ BugsMisc.retrieveSummary(config,bug)})
+    val summs_distinct = Globals.distinct_eq((a:RFSumm,b:RFSumm) => a.equals(b),summs)
+    mainAlgo(summs_distinct, config, ast, patchStore)
   }
 
   def runPatchAndFix(config: FixConfig, iteration: Int): Int = {
@@ -97,20 +120,11 @@ object RacerDFix {
     bugs.foreach(bug => bugsStore.update(bug))
 
     bugsStore.map.foreach( fbugs => {
-      val bugs_str = fbugs._2._2.foldLeft("")((acc,bug) => acc + ", "  + bug.hash)
-      println("**************** BUGS: " + fbugs._1 + " =>" + bugs_str + " ************* ")
-      patchStore.bug = fbugs._2._2.head.hash
-      Logging.add("*********************************")
-      Logging.add("bugs: " + bugs_str)
-
-      val bugs_group = fbugs._2._2
-      val summs = bugs_group.foldLeft[List[RFSumm]](Nil)((acc,bug) =>  {acc ++ BugsMisc.retrieveSummary(config,bug)})
-      val summs_distinct = Globals.distinct_eq((a:RFSumm,b:RFSumm) => a.equals(b),summs)
-      mainAlgo(summs_distinct, config, ast, patchStore)
+      patchOneCluster(config,fbugs,patchStore,ast)
     })
 
     /* Write the fixes to files */
-    /* TODO for logging purposes, but also for generating the json, perhaps ast should also account for the patches*/
+    /* TODO for logging purposes, but also for generating the json, perhaps ast should also account for the patches */
     ast.dumpAll(config, iteration == 1)
     val bugsOut = bugsIn.results.map(bug => bug.toBugOut(patchStore))
     jsonTranslator.printJsonBugsResults(bugsOut)
