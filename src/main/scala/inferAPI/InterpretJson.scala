@@ -116,7 +116,7 @@ object BugProtocol extends DefaultJsonProtocol {
 
   def patchesToJson(patches: GroupByIdPatchOptions) = {
     JsObject(
-      "patch_options" -> JsArray(patches.map.toList.map( k => patchToJson(k._1,k._2)).toVector)
+      "patch_options" -> JsArray(patches.map.toList.map( k => patchToJson(k._1,k._2.patch)).toVector)
     )
   }
 

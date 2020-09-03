@@ -1,6 +1,6 @@
 package org.racerdfix.language
 
-import org.antlr.v4.runtime.{Token, TokenStreamRewriter}
+import org.antlr.v4.runtime.{ParserRuleContext, Token, TokenStreamRewriter}
 import org.racerdfix.Globals
 import org.racerdfix.utils.{ASTStoreElem, RewriterExt}
 
@@ -92,7 +92,8 @@ case object InsAfter  extends RewriteKind  { override def getText() = "InsAfter"
 
 class PatchBlock(var rewriter: RewriterExt, val kind: RewriteKind, val patch: String,
                  val start: Token, val stop: Token, val description: String, val cost: PatchCost,
-                 val modifiers: List[String]) {
+                 val modifiers: List[String],
+                 val sblock : Option[ParserRuleContext] = None) {
   override def toString() : String = {
     patch
   }

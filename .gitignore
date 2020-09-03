@@ -2,6 +2,7 @@
 *.log
 
 *.orig
+*.temp
 
 target/
 

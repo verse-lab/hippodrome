@@ -20,8 +20,16 @@ class FileManipulation {
     val _ = copyRenameFile(filename, filename + ".orig")
   }
 
+  def cloneOriginalToTemp(filename: String): Unit = {
+    val _ = copyRenameFile(filename, filename + ".temp")
+  }
+
   def revertToOriginalFile(filename: String): Unit = {
     val _ = copyRenameFile(filename + ".orig", filename)
+  }
+
+  def revertFromTempFile(filename: String): Unit = {
+    val _ = copyRenameFile(filename + ".temp", filename)
   }
 
   def cloneOriginalFileToFix(filename: String) = {

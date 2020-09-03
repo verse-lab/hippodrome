@@ -110,6 +110,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
   /* capture the inner most statement which contains the culprit resource */
   override def visitStatement(ctx: Java8Parser.StatementContext): Unit = {
     // println("VISIT STATEMENT " + ctx.getText)
+    //ctx.
     resource match {
       case None      => { this.visitChildren(ctx)
         resource match {
@@ -419,6 +420,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
       case None => {
         rewriter.insertBefore(start.start, "synchronized(" + fix.lock.id + ") { ")
         rewriter.insertAfter(stop.stop, " } ")
+//        rewriter.insertBefore(ctx.start.getTokenIndex, "synchronized(" + fix.lock.id + ") { ")
+//        rewriter.insertAfter(ctx.stop.getTokenIndex, " } ")
       }
       case Some(sdecl) => {
         val decl = sdecl.declarations
@@ -430,8 +433,9 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
     val rinterval = new Interval(start.getSourceInterval.a,stop.getSourceInterval.b+1)
 
-//    println("ctx: " + ctx.start.getInputStream.getText(interval)  + "#####")
-//    println("rewriter:" + rewriter.getText())
+//     println("ctx: " + ctx.start.getInputStream.getText(interval)  + "#####")
+//     println("fix: " + fix.lock.id)
+//     println("rewriter:" + rewriter.getText())
 //    println("rewriter:" + rewriter.getText(rinterval) + "#####")
 
     (start.start.getInputStream.getText(interval),rewriter.getText(rinterval))

@@ -11,46 +11,47 @@ import scala.io.StdIn.readLine
 import scala.collection.mutable.HashMap
 
 /* maps patch ID -> list of individual code modifications */
-class GroupByIdPatchOptions(var map : HashMap[String, List[PatchBlock]]) {
+class OnePatch(val prio: Int, val patch: List[PatchBlock])
+class GroupByIdPatchOptions(var map : HashMap[String, OnePatch]) {
 
-  def update(id: String, pb: PatchBlock): Unit = {
+  def update(id: String, prio: Int = 0 , pb: PatchBlock): Unit = {
     try {
-      this.map.update(id, this.map(id) ++ List(pb))
+      this.map.update(id, new OnePatch(prio, this.map(id).patch ++ List(pb)))
     } catch {
       case e => {
-        this.map(id) = List(pb)
+        this.map(id) = new OnePatch(prio, List(pb))
       }
     }
   }
 
-  def emptyMap() = HashMap.empty[String, List[PatchBlock]]
+  def emptyMap() = HashMap.empty[String, OnePatch]
 
   def getText(): String = {
     map.foldLeft("")((acc, x) => acc + (
       "\n" +
         "==========================" +
         "\n" +
-        "Patch ID: " + x._1 + x._2.foldLeft("")((acc, y) => acc + "\n" + y.description)))
+        "Patch ID: " + x._1 + x._2.patch.foldLeft("")((acc, y) => acc + "\n" + y.description)))
   }
 
   /* returns the cost of the patch with id `patchID` */
   def getCost(patchID: String) = {
-    this.map(patchID).foldLeft(Globals.unitCost)((acc,pb) => acc.add(pb.cost))
+    this.map(patchID).patch.foldLeft(Globals.unitCost)((acc,pb) => acc.add(pb.cost))
   }
 
   def removeRedundant(patchStore:PatchStore) = {
     /* filter redundant components for each patch */
     this.map.foreach(patch => {
-      val patch_components = patch._2
+      val patch_components = patch._2.patch
       val filtered_patch = patch_components.foldLeft[List[PatchBlock]](Nil)((acc, pb) => {
         if (
         /* remove duplicated/redundant patch components from within the same patch for the same bug group*/
         acc.exists(pb_acc => pb_acc.equals(pb) || pb_acc.subsumes(pb)) ||
           /* remove components which are subsumed by other patches' for the same bug group */
           /* pb_inner.equals(pb)  || pb_inner.overlaps(pb)*/
-          (this.map.exists(patch_inner => patch_inner._1 != patch._1 && patch_inner._2.exists(pb_inner => pb_inner.equals(pb)))) ||
+          (this.map.exists(patch_inner => patch_inner._1 != patch._1 && patch_inner._2.patch.exists(pb_inner => pb_inner.equals(pb)))) ||
           /* remove components which are subsumed by other patches' for a different bug group */
-          patchStore.map.exists((bug_grp) => bug_grp._2.patches.map(bug_grp._2.choiceId).exists(p => p.subsumes(pb) || p.overlaps(pb)))
+          patchStore.map.exists((bug_grp) => bug_grp._2.patches.map(bug_grp._2.choiceId).patch.exists(p => p.subsumes(pb) || p.overlaps(pb)))
           ) {
           //println(" Removing redundant or overlapping patch component: \n ######### " + pb.description + "\n ######### ")
           Logging.add(" Removing redundant or overlapping patch component from patch " + patch._1 + ": \n ######### " + pb.description + "\n ######### ")
@@ -58,17 +59,27 @@ class GroupByIdPatchOptions(var map : HashMap[String, List[PatchBlock]]) {
         }
           else acc ++ List(pb)
       })
-      this.map.update(patch._1, filtered_patch)
+      this.map.update(patch._1, new OnePatch(patch._2.prio,filtered_patch))
     })
 
     /* remove empty fixes */
     this.map.foreach(patch => {
-      val patch_components = patch._2
+      val patch_components = patch._2.patch
       patch_components match {
         case Nil => this.map.remove(patch._1)
         case _ =>
       }
     })
+  }
+
+  def highestPrio() = {
+    val res = this.map.foldLeft[(Int,Option[String])]((-1,None))((acc,one_patch) => {
+      acc._2 match {
+        case None => (one_patch._2.prio,Some(one_patch._1))
+        case Some(id) => if(acc._1 < one_patch._2.prio) (one_patch._2.prio,Some(one_patch._1)) else acc
+      }
+    })
+    res._2
   }
 }
 
@@ -196,7 +207,7 @@ object ProcessOneBugGroup  {
         "Replace (INSERT) lines: " + Globals.getRealLineNo(sblock.start.getLine) + " - " + Globals.getRealLineNo(sblock.stop.getLine)
           + ("\n" + "-: " + oldcode)
           + ("\n" + "+: " + patch) )
-        Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers))
+        Some(new PatchBlock(ast.rewriter, Replace, patch, sblock.start, sblock.stop, description, Globals.defCost, modifiers, Some(sblock)))
       case None =>
         println("No INSERT patch could be generated for attempt ID " )
         Logging.add("No INSERT patch could be generated -- " + insert.line + " " + insert.resource + " on " + insert.lock)
@@ -359,17 +370,10 @@ object ProcessOneBugGroup  {
                  patches: GroupByIdPatchOptions,
                  patchStore: PatchStore): Unit = {
     try {
+      println("Applying Patch ID: " + patch_id)
       val patches0 = patches.map(patch_id)
       patchStore.update(patch_id, patches)
-      patches0.foreach( x => {
-        val rewriter = x.rewriter.rewriter
-        val label    = RacerDFix.labelIDGenerator()
-        x.kind match{
-          case Replace   => rewriter.replace( x.start, x.stop, x.patch)
-          case InsBefore => rewriter.insertBefore( x.start,x.patch)
-          case InsAfter  => rewriter.insertAfter( x.stop,x.patch)
-        }
-      })
+      patches0.patch.foreach( x => x.rewriter.addInstruction(x.kind, x.start, x.stop, x.patch))
     } catch {
       case _ => println("Invalid patch ID")
     }
@@ -510,11 +514,11 @@ object ProcessOneBugGroup  {
     patches match {
       case NoPatch => groupByIdPatchOptions
       case PInsert(id, block) => {
-        groupByIdPatchOptions.update(id,block)
+        groupByIdPatchOptions.update(id,pb=block)
         groupByIdPatchOptions
       }
       case PUpdate(id, block) => {
-        groupByIdPatchOptions.update(id,block)
+        groupByIdPatchOptions.update(id,pb=block)
         groupByIdPatchOptions
       }
       case PAnd(_,left, right)  => {
@@ -632,20 +636,20 @@ object ProcessOneBugGroup  {
   }
   /**/
 
-  def mainAlgo_def(csumms: List[RFSumm], config: FixConfig, ast: ASTManipulation, patchStore: PatchStore): Unit = {
+  def mainAlgo_def(csumms: List[RFSumm], config: FixConfig, ast: ASTManipulation, patchStore: PatchStore): Option[(String, GroupByIdPatchOptions)]  = {
     /* ******** */
     /*   PARSE  */
     val summs = translateRawSnapshotsToSnapshots(csumms, ast)
 
     println("************* GENERATE PATCH *************")
     //    if ( true /*csumm1.resource == csumm2.resource*/) {
-    var empty_map = new GroupByIdPatchOptions(HashMap.empty[String, List[PatchBlock]])
+    var empty_map = new GroupByIdPatchOptions(HashMap.empty[String, OnePatch])
     summs match {
-      case Nil =>
+      case Nil => None
       case summ::Nil => {
         /* UNPROTECTED WRITE */
         val patch_id = RacerDFix.patchIDGeneratorRange(0)._2
-        var empty_map = new GroupByIdPatchOptions(HashMap.empty[String, List[PatchBlock]])
+        var empty_map = new GroupByIdPatchOptions(HashMap.empty[String, OnePatch])
         val grouped_patches = if (summ.csumm.locks.length == 0) {
           /* ************** INSERTS ***************** */
           /* generate insert objects */
@@ -672,13 +676,15 @@ object ProcessOneBugGroup  {
           val patch_id_str = readLine()
 
           println("************* GENERATE FIX *************")
-          applyPatch(patch_id_str, grouped_patches, patchStore)
+          // applyPatch(patch_id_str, grouped_patches, patchStore)
+          Some (patch_id_str, grouped_patches)
         } else {
           val patch_id = leastCostlyPatch(grouped_patches)
           println("Applying Patch ID " + patch_id)
           patch_id match {
-            case None =>
-            case Some(id) => applyPatch_def(id, grouped_patches, patchStore)
+            case None     => None
+            case Some(id) => Some(id, grouped_patches)
+            /* applyPatch(id, grouped_patches, patchStore) */
           }
         }
       }
@@ -694,13 +700,14 @@ object ProcessOneBugGroup  {
           static_vars.exists( p => lck.resource.allAliases.contains(p.id))
         }
 
-        val existing_locks      = summs.foldLeft[List[Lock]](Nil)((acc,summ) => {
+        val existing_locks   = summs.foldLeft[List[Lock]](Nil)((acc,summ) => {
           val locks = summ.csumm.locks.filter( lck => (atLeastOneStatic &&  isLockStatic((lck)) || !atLeastOneStatic ))
           acc ++ locks
         })
 
         val existing_locks_ext  = existing_locks.map( lock => (lock,summs.count( p => p.csumm.locks.exists(lck => lck.equals(lock)))))
 
+        /* sorts locks based on their occurrence */
         val candidate_locks = existing_locks_ext.sortBy(lck => -lck._2)
 
         def create_new_lock : (FixKind, Lock)=   {
@@ -727,12 +734,9 @@ object ProcessOneBugGroup  {
 
           val inserts = {
             if(!config.atomicity) insert
-            else {
-              val inserts = possiblyMergeFixesOpt(insert)
-              inserts
+            else possiblyMergeFixesOpt(insert)
               /* sort the above based on method and merge patches belonging to the same method */
               /* merge objects which are \delta apart or which are within the same method */
-            }
           }
           /* generate inserts patches */
           val insert_patches = generatePatches(inserts)
@@ -758,15 +762,17 @@ object ProcessOneBugGroup  {
           val patch_id_str = readLine()
 
           println("************* GENERATE FIX *************")
-          applyPatch(patch_id_str, grouped_patches, patchStore)
+          /* applyPatch(patch_id_str, grouped_patches, patchStore) */
+          Some(patch_id_str, grouped_patches)
         } else {
           println(grouped_patches.getText())
           /* apply the patch with the least cost */
           val patch_id = leastCostlyPatch(grouped_patches)
           println("Applying Patch ID " + patch_id)
           patch_id match {
-            case None =>
-            case Some(id) => applyPatch_def(id, grouped_patches, patchStore)
+            case None     => None
+            case Some(id) => Some(id, grouped_patches)
+            /* applyPatch(id, grouped_patches, patchStore)*/
           }
         }
       }
@@ -774,8 +780,8 @@ object ProcessOneBugGroup  {
   }
 
   /* logging wrapper for mainAlgo */
-  def mainAlgo(csumm: List[RFSumm], config: FixConfig, ast: ASTManipulation, patchStore: PatchStore): Unit = {
-    def fnc (a: Unit) = mainAlgo_def(csumm: List[RFSumm], config: FixConfig, ast: ASTManipulation, patchStore: PatchStore)
+  def mainAlgo(csumm: List[RFSumm], config: FixConfig, ast: ASTManipulation, patchStore: PatchStore) : Option[(String, GroupByIdPatchOptions)]  = {
+    def fnc (a: Unit): Option[(String, GroupByIdPatchOptions)]  = mainAlgo_def(csumm: List[RFSumm], config: FixConfig, ast: ASTManipulation, patchStore: PatchStore)
     Logging.addTime("Time to generate patch: ", fnc, ())
   }
 }
