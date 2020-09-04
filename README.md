@@ -41,7 +41,7 @@ See the `CONFIG.json` file in the project's root directory for a config file exa
 
 Assuming that the name of the resulted jar is `racerdfix.jar` you could test it as follows:
 
-`java -jar RacerDFix-1.0-jar-with-dependencies.jar --config_file="CONFIG.json"`
+`java -jar racerdfix.jar --config_file="CONFIG.json"`
 
 ### Example
 Say we have a directory `/tmp/` with the following content:
