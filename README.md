@@ -51,7 +51,9 @@ and the following content for `CONFIG.json`:
 {"infer":"infer",
  "options":["--racerdfix-only", "--starvation"],
  "json_path": "./infer-out/",
- "target_options": ["--", "javac", "java/RacyFalseNeg.java"]
+ "target_options": ["--", "javac", "java/RacyFalseNeg.java"],
+ "prio_files": [],
+ "iterations": 3
 }
 ```
 
