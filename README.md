@@ -24,9 +24,18 @@ RacerDFix requires a configuration file to indicate which files to analyse and w
  "options":["--racerdfix-only", "--starvation", <list-of-strings-representing-additional-infer-options>],
  "json_path": "./infer-out/",
  "target_options": ["--", "javac", "<java-files-to-be-analysed>"],
- "iterations": 10,
+ "prio_file": [],
+ "iterations": 10
 }
 ```
+where
+ * ``infer`` sets the path to the running infer
+ * ``options`` are the options passed to the infer process
+ * ``json_path`` is the path to the directory where infer writes its reports
+ * ``targer_options`` tells how to compile the target files and which files to compile
+ * ``prio_files`` selects only these files to be fixed. If left empty, RacerDFix will attempt to fix all the files
+ * ``iterations`` the number of iterations allowed to re-analyse and re-patch the target files before stopping the patching process.
+
 
 See the `CONFIG.json` file in the project's root directory for a config file example.
 
