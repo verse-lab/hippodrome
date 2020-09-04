@@ -1,5 +1,6 @@
 package wrongLock;
 
+import com.facebook.infer.annotation.*;
 /**
  * @author Xuan
  * Created on 2005-1-18
@@ -8,6 +9,7 @@ package wrongLock;
  * Method A requests a lock on data while method B request a lock
  * on the class.
  */
+@ThreadSafe
 public class WrongLock {
     Data data;
 
