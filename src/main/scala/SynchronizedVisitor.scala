@@ -67,20 +67,24 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
 
   def visitCriticalSection_def(ctx: ParserRuleContext, identifier: String) = {
+    //println("ID " + "   " + identifier)
     fix match {
       case InsertSync(_,cls, line, unprotected_resource, lock_new) => {
+        //println("line" + line  + "   " + identifier)
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
           val vars = RacerDAPI.refToListOfRef(identifier)
           val vars_extended = vars.map(v => if (cls.length >0 ) cls + "." + v else v)
+          //println("line" + line)
           //println("LOG INSERT: \n expected vars:" + unprotected_resource + "\n found variables: " + vars_extended)
 //          if ((vars ++ vars_extended).intersect(unprotected_resource.allAliases()).length>0){
+
           if ((unprotected_resource.allAliases()).exists(vr => Globals.contains_eq((a:String,b:String) => a == b,vars ++ vars_extended,vr))){
             resource = Some(ctx)
             static_ctx = static_mthd
           } else {
             this.visitChildren(ctx)
           }
-        }
+        } else this.visitChildren(ctx)
       }
       case InsertDeclareAndInst(_,line,_,_) =>  {
         if (Globals.getRealLineNo(ctx.start.getLine) <= line && line <= Globals.getRealLineNo(ctx.stop.getLine)){
@@ -112,7 +116,8 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     // println("VISIT STATEMENT " + ctx.getText)
     //ctx.
     resource match {
-      case None      => { this.visitChildren(ctx)
+      case None      => {
+        this.visitChildren(ctx)
         resource match {
           case None =>
           case Some(_) => {
@@ -195,29 +200,6 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
         }
 
         visitStatementsForMergingBlocks(ctx.blockStatement().toArray.toList.map(x => x.asInstanceOf[BlockStatementContext]))
-
-//        if (((ctx.start.getLine <= patch.start.getLine) &&  (patch.stop.getLine <= ctx.start.getLine))){
-//          setFix(ins)
-//          this.visitChildren(ctx)
-//          targetContext match {
-//            case Some(ctx2) => {
-//              /* this statements block contains both insertion locations */
-//              /*  need to repeat the process  */
-//              val targetContext2 = ctx2
-//              targetContext = None
-//              /* iterate through this whole process again until we hit the inner most block statements that contains both inserts */
-//              /*****/
-//              setFix(MergePatchWithInserts(patch,ins))
-//              this.visitChildren(ctx)
-//              /*****/
-//              targetContext match {
-//                case None    => targetContext = Some(ctx)
-//                case Some(_) =>
-//              }
-//            }
-//            case None =>
-//          }
-//        }
       }
       case _ => this.visitChildren(ctx)
     }
@@ -225,6 +207,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
 
   override def visitClassDeclaration(ctx: Java8Parser.ClassDeclarationContext): Unit = {
+    //println("VISIT CLASS DECLARATION " + ctx.normalClassDeclaration().Identifier())
     try {
       val className_prev = className
       className = ctx.normalClassDeclaration().Identifier().getText
@@ -244,8 +227,9 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
       }
       this.visitChildren(ctx)
       className = className_prev
-    } catch {
-      case _: NullPointerException =>
+    }
+    catch {
+      case _: NullPointerException => println ("WARNING: issues with the class declaration traversal")
     }
   }
 
@@ -275,21 +259,40 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
   /* TODO terrible for performance to call both */
   override def visitMethodInvocation(ctx: Java8Parser.MethodInvocationContext): Unit = {
-    visitCriticalSection_def(ctx, ctx.Identifier().getText)
-    visitCriticalSection(ctx)
+    try {
+      /** this is for identifying whether method call triggers the access */
+      visitCriticalSection_def(ctx, ctx.Identifier().getText)
+    } catch {
+      case _ =>
+    } finally {
+    /** this is just to whether the children refer to teh unprotected resource */
+    visitCriticalSection(ctx)}
   }
 
   override def visitMethodInvocation_lf_primary(ctx: Java8Parser.MethodInvocation_lf_primaryContext): Unit = {
-    visitCriticalSection_def(ctx, ctx.Identifier().getText)
+    try {
+      /** this is for identifying whether method call triggers the access */
+      visitCriticalSection_def(ctx, ctx.Identifier().getText)
+    } catch {
+      case _ =>
+    } finally  {
+    /** this is just to whether the children refer to teh unprotected resource */
     visitCriticalSection(ctx)
-  }
+  }}
 
   override def visitMethodInvocation_lfno_primary(ctx: Java8Parser.MethodInvocation_lfno_primaryContext): Unit = {
-    visitCriticalSection_def(ctx, ctx.Identifier().getText)
+    try {
+      /** this is for identifying whether method call triggers the access */
+      visitCriticalSection_def(ctx, ctx.Identifier().getText)
+    } catch {
+      case _ =>
+    } finally  {
+    /** this is just to whether the children refer to teh unprotected resource */
     visitCriticalSection(ctx)
-  }
+  }}
 
   override def visitMethodDeclaration(ctx: Java8Parser.MethodDeclarationContext): Unit = {
+    //println("VISIT MTHD DECLARATION " + ctx.methodHeader().methodDeclarator().Identifier())
     val static_prev = static_mthd
     val isStatic    = ctx.methodModifier().toArray.exists(x => x.asInstanceOf[Java8Parser.MethodModifierContext].getText == "static")
     if (isStatic) static_mthd = true

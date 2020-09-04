@@ -3,6 +3,5 @@
   "json_path": "./infer-out/",
   "target_options": ["--", "javac", "src/test/resources/java-benchmark/buggyprogram/BuggyProgram.java"],
   "prio_files":  [],
-  "iterations": 1,
-  "racerdfix_options": ["--atomicity=true"]
+  "iterations": 1
 }

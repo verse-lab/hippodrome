@@ -195,6 +195,7 @@ object ProcessOneBugGroup  {
                               ast: ASTStoreElem): Option[PatchBlock] = {
     val syncVisitor = new SynchronizedVisitor
     val rewriter    = new TokenStreamRewriter(ast.tokens)
+   // println("VISIT for " + insert.line)
     syncVisitor.setFix(insert)
     syncVisitor.visit(ast.tree)
     val modifiers = syncVisitor.getModifiers
@@ -286,7 +287,7 @@ object ProcessOneBugGroup  {
                     + ("\n" + "+: " + patch) )
                 new_acc ++ List(Some(new PatchBlock(ast.rewriter, Replace, patch, start.start, stop.stop, description, Globals.defCost, modifiers)))
               case _ =>
-                println("No INSERT patch could be generated for attempt ID " )
+                println("No (merge) INSERT patch could be generated for attempt ID " )
                 Logging.add("No Merge patch could be generated -- " + ins.line + " " + ins.resource + " on lock " + ins.lock + " , " )
                 acc ++ List (generateInsertPatch_def(ins,ast) )
             }

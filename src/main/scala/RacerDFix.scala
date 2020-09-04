@@ -27,6 +27,7 @@ object RacerDFix {
     parser.parse(args, newConfig) match {
       case Some(RunConfig(fixConfig, file)) =>
         val config_from_json = fixConfig.config_options.toArray
+        config_from_json.foreach( str => println("args: " + str))
         val fixConfig_ext = {
           parser.parse(config_from_json, RunConfig(fixConfig, fixConfig.java_sources_path)) match {
             case Some(RunConfig(fixConfig, file)) => fixConfig
