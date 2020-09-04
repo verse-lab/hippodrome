@@ -23,7 +23,8 @@ RacerDFix requires a configuration file to indicate which files to analyse and w
 {"infer":"<path-to-infer>",
  "options":["--racerdfix-only", "--starvation", <list-of-strings-representing-additional-infer-options>],
  "json_path": "./infer-out/",
- "target_options": ["--", "javac", "<java-files-to-be-analysed>"]
+ "target_options": ["--", "javac", "<java-files-to-be-analysed>"],
+ "iterations": 10,
 }
 ```
 
@@ -64,11 +65,11 @@ Running RacerDFix in this setting leads to the following structure:
 ...
 └── java
     ├── RacyFalseNeg.java
-    └── RacyFalseNeg.java.orig.java
+    └── RacyFalseNeg.java.orig
 ```
 
 * The `infer-out` directory has beed created by infer to store the results of the analysis in json format. 
-* The `java` directory now contains the fixed java file `RacyFalseNeg.java` and its original counterpart  `RacyFalseNeg.java.orig.java`
+* The `java` directory now contains the fixed java file `RacyFalseNeg.java` and its original counterpart  `RacyFalseNeg.java.orig`
 
 
 ADD RACE EXAMPLE, PATCH AND FIX EXAMPLE
