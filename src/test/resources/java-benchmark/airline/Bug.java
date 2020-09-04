@@ -1,7 +1,7 @@
 package airline;
 
-import com.facebook.infer.annotation.*;
 import java.io.FileOutputStream;
+import com.facebook.infer.annotation.*;
 
 /**
  * Created by IntelliJ IDEA.

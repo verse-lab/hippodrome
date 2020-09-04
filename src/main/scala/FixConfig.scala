@@ -9,7 +9,8 @@ class Config(val infer: String,
              val json_path: String,
              val infer_target_files: Seq[String],
              val prio_files: List[String],
-             val iterations: Int
+             val iterations: Int,
+             val racerdfix_options: Seq[String],
             )
 case class RunConfig(fixConfig: FixConfig, fileName: String)
 
@@ -36,7 +37,8 @@ case class FixConfig(
                       prio_files: List[String]  = Nil,  // checks only the bugs in prio_files if the list in non-empty
                       // General purpose flags
                       flag1: Boolean            = false,
-                      flag2: Boolean            = false
+                      flag2: Boolean            = false,
+                      config_options: Seq[String] = Seq.empty
   ) extends PrettyPrinting {
 
   val fm = new FileManipulation
@@ -145,9 +147,11 @@ object ArgParser {
           infer_target_files = infer_config.infer_target_files,
           json_path = infer_config.json_path,
           prio_files = infer_config.prio_files,
-          iterations = infer_config.iterations
-        )})
-    }.text("the config file to setup infers. The default one is " + Globals.config_file)
+          iterations = infer_config.iterations,
+          config_options = infer_config.racerdfix_options
+        )
+      })
+    }.text("the config file to setup infer. The default one is " + Globals.config_file)
 
     help("help").text("prints this usage text")
   }

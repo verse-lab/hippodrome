@@ -3,5 +3,6 @@
   "json_path": "./infer-out/",
   "target_options": ["--", "javac", "src/test/resources/java-benchmark/alarmclock/AlarmClock.java"],
   "prio_files":  [],
-  "iterations": 8
+  "iterations": 8,
+  "racerdfix_options": ["--atomicity=true"]
 }

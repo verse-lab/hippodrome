@@ -3,5 +3,5 @@
   "json_path": "./infer-out/",
   "target_options": ["--", "javac", "src/test/resources/java-benchmark/nestedclasses3/Test2.java"],
   "prio_files":  [],
-  "iterations": 1
+  "iterations": 10
 }

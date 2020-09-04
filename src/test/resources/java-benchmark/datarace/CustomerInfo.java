@@ -1,7 +1,5 @@
 package datarace;
-import com.facebook.infer.annotation.*;
 
-@ThreadSafe
 public class CustomerInfo {
 
 	private int nAccount;

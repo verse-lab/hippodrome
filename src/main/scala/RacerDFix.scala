@@ -26,8 +26,15 @@ object RacerDFix {
     val newConfig = RunConfig(FixConfig(), Globals.def_src_path)
     parser.parse(args, newConfig) match {
       case Some(RunConfig(fixConfig, file)) =>
-        Logging.init(fixConfig)
-        val res = runPatchAndFix(fixConfig, 1)
+        val config_from_json = fixConfig.config_options.toArray
+        val fixConfig_ext = {
+          parser.parse(config_from_json, RunConfig(fixConfig, fixConfig.java_sources_path)) match {
+            case Some(RunConfig(fixConfig, file)) => fixConfig
+            case None => fixConfig
+          }
+        }
+        Logging.init(fixConfig_ext)
+        val res = runPatchAndFix(fixConfig_ext, 1)
         Logging.stop
         res
       case None =>
