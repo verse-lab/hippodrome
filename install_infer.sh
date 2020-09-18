@@ -4,5 +4,5 @@ brew cask install java
 git clone git@github.com:andrecostea/infer.git
 cd infer
 ./build-infer.sh java
-sudo make install
+make install
 export PATH=`pwd`/infer/bin:$PATH
