@@ -1,0 +1,16 @@
+language: scala
+
+os:
+  - osx
+
+scala:
+  - 2.13.3
+
+before_install:
+  - ./install_infer.sh
+  - cd ~
+  - ./install_antlr.sh
+  - cd ~
+
+install:
+  - mvn install:install-file -Dfile=antlr-java/target/antlr-1-jar-with-dependencies.jar  -DgroupId=org.racerdfix.antlr -DartifactId=antlr -Dversion=1.0 -Dpackaging=jar
