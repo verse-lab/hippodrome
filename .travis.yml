@@ -7,7 +7,13 @@ scala:
   - 2.13.3
 
 before_install:
-  - ./install_infer.sh
+  - brew install autoconf automake cmake opam pkg-config sqlite gmp mpfr
+  - brew cask install java
+  - git clone git@github.com:andrecostea/infer.git
+  - cd infer
+  - ./build-infer.sh java
+  - make install
+  - export PATH=`pwd`/infer/bin:$PATH
   - cd ~
   - ./install_antlr.sh
   - cd ~
