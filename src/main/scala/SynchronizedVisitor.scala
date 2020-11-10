@@ -208,6 +208,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
 
   override def visitClassDeclaration(ctx: Java8Parser.ClassDeclarationContext): Unit = {
     //println("VISIT CLASS DECLARATION " + ctx.normalClassDeclaration().Identifier())
+
     try {
       val className_prev = className
       className = ctx.normalClassDeclaration().Identifier().getText
@@ -265,7 +266,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     } catch {
       case _ =>
     } finally {
-    /** this is just to whether the children refer to teh unprotected resource */
+      /** this is just to check whether the children refer to the unprotected resource */
     visitCriticalSection(ctx)}
   }
 
@@ -276,7 +277,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     } catch {
       case _ =>
     } finally  {
-    /** this is just to whether the children refer to teh unprotected resource */
+    /** this is just to check whether the children refer to the unprotected resource */
     visitCriticalSection(ctx)
   }}
 
@@ -287,7 +288,7 @@ class SynchronizedVisitor extends Java8BaseVisitor[Unit] {
     } catch {
       case _ =>
     } finally  {
-    /** this is just to whether the children refer to teh unprotected resource */
+      /** this is just to check whether the children refer to the unprotected resource */
     visitCriticalSection(ctx)
   }}
 

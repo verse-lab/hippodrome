@@ -194,6 +194,29 @@ case class POr(val id: String, val left: Patch, val right: Patch) extends Patch 
   }
 }
 
+/* represents the choice of the lock to be introduced for complete synchronization */
+sealed trait LockChoice{
+  def toText() = ""
+
+  def getLockChoice(str: String) = {
+    if (str == OccurenceMax.toText()) OccurenceMax
+    else if (str == OccurenceMin.toText()) OccurenceMin
+    else if (str == NewLock.toText()) NewLock
+    else NoLock
+  }
+}
+case object OccurenceMax extends LockChoice {
+  override def toText() = "OccurenceMax"
+}
+case object OccurenceMin extends LockChoice {
+  override def toText() = "OccurenceMin"
+}
+case object NewLock      extends LockChoice {
+  override def toText() = "NewLock"
+}
+case object NoLock extends LockChoice {
+override def toText() = "NoLock"
+}
 
 
 class Fix(file: String, cls: String, line_start: Int, lines_top: Int, code: String)

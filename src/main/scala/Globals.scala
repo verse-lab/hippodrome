@@ -1,6 +1,6 @@
 package org.racerdfix
 
-import language.PatchCost
+import language.{PatchCost, OccurenceMax}
 import org.racerdfix.utils.FileManipulation
 
 object Globals {
@@ -29,6 +29,7 @@ object Globals {
   val defCost                   = new PatchCost(defCostValue)
   val unitCost                  = new PatchCost(defUnitValue)
   val volatileCost              = new PatchCost(defVolatileValue)
+  val lockCost                  = OccurenceMax
 
   /* default files and paths */
   val results_out_dir           = "src/main/misc/infer-out/"
@@ -58,11 +59,15 @@ object Globals {
   val def_target_files          = Seq("--", "javac", def_src_file)
   val config_file               = "CONFIG.json"
 
+  /* modifiers */
+  val mstatic     = "static"
+
   /* MISC */
   val base_obj_id = "objR"
   val def_obj_typ = "Object"
   val label_def   = "L"
 
+  /* generic list handlers */
   def print_list[A](printer: A => String, separator: String, lst: List[A], last: Boolean = false) = {
     def helper(lst: List[A]): String =
       lst match {
@@ -71,6 +76,10 @@ object Globals {
         case x::xs  => printer(x) + separator + helper(xs)
       }
     helper(lst)
+  }
+
+  def print_list_def[A](printer: A => String, lst: List[A]) = {
+    print_list[A](printer, ",", lst, false)
   }
 
   def pr_id(str: String): String = str
@@ -92,5 +101,8 @@ object Globals {
   def distinct_eq[A](eq: (A,A) => Boolean, lst: List[A]) : List[A] = {
     lst.foldLeft(List[A]())((acc,elem) => if (contains_eq(eq,acc,elem)) acc else acc ++ List(elem))
   }
+
+  /* modifiers handlers */
+  def is_static(str: String) =  str == mstatic
 
 }

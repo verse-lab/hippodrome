@@ -1,7 +1,7 @@
 package org.racerdfix
 
 import org.racerdfix.inferAPI.InterpretJson
-import org.racerdfix.language.PrettyPrinting
+import org.racerdfix.language.{LockChoice, NewLock, NoLock, OccurenceMax, OccurenceMin, PrettyPrinting}
 import org.racerdfix.utils.FileManipulation
 
 class Config(val infer: String,
@@ -22,6 +22,7 @@ case class FixConfig(
                       log:         Boolean      = true,
                       iterations:  Int          = Globals.no_iter,
                       atomicity:   Boolean      = false,
+                      lock_choice: LockChoice   = Globals.lockCost,
                       // Files
                       json_path: String         = Globals.results_out_dir,
                       json_bugs:   String       = Globals.json_bugs_file,
@@ -34,7 +35,7 @@ case class FixConfig(
                       infer: String             = Globals.def_infer,
                       infer_opt: Seq[String]    = Globals.def_infer_options,
                       infer_target_files: Seq[String]  = Globals.def_target_files,
-                      prio_files: List[String]  = Nil,  // checks only the bugs in prio_files if the list in non-empty
+                      prio_files: List[String]  = Nil, // checks only the bugs in prio_files if the list in non-empty
                       // General purpose flags
                       flag1: Boolean            = false,
                       flag2: Boolean            = false,
@@ -116,6 +117,13 @@ object ArgParser {
     opt[String]('j', "java_sources_path").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(java_sources_path = b))
     }.text("the path to the source files. The default one is " + Globals.def_src_path)
+
+    opt[String]("lock_choice").action { (b, rc) =>
+      rc.copy(fixConfig = rc.fixConfig.copy(lock_choice = NewLock.getLockChoice(b)))
+    }.text("decides how the candidate lock is chosen. The default one is " + Globals.lockCost.toText()
+      + " Choices:{"
+      + Globals.print_list_def[LockChoice]((x => x.toText()), List(OccurenceMin,OccurenceMax,NewLock))
+      + " }")
 
     opt[String]("infer").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(infer = b))

@@ -692,7 +692,7 @@ object ProcessOneBugGroup  {
       case _ => {
         /* retrieve possible modifiers e.g. static */
         val modifiers        = summs.foldLeft[List[String]](Nil)((acc,p) => acc ++ generateTestPatch(new Test(p.csumm.line),p.ast).block.modifiers).distinct
-        val atLeastOneStatic = modifiers.exists( m => m == "static")
+        val atLeastOneStatic = modifiers.exists( m => Globals.is_static(m))
         val variables_store  = getVariablesStore(summs.head.ast)
         def getStaticVars(cls: String): List[Variable] = variables_store.getOrElseUpdate(cls,Nil).filter(v => v.isStatic())
         def isLockStatic(lck: Lock) = {
@@ -706,6 +706,7 @@ object ProcessOneBugGroup  {
           acc ++ locks
         })
 
+        /* maps each unique lock to a pair of lock and its occurrence */
         val existing_locks_ext  = existing_locks.map( lock => (lock,summs.count( p => p.csumm.locks.exists(lck => lck.equals(lock)))))
 
         /* sorts locks based on their occurrence */
