@@ -183,7 +183,7 @@ object ProcessOneBugGroup  {
     /* TODO need to recheck what is the resource we create lock for. myA.f is not the right type, it should be
     *   a reference type. */
     val modifiers = generateTestPatch(new Test(summ.csumm.line),summ.ast).block.modifiers.distinct
-    val varName = Globals.base_obj_id + RacerDFix.patchIDGenerator
+    val varName = Globals.base_obj_id + Hippodrome.patchIDGenerator
     val vb      = new Variable(summ.csumm.resource.cls,modifiers, Globals.def_obj_typ, varName, List(varName))
     val declareObj = InsertDeclareAndInst(summ, summ.csumm.line, vb, modifiers)
     val insert1 = InsertSync(summ,summ.csumm.cls,summ.csumm.line,summ.csumm.resource,vb)
@@ -398,7 +398,7 @@ object ProcessOneBugGroup  {
                             id: Option[String] = None): Patch = {
     val res     = generateUpdatePatch(updates,ast)
     val patchID = id match {
-      case None => RacerDFix.patchIDGenerator
+      case None => Hippodrome.patchIDGenerator
       case Some (id) => id
     }
     res match {
@@ -415,7 +415,7 @@ object ProcessOneBugGroup  {
                             id: Option[String] = None): Patch = {
      val res     = generateInsertPatch(inserts,ast)
      val patchID = id match {
-       case None => RacerDFix.patchIDGenerator
+       case None => Hippodrome.patchIDGenerator
        case Some (id) => id
      }
     res match {
@@ -431,7 +431,7 @@ object ProcessOneBugGroup  {
                             id: Option[String] = None): Patch = {
     val res     = generateMergedPatch_def(inserts)
     val patchID = id match {
-      case None => RacerDFix.patchIDGenerator
+      case None => Hippodrome.patchIDGenerator
       case Some (id) => id
     }
 
@@ -458,7 +458,7 @@ object ProcessOneBugGroup  {
                             id: Option[String] = None): Patch = {
     val res     = generateInsertDeclareAndInstPatch(inserts,ast)
     val patchID = id match {
-      case None => RacerDFix.patchIDGenerator
+      case None => Hippodrome.patchIDGenerator
       case Some (id) => id
     }
     res match {
@@ -475,7 +475,7 @@ object ProcessOneBugGroup  {
                                           id: Option[String] = None): Patch = {
     val res     = generateUpdateToVolatilePatch(update,ast)
     val patchID = id match {
-      case None => RacerDFix.patchIDGenerator
+      case None => Hippodrome.patchIDGenerator
       case Some (id) => id
     }
     res match {
@@ -496,7 +496,7 @@ object ProcessOneBugGroup  {
       case InsertDeclareAndInst(s,_,_,_) => generateInsertDeclareAndInstPatch0(fixobj.asInstanceOf[InsertDeclareAndInst],s.ast,id)
       case And(left, right) =>
         val fresh_id =  id match {
-          case None =>    RacerDFix.patchIDGenerator
+          case None =>    Hippodrome.patchIDGenerator
           case Some(id) => id
         }
         (generatePatches(left, Some(fresh_id)), generatePatches(right,Some(fresh_id))) match {
@@ -504,7 +504,7 @@ object ProcessOneBugGroup  {
 //          case (_,NoPatch)  => NoPatch
           case (p1, p2)     => new PAnd(fresh_id, p1, p2)
         }
-      case Or(left, right)  => new POr(RacerDFix.patchIDGenerator, generatePatches(left,Some(RacerDFix.patchIDGenerator)), generatePatches(right,Some(RacerDFix.patchIDGenerator)))
+      case Or(left, right)  => new POr(Hippodrome.patchIDGenerator, generatePatches(left,Some(Hippodrome.patchIDGenerator)), generatePatches(right,Some(Hippodrome.patchIDGenerator)))
     }
   }
 
@@ -649,7 +649,7 @@ object ProcessOneBugGroup  {
       case Nil => None
       case summ::Nil => {
         /* UNPROTECTED WRITE */
-        val patch_id = RacerDFix.patchIDGeneratorRange(0)._2
+        val patch_id = Hippodrome.patchIDGeneratorRange(0)._2
         var empty_map = new GroupByIdPatchOptions(HashMap.empty[String, OnePatch])
         val grouped_patches = if (summ.csumm.locks.length == 0) {
           /* ************** INSERTS ***************** */
@@ -661,7 +661,7 @@ object ProcessOneBugGroup  {
 
           /* generate volatile */
           val update      = generateUpdateToVolatileObject(summ)
-          val aux_patches = generatePatches(update, Some(RacerDFix.patchIDGenerator()))
+          val aux_patches = generatePatches(update, Some(Hippodrome.patchIDGenerator()))
 
           val grouped_patches1 = generateGroupPatches(empty_map, patches)
           val grouped_patches  = generateGroupPatches(grouped_patches1, aux_patches)
@@ -714,7 +714,7 @@ object ProcessOneBugGroup  {
 
         def create_new_lock : (FixKind, Lock)=   {
           /* CREATE new lock object */
-          val varName = Globals.base_obj_id + RacerDFix.patchIDGenerator
+          val varName = Globals.base_obj_id + Hippodrome.patchIDGenerator
           /* TODO below assumes that all bugs are in the same class */
           val varb    = new Variable(summs.head.csumm.resource.cls,modifiers,Globals.def_obj_typ,varName,List(varName))
           val declareObj = InsertDeclareAndInst(summs.head,summs.head.csumm.line, varb, modifiers)
@@ -745,7 +745,7 @@ object ProcessOneBugGroup  {
 
           /* generate volatile */
           val update =  generateUpdateToVolatileObject(summs.head)
-          val aux_patches = generatePatches(update, Some(RacerDFix.patchIDGenerator()))
+          val aux_patches = generatePatches(update, Some(Hippodrome.patchIDGenerator()))
 
           /* group patches based on their ID */
           val patches0 = generateGroupPatches(empty_map, insert_patches)

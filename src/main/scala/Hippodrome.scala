@@ -9,7 +9,7 @@ import scala.io.StdIn.readLine
 import scala.sys.process._
 
 
-object RacerDFix {
+object Hippodrome {
 
   private val parser = ArgParser.argsParser
 
@@ -135,7 +135,7 @@ object RacerDFix {
   def runPatchAndFix(config: FixConfig, iteration: Int): Int = {
 
     /* run infer */
-    if(config.flag1) println("RacerDFix started!")
+    if(config.flag1) println(Globals.TOOLNAME + " started!")
     val infer   = config.infer
     val options = config.infer_opt
     val output_dir = Seq("--results-dir",config.json_path)
@@ -193,7 +193,7 @@ object RacerDFix {
           val newBugsInAll = jsonTranslator.getJsonBugs()
           val diffBugsNo = bugsInAll.results.length - bugsIn.results.length
           if (diffBugsNo < newBugsInAll.results.length) {
-            println("New bugs detected during validation phase. Rerun RacerDFix? (Y/n)")
+            println("New bugs detected during validation phase. Rerun " + Globals.TOOLNAME + "? (Y/n)")
             val answer_str = if (config.interactive) {
               readLine()
             } else if (iteration < config.iterations) "Y" else "n"
@@ -210,7 +210,7 @@ object RacerDFix {
       case exc => throw exc
     } finally {
         if(config.testing) ast.resetToOrig(config)
-        println(" End of RacerDFix execution. ")
+        println(" End of " + Globals.TOOLNAME + " execution. ")
       }
    return ret;
   }

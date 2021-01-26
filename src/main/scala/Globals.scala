@@ -15,8 +15,8 @@ object Globals {
   def getTextOpt[A](par: Option[A]): String = par.toString
 
   /* Tool's versioning */
-  val TOOLNAME          = "RacerDFix"
-  val SCRIPTNAME        = "racerdfix"
+  val TOOLNAME          = "HIPPODROME"
+  val SCRIPTNAME        = "hippodrome"
   val VERSION           = "0.1"
   val VERSION_STRING    = s"v$VERSION"
 

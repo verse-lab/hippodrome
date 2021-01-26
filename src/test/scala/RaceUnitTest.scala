@@ -5,7 +5,7 @@ import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.utils.{ASTManipulation, Logging}
 import org.hamcrest.CoreMatchers.is
 import org.hamcrest.MatcherAssert.assertThat
-import org.racerdfix.RacerDFix.runPatchAndFix
+import org.racerdfix.RacerDFix.{parser, runPatchAndFix}
 
 class PatchCreationUnitTest {
 
@@ -23,8 +23,15 @@ class PatchCreationUnitTest {
         val newConfig = RunConfig(FixConfig(), Globals.def_src_path)
         parser.parse(args, newConfig) match {
             case Some(RunConfig(fixConfig, file)) =>
-                Logging.init(fixConfig)
-                assertThat(RacerDFix.runPatchAndFix(fixConfig,1),is(0))
+                val config_from_json = fixConfig.config_options.toArray
+                val fixConfig_ext = {
+                    parser.parse(config_from_json, RunConfig(fixConfig, fixConfig.java_sources_path)) match {
+                        case Some(RunConfig(fixConfig, file)) => fixConfig
+                        case None => fixConfig
+                    }
+                }
+                Logging.init(fixConfig_ext)
+                assertThat(RacerDFix.runPatchAndFix(fixConfig_ext,1),is(0))
                 Logging.stop
             case None =>
                 System.err.println("Bad argument format.")
@@ -70,9 +77,16 @@ class PatchCreationUnitTest {
 
     @Test
     @throws[Exception]
-    def runWrongLock(): Unit = {
+    def runWrongLock2(): Unit = {
         handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/wronglock2/CONFIG.json" ))
     }
+
+    @Test
+    @throws[Exception]
+    def runWrongLock(): Unit = {
+        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/wrongLock/CONFIG.json" ))
+    }
+
 
 
     @Test

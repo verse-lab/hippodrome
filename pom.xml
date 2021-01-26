@@ -2,7 +2,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.racerdfix</groupId>
-  <artifactId>RacerDFix</artifactId>
+  <artifactId>hippodrome</artifactId>
   <version>1.0</version>
   <packaging>jar</packaging>
   <properties>
@@ -116,7 +116,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>org.racerdfix.RacerDFix</mainClass>
+              <mainClass>org.racerdfix.Hippodrome</mainClass>
             </manifest>
           </archive>
         </configuration>
@@ -126,7 +126,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>org.racerdfix.RacerDFix</mainClass>
+              <mainClass>org.racerdfix.Hippodrome</mainClass>
             </manifest>
           </archive>
           <descriptorRefs>

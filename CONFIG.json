@@ -1,7 +1,8 @@
 {"infer":"/Users/andrea/git/infer-clean/infer/infer/bin/infer",
   "options":["--racerdfix-only", "--starvation"],
   "json_path": "./infer-out/",
-  "target_options": ["--", "javac", "src/test/java/alarmclock/AlarmClock.java"],
+  "target_options": ["--", "javac", "src/test/java/Hello.java"],
   "prio_files":  [],
-  "iterations": 5
+  "iterations": 5,
+  "racerdfix_options": []
 }

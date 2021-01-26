@@ -1,4 +1,4 @@
-# RacerDFix
+# HIPPODROME
 
 ## Setup and Build
 ### Dependencies:
@@ -8,16 +8,16 @@
 
 For each of the above just follow the given instructions. 
 
-### Install RacerDFix:
+### Install HIPPODROME:
 * install antlr to your local maven repository:
 
 `mvn install:install-file -Dfile="<path-to-your-antlr-for-java-jar>" -DgroupId=org.racerdfix.antlr -DartifactId=antlr -Dversion=1.0 -Dpackaging=jar`
 
-* install RacerDFix:
+* install HIPPODROME:
 `mvn install` (from the project's main directory)
 
 ## Run
-RacerDFix requires a configuration file to indicate which files to analyse and where to find infer. The config file is in json format, as follows:
+HIPPODROME requires a configuration file to indicate which files to analyse and where to find infer. The config file is in json format, as follows:
 
 ```json
 {"infer":"<path-to-infer>",
@@ -33,15 +33,15 @@ where
  * ``options`` are the options passed to the infer process
  * ``json_path`` is the path to the directory where infer writes its reports
  * ``targer_options`` tells how to compile the target files and which files to compile
- * ``prio_files`` selects only these files to be fixed. If left empty, RacerDFix will attempt to fix all the files
+ * ``prio_files`` selects only these files to be fixed. If left empty, HIPPODROME will attempt to fix all the files
  * ``iterations`` the number of iterations allowed to re-analyse and re-patch the target files before stopping the patching process.
-
+ * ``hippodrome_options`` enables other options specific to hippodrome. 
 
 See the `CONFIG.json` file in the project's root directory for a config file example.
 
-Assuming that the name of the resulted jar is `racerdfix.jar` you could test it as follows:
+Assuming that the name of the resulted jar is `hippodrome.jar` you could test it as follows:
 
-`java -jar racerdfix.jar --config_file="CONFIG.json"`
+`java -jar hippodrome.jar --config_file="CONFIG.json"`
 
 ### Example
 Say we have a directory `/tmp/` with the following content:
@@ -66,7 +66,7 @@ and the following content for `CONFIG.json`:
 }
 ```
 
-Running RacerDFix in this setting leads to the following structure:
+Running HIPPPODROME in this setting leads to the following structure:
 
 ```bash
 .

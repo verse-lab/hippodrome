@@ -76,15 +76,15 @@ object ArgParser {
 
     opt[Boolean]('i', "interactive").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(interactive = b))
-    }.text("runs RacerDFix in interactive mode - the user is expected to choose a patch")
+    }.text("runs " + Globals.TOOLNAME + " in interactive mode - the user is expected to choose a patch")
 
     opt[Boolean]("testing").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(testing = b))
-    }.text("runs RacerDFix in testing mode - generated fixes do not overwrite the original file")
+    }.text("runs " + Globals.TOOLNAME + " in testing mode - generated fixes do not overwrite the original file")
 
     opt[Boolean]( "intellij").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(intellij = b))
-    }.text("runs RacerDFix in IntelliJ mode - runs infer only once")
+    }.text("runs " + Globals.TOOLNAME + " in IntelliJ mode - runs infer only once")
 
     opt[Boolean]( "atomicity").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(atomicity = b))
@@ -92,7 +92,7 @@ object ArgParser {
 
     opt[Int]("interations").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(iterations = b))
-    }.text("the number of times racerdfix attempts to create patches until all the bugs are solved. The default value is " + Globals.no_iter)
+    }.text("the number of times " + Globals.TOOLNAME + " attempts to create patches until all the bugs are solved. The default value is " + Globals.no_iter)
 
     opt[Boolean]('l', "log").action { (b, rc) =>
       rc.copy(fixConfig = rc.fixConfig.copy(log = b))
