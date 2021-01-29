@@ -1,0 +1,8 @@
+{"infer":"/Users/andrea/git/infer-clean/infer/infer/bin/infer",
+  "options":["--racerdfix-only", "--starvation"],
+  "json_path": "./infer-out/",
+  "target_options": ["--", "javac", "src/test/resources/java-benchmark/deadlock-paper/Hello.java"],
+  "prio_files":  [],
+  "iterations": 10,
+  "hippodrome_options": ["--atomicity=true"]
+}

@@ -111,7 +111,7 @@ class PatchBlock(var rewriter: RewriterExt, val kind: RewriteKind, val patch: St
 
   def subsumes(that: PatchBlock): Boolean = {
       this.start.getStartIndex < that.start.getStartIndex &&
-      that.stop.getStopIndex < this.stop.getStopIndex
+      that.stop.getStopIndex <= this.stop.getStopIndex
   }
 
   def overlaps(that: PatchBlock): Boolean = {
