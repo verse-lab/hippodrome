@@ -4,45 +4,26 @@ import com.facebook.infer.annotation.ThreadSafe;
 @ThreadSafe
 
 public class ThreadB {
-
-	public static void main(String[] args) {
-		TestThreadA T1 = new TestThreadA();
-		T1.update();
-		T1.start();
-		TestThreadA T2 = new TestThreadA();
-		T2.start();
-
-	}
-
-}
-
-@ThreadSafe
-class TestThreadA extends Thread {
 	byte[] messageByte = new byte[100];
 	int port = 8080;
-	boolean read = true;
-	byte rand = 1;
-	
+
 	Thread mythread;
-	
-	public void update() {
-		this.read = false;
-	}
-	
-	public void run() {
-	
-		if (read)
-			read(messageByte);
+
+	public void run(boolean rand) {
+	    byte[] a = new byte[100],b = new byte[100];
+
+		if (rand)
+			read(a,messageByte);
 		else
-			write(messageByte);
+			write(b,messageByte);
 	}
 	
-	public void read(byte[] messageByte) {
-		rand = messageByte[0];
+	public void read(byte[] a, byte[] msg) {
+		msg[0] = a[0];
 	}
 	
-	public void write(byte[] messageByte) {
-		messageByte[0] = rand;
+	public void write(byte[] a, byte[] msg) {
+		a[0] = msg[0] ;
 	}
 	
 }
