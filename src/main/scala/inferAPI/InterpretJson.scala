@@ -21,7 +21,7 @@ object ConfigProtocol extends DefaultJsonProtocol {
       "target_options" -> JsArray(configInfer.infer_target_files.map(f => JsString(f)).toVector),
       "prio_files"     -> JsArray(configInfer.prio_files.map(f => JsString(f)).toVector),
       "iterations"     -> Option(configInfer.iterations).map(JsNumber(_)).getOrElse(JsNull),
-      "racerdfix_options" -> Option(configInfer.racerdfix_options).map(seq => JsArray(seq.map(JsString(_)).toVector)).getOrElse(JsNull)
+      "hippodrome_options" -> Option(configInfer.hippodrome_options).map(seq => JsArray(seq.map(JsString(_)).toVector)).getOrElse(JsNull)
     )
   }
 
@@ -50,7 +50,7 @@ object ConfigProtocol extends DefaultJsonProtocol {
           case None => Globals.results_out_dir
           case Some (JsString(json_path)) => json_path
         }
-        val racerdfix_config = fields.get("racerdfix_options") match {
+        val racerdfix_config = fields.get("hippodrome_options") match {
           case None => Seq.empty[String]
           case Some (JsArray(vect)) => vect.map(jsonToString(_))
         }

@@ -10,7 +10,7 @@ class Config(val infer: String,
              val infer_target_files: Seq[String],
              val prio_files: List[String],
              val iterations: Int,
-             val racerdfix_options: Seq[String],
+             val hippodrome_options: Seq[String],
             )
 case class RunConfig(fixConfig: FixConfig, fileName: String)
 
@@ -156,7 +156,7 @@ object ArgParser {
           json_path = infer_config.json_path,
           prio_files = infer_config.prio_files,
           iterations = infer_config.iterations,
-          config_options = infer_config.racerdfix_options
+          config_options = infer_config.hippodrome_options
         )
       })
     }.text("the config file to setup infer. The default one is " + Globals.config_file)

@@ -112,4 +112,16 @@ class PatchCreationUnitTest {
     def runDataRace(): Unit = {
         handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/datarace/CONFIG.json" ))
     }
+
+    @Test
+    @throws[Exception]
+    def runNIOSImplified(): Unit = {
+        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/nio-io-library-simplified/CONFIG.json" ))
+    }
+
+    @Test
+    @throws[Exception]
+    def runDeadlockPaper(): Unit = {
+        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/deadlock-paper/CONFIG.json" ))
+    }
 }
