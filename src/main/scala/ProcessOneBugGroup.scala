@@ -735,6 +735,7 @@ object ProcessOneBugGroup  {
           })
 
           val inserts = {
+//            new Or(insert, possiblyMergeFixesOpt(insert))
             if(!config.atomicity) insert
             else possiblyMergeFixesOpt(insert)
               /* sort the above based on method and merge patches belonging to the same method */

@@ -7,7 +7,14 @@ import org.racerdfix.utils.PatchStore
 import scala.collection.mutable.HashMap
 
 /*  bug */
-class TraceElem(val level: Int, val filename: String, val line_number: Int,val column_number: Int, val description: String)
+class TraceElem(val level: Int, val filename: String, val line_number: Int,val column_number: Int, val description: String) {
+  def equals(that:TraceElem) = {
+    this.level == that.level &&
+    this.filename == that.filename &&
+    this.line_number == that.line_number &&
+    this.column_number == that.column_number
+  }
+}
 
 /* summary */
 class Access(val kind: String, val exp: String)

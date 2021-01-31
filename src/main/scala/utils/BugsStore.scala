@@ -22,26 +22,45 @@ class BugsStore {
         val resources = snapshots.map(rfsumm => rfsumm.resource.allAliases()).flatten.distinct
         //val resources  = resources0.map(res => bug.cls + re)
         /* at least one of resources is key in map */
-        val key = resources.foldLeft[Option[String]](None)( (acc,res) => {
-          /* if the resources is already a key keep it as a key */
-          if (map.contains(res))  Some(res)
-          else {
-            /* if the resources is part of existing resources for a certain `key` return that `key` */
-            acc match {
-              case  None =>
-                map.foldLeft[Option[String]](acc)((acc0,mapElem) => {
-                  val existing_resources = mapElem._2._1
-                  val existing_key  = mapElem._1
-                  if(existing_resources.contains(res)) Some(existing_key)
-                  else acc0
-                })
-              case Some(_) => acc
+        def contains_key(exact: Boolean) = {
+          val key = resources.foldLeft[Option[String]](None)((acc, res) => {
+            /* if the resources is already a key keep it as a key */
+            if (map.contains(res)) Some(res)
+            else {
+              /* if the resources is part of existing resources for a certain `key` return that `key` */
+              acc match {
+                case None =>
+                  map.foldLeft[Option[String]](acc)((acc0, mapElem) => {
+                    val existing_resources = mapElem._2._1
+                    val existing_key = mapElem._1
+                    if(exact)
+                      if (existing_resources.contains(res)) Some(existing_key)
+                      else acc0
+                    else
+                      if (existing_resources.exists(x => res.startsWith(x) && !(x.equals("this")))) Some(existing_key)
+                      else acc0
+                  })
+                case Some(_) => acc
+              }
             }
-          }
-        })
+          })
+          key
+        }
+
+      val key   = contains_key(true)
+      val key2 = contains_key(false)
 
       key match {
-        case None => map.update(resources.head,(resources,List(bug)))
+        case None =>
+          key2 match {
+            case None => map.update(resources.head, (resources, List(bug)))
+            case Some(key) =>
+              val (res, bugs) = map(key)
+//              if (bugs.exists(p=> p.equals_weak(bug)))
+                map.update(key, ((res ++ resources).distinct, (bugs ++ List(bug)).distinct ))
+//              else
+//                map.update(resources.head, (resources, List(bug)))
+          }
         case Some(key) =>
           val (res,bugs) = map(key)
           map.update(key, ((res ++ resources).distinct, (bugs ++ List(bug)).distinct ))

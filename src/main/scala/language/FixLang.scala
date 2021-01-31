@@ -267,6 +267,16 @@ class RFSumm(val filename: String, val cls: String, val procedure: String, val r
     this.trace.equals(that.trace) &&
     this.hash     == that.hash
   }
+
+  def equals_weak(that: RFSumm) = {
+    this.filename == that.filename &&
+      this.cls      == that.cls &&
+      this.procedure== that.procedure &&
+      this.resource.equals_weak(that.resource) &&
+      this.access   == that.access &&
+      Globals.eq_set(((a:Lock, b: Lock) => a.equals(b)), this.locks, that.locks) &&
+      this.line     == that.line
+  }
 }
 
 /* racerdfix snapshot */
@@ -274,7 +284,17 @@ class FSumm(var ast: ASTStoreElem, val csumm: RFSumm)
 /* racerdfix bug */
 class FBug(val file: String, val cls: String, val proc: String,
            val bug_trace: List[TraceElem],
-           val snapshot1: List[RFSumm], val snapshot2: List[RFSumm], val hash: String)
+           val snapshot1: List[RFSumm], val snapshot2: List[RFSumm], val hash: String) {
+
+  def equals_weak(that: FBug) = {
+    this.file == that.file &&
+    this.cls  == that.cls  &&
+    this.proc == that.proc &&
+//      Globals.eq_set(((a:TraceElem, b: TraceElem) => a.equals(b)), this.bug_trace, that.bug_trace) &&
+      Globals.eq_set(((a:RFSumm, b: RFSumm) => a.equals_weak(b)), this.snapshot1, that.snapshot1)
+//      Globals.eq_set(((a:RFSumm, b: RFSumm) => a.equals_weak(b)), this.snapshot2, that.snapshot2)
+  }
+}
 
 /**/
 class DeclaratorSlicing(val declarations: String, val initializations: String)
@@ -296,6 +316,11 @@ class Variable(val cls: String, val modifiers: List[String] = Nil, val typ: Stri
     this.cls == that.cls &&
       this.id  == that.id  &&
       Globals.eq_set(((a:String,b:String) => a == b), this.id::this.aliases, that.id::that.aliases)
+  }
+
+  def equals_weak(that: Variable): Boolean = {
+    this.cls == that.cls &&
+      (this.id.startsWith(that.id) || that.id.startsWith(this.id))
   }
 
   def isIn(lst : List[Variable]) : Boolean = {
