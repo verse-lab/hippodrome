@@ -2,9 +2,10 @@
 
 ## Setup and Build
 ### Dependencies:
+* Make sure you have JDK version 1.7 or higher installed on your machine 
+* [maven](https://maven.apache.org/install.html)
 * [infer](https://github.com/andrecostea/infer) (RacerD) - the extended version which tackles a more fine grained tracking of the locks when analysing for data races:
 * [antlr for java](https://github.com/andrecostea/antlr-java)
-* [maven](https://maven.apache.org/install.html)
 
 For each of the above just follow the given instructions. 
 
