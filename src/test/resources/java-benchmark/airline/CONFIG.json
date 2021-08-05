@@ -1,6 +1,6 @@
 {
   "json_path": "./infer-out/",
-  "target_options": ["--", "javac", "src/test/resources/java-benchmark/airline/Bug.java"],
+  "target_options": ["--", "javac", "src/test/resources/java-benchmark/airline/Bug.java","-d", "target"],
   "prio_files":  [],
   "iterations": 3
 }

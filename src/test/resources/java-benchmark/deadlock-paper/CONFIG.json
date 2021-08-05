@@ -1,6 +1,6 @@
 {
   "json_path": "./infer-out/",
-  "target_options": ["--", "javac", "src/test/resources/java-benchmark/deadlock-paper/Hello.java"],
+  "target_options": ["--", "javac", "src/test/resources/java-benchmark/deadlock-paper/Hello.java","-d", "target"],
   "prio_files":  [],
   "iterations": 10,
   "hippodrome_options": ["--atomicity=true"]
