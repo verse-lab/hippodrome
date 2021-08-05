@@ -1,4 +1,4 @@
-{"infer":"/Users/andrea/git/infer-clean/infer/infer/bin/infer",
+{
   "options":["--racerdfix-only", "--starvation"],
   "json_path": "./infer-out/",
   "target_options": ["--", "javac", "src/test/resources/java-benchmark/nestedclasses2/Test2.java"],

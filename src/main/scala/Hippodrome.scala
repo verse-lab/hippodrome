@@ -13,15 +13,16 @@ object Hippodrome {
 
   private val parser = ArgParser.argsParser
 
-  def parseParams(paramString: Array[String], params: FixConfig): FixConfig = {
-    val newConfig = RunConfig(params, Globals.def_src_path)
-    parser.parse(paramString, newConfig) match {
-      case Some(RunConfig(fixConfig, _)) => fixConfig
-      case None => throw RacerDFixException("Bad argument format.")
-    }
+  private def mergeConfigurations(config: FixConfig) = {
+    val jsonTranslator = new InterpretJson(config)
+    val toolConfig = jsonTranslator.getJsonToolConfig()
+    /** the `infer` in file-config overwrites the `infer` in the tool-config which overwrites the `Globals.def_infer` */
+    val iConfig = if (config.infer == "")  config.copy(infer = toolConfig.infer) else config
+    val inferOptions = toolConfig.infer_opt diff iConfig.infer_opt
+    if (inferOptions.isEmpty) iConfig else iConfig.copy(infer_opt = iConfig.infer_opt.concat(inferOptions))
   }
 
-  private def handleInput(args: Array[String]): Int = {
+  private def handleInput(args: Array[String]): FixConfig = {
     args.foreach( str => println("args: " + str))
     val newConfig = RunConfig(FixConfig(), Globals.def_src_path)
     parser.parse(args, newConfig) match {
@@ -34,14 +35,13 @@ object Hippodrome {
             case None => fixConfig
           }
         }
-        Logging.init(fixConfig_ext)
-        val res = runPatchAndFix(fixConfig_ext, 1)
-        Logging.stop
-        res
-      case None =>
-        System.err.println("Bad argument format.")
-        1
+        mergeConfigurations(fixConfig_ext)
+      case None => throw new Exception("Bad argument format.")
     }
+  }
+
+  private def installConfig() = {
+
   }
 
   /* Generating unique references */
@@ -132,7 +132,7 @@ object Hippodrome {
     }
   }
 
-  def runPatchAndFix(config: FixConfig, iteration: Int): Int = {
+  def detectAndFix(config: FixConfig, iteration: Int): Int = {
 
     /* run infer */
     if(config.flag1) println(Globals.TOOLNAME + " started!")
@@ -197,7 +197,7 @@ object Hippodrome {
             val answer_str = if (config.interactive) {
               readLine()
             } else if (iteration < config.iterations) "Y" else "n"
-            if (answer_str == "Y") runPatchAndFix(config, iteration + 1)
+            if (answer_str == "Y") detectAndFix(config, iteration + 1)
             else if (answer_str == "n") 1
             else {
               println("Unrecognized answer.")
@@ -216,7 +216,12 @@ object Hippodrome {
   }
 
   def main(args: Array[String]): Unit = {
-    val res = handleInput(args)
+    /* Setup the running configuration */
+    val config = handleInput(args)
+    Logging.init(config)
+    /* call the main fix engine */
+    val res = detectAndFix(config, 1)
+    Logging.stop
     System.exit(res)
   }
 

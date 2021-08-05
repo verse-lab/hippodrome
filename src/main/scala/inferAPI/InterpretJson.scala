@@ -3,7 +3,7 @@ package org.racerdfix.inferAPI
 import java.io.{BufferedWriter, FileWriter}
 
 import org.racerdfix.language.{PatchBlock, _}
-import org.racerdfix.{Config, FixConfig, Globals, GroupByIdPatchOptions}
+import org.racerdfix.{Config, FixConfig, Globals, GroupByIdPatchOptions, ToolConfig}
 import spray.json._
 import org.racerdfix.utils.FileManipulation
 
@@ -43,7 +43,7 @@ object ConfigProtocol extends DefaultJsonProtocol {
           case Some(value) => value.toString().toInt
         }
         val infer = fields.get("infer") match {
-          case None => Globals.def_infer
+          case None => ""
           case Some (JsString(infer)) => infer
         }
         val json_path = fields.get("json_path") match {
@@ -69,9 +69,46 @@ object ConfigProtocol extends DefaultJsonProtocol {
   implicit object ConfigJsonFormat extends RootJsonFormat[Config] {
     def write(c: Config) : JsValue  = configToJson(c)
 
-    def read(value: JsValue) = {
-      jsonToConfig(value)
+    def read(value: JsValue) = jsonToConfig(value)
+  }
+}
+
+object ToolConfigProtocol extends DefaultJsonProtocol {
+
+  def configToJson(configInfer: ToolConfig) ={
+    JsObject(
+      "infer"          -> JsString(configInfer.infer),
+      "infer_options"  -> JsArray(configInfer.infer_opt.map(f => JsString(f)).toVector),
+    )
+  }
+
+  def jsonToString(e: JsValue) = {
+    e match {
+      case JsString(str) => str
+      case _ => throw new DeserializationException("String expected")
     }
+  }
+
+  def jsonToToolConfig(value: JsValue) = {
+    value match {
+      case JsObject(fields) => {
+        val infer = fields.get("infer") match {
+          case None => Globals.def_infer
+          case Some (JsString(infer)) => infer
+        }
+        val options = fields.get("infer_options").map(w => w.asInstanceOf[JsArray].elements.map(v => jsonToString(v)).toList).getOrElse[List[String]](Nil)
+        new ToolConfig(
+          infer,
+          options)
+      }
+    }
+  }
+
+  implicit object ToolConfigJsonFormat extends RootJsonFormat[ToolConfig] {
+
+    def write(c: ToolConfig) : JsValue  = configToJson(c)
+
+    def read(value: JsValue) =  jsonToToolConfig(value)
   }
 }
 
@@ -418,9 +455,18 @@ class InterpretJson(val config: FixConfig) {
   def getJsonConfig() = {
     import ConfigProtocol._
     val fm  = new FileManipulation
-    val src = fm.fileToString(config.config_file)
+    val src = fm.fileToString(config.target_config_file)
     val jsonAst = src.parseJson
     val configObj  = jsonAst.convertTo[Config]
     configObj
+  }
+
+  def getJsonToolConfig() = {
+    import ToolConfigProtocol._
+    val fm  = new FileManipulation
+    val src = fm.fileToString(config.tools_config_file)
+    val jsonAst = src.parseJson
+    val toolsConfigObj = jsonAst.convertTo[ToolConfig]
+    toolsConfigObj
   }
 }

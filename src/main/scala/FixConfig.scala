@@ -4,6 +4,12 @@ import org.racerdfix.inferAPI.InterpretJson
 import org.racerdfix.language.{LockChoice, NewLock, NoLock, OccurenceMax, OccurenceMin, PrettyPrinting}
 import org.racerdfix.utils.FileManipulation
 
+
+class ToolConfig(
+                 val infer: String,
+                 val infer_opt: Seq[String],
+            )
+
 class Config(val infer: String,
              val infer_opt: Seq[String],
              val json_path: String,
@@ -31,7 +37,8 @@ case class FixConfig(
                       java_sources_path: String = Globals.def_src_path,
                       log_file: String          = Globals.log_file,
                       // Infer
-                      config_file: String       = Globals.config_file,
+                      target_config_file: String= Globals.target_config_file,
+                      tools_config_file:  String= Globals.tools_config_file,
                       infer: String             = Globals.def_infer,
                       infer_opt: Seq[String]    = Globals.def_infer_options,
                       infer_target_files: Seq[String]  = Globals.def_target_files,
@@ -147,19 +154,19 @@ object ArgParser {
 
     opt[String]('c', "config_file").action { (b, rc) =>
       rc.copy(fixConfig = {
-        val jsonTranslator = new InterpretJson(rc.fixConfig.copy(config_file = b))
-        val infer_config = jsonTranslator.getJsonConfig()
-        rc.fixConfig.copy(config_file = b,
-          infer = infer_config.infer,
-          infer_opt = infer_config.infer_opt,
-          infer_target_files = infer_config.infer_target_files,
-          json_path = infer_config.json_path,
-          prio_files = infer_config.prio_files,
-          iterations = infer_config.iterations,
-          config_options = infer_config.hippodrome_options
+        val jsonTranslator = new InterpretJson(rc.fixConfig.copy(target_config_file = b))
+        val config = jsonTranslator.getJsonConfig()
+        rc.fixConfig.copy(target_config_file = b,
+          infer     = config.infer,
+          infer_opt = config.infer_opt,
+          infer_target_files = config.infer_target_files,
+          json_path  = config.json_path,
+          prio_files = config.prio_files,
+          iterations = config.iterations,
+          config_options = config.hippodrome_options
         )
       })
-    }.text("the config file to setup infer. The default one is " + Globals.config_file)
+    }.text("the file with repair config (target file, iterations, etc). The default one is " + Globals.target_config_file)
 
     help("help").text("prints this usage text")
   }

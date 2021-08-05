@@ -1,5 +1,4 @@
-{"infer":"/Users/andrea/git/infer-clean/infer/infer/bin/infer",
-  "options":["--racerdfix-only", "--starvation", "--no-deduplicate"],
+{
   "json_path": "./infer-out/",
   "target_options": ["--", "javac", "src/test/resources/java-benchmark/pingpong/BuggedProgram.java"],
   "prio_files":  [],

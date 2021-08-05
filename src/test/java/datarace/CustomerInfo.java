@@ -1,4 +1,3 @@
-
 package datarace;
  import com.facebook.infer.annotation.*; 
   
@@ -19,23 +18,30 @@ package datarace;
  		this.accounts = accounts; 
  	} 
   
- 	public void withdraw(int accountNumber, int amount){ 
- 		int temp = accounts[accountNumber].getBalance(); 
- 		temp = temp - amount; 
- 		accounts[accountNumber].setBalance(temp); 
- 		System.out.println("withdraw " + amount + "now " + accounts[accountNumber].getBalance());
-		int x = 0;
+ 	public void withdraw(int accountNumber, int amount){
+ 		Object o = new Object();
+ 		synchronized (o) {
+			int temp = accounts[accountNumber].getBalance();
+			temp = temp - amount;
+			accounts[accountNumber].setBalance(temp);
+			System.out.println("withdraw " + amount + "now " + accounts[accountNumber].getBalance());
+			int x = 0;
+		}
  	} 
- 	 
- 	public void deposit(int accountNumber, int amount){ 
- 		int temp = accounts[accountNumber].getBalance(); 
- 		temp = temp + amount; 
- 		accounts[accountNumber].setBalance(temp); 
- 		System.out.println("deposit " + amount + "now " + accounts[accountNumber].getBalance());
- 		int x = 5;
+
+ 	public void deposit(int accountNumber, int amount) {
+		Object o = new Object();
+		synchronized (o) {
+		int temp = accounts[accountNumber].getBalance();
+		temp = temp + amount;
+		accounts[accountNumber].setBalance(temp);
+		System.out.println("deposit " + amount + "now " + accounts[accountNumber].getBalance());
+		int x = 5;
+	}
  	} 
- 	 
+ 	/*
  	public boolean check(int accountNumber, int amount) { 
  		return accounts[accountNumber].getBalance() == amount; 
- 	} 
+ 	}
+ 	*/
  }
