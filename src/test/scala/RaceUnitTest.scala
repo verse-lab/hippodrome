@@ -1,22 +1,23 @@
 import org.racerdfix.language.{EmptyTrace, InsertSync, NoFix, Or, PatchBlock, RFSumm, Read, Write}
 import org.junit.Test
 import org.racerdfix.{ArgParser, FixConfig, Globals, Hippodrome, RacerDFixException, RunConfig}
-import org.racerdfix.inferAPI.RacerDAPI
+import org.racerdfix.inferAPI.{InterpretJson, RacerDAPI}
 import org.racerdfix.utils.{ASTManipulation, Logging}
 import org.hamcrest.CoreMatchers.is
 import org.hamcrest.MatcherAssert.assertThat
-import org.racerdfix.Hippodrome.{parser, runPatchAndFix}
+import org.racerdfix.Hippodrome.{detectAndFix, parser}
 
 class PatchCreationUnitTest {
 
     private val parser = ArgParser.argsParser
 
-    def parseParams(paramString: Array[String], params: FixConfig): FixConfig = {
-        val newConfig = RunConfig(params, Globals.def_src_path)
-        parser.parse(paramString, newConfig) match {
-            case Some(RunConfig(fixConfig, _)) => fixConfig
-            case None => throw RacerDFixException("Bad argument format.")
-        }
+    private def mergeConfigurations(config: FixConfig) = {
+        val jsonTranslator = new InterpretJson(config)
+        val toolConfig = jsonTranslator.getJsonToolConfig()
+        /** the `infer` in file-config overwrites the `infer` in the tool-config which overwrites the `Globals.def_infer` */
+        val iConfig = if (config.infer == "")  config.copy(infer = toolConfig.infer) else config
+        val inferOptions = toolConfig.infer_opt diff iConfig.infer_opt
+        if (inferOptions.isEmpty) iConfig else iConfig.copy(infer_opt = iConfig.infer_opt.concat(inferOptions))
     }
 
     private def handleInput(args: Array[String]): Unit = {
@@ -30,8 +31,9 @@ class PatchCreationUnitTest {
                         case None => fixConfig
                     }
                 }
-                Logging.init(fixConfig_ext)
-                assertThat(Hippodrome.runPatchAndFix(fixConfig_ext,1),is(0))
+                val config = mergeConfigurations(fixConfig_ext)
+                Logging.init(config)
+                assertThat(Hippodrome.detectAndFix(config,1),is(0))
                 Logging.stop
             case None =>
                 System.err.println("Bad argument format.")
