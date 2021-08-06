@@ -6,8 +6,9 @@ import org.racerdfix.utils.FileManipulation
 
 
 class ToolConfig(
-                 val infer: String,
-                 val infer_opt: Seq[String],
+                 val infer: String,            // path to infer
+                 val infer_opt: Seq[String],   // the options infer is executed with
+                 val json_path: String,        // path to the files in which infer stores its summaries and reports
             )
 
 class Config(val infer: String,

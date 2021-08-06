@@ -1,4 +1,5 @@
 {
   "infer": "/Users/andrea/git/infer-clean/infer/infer/bin/infer",
-  "infer_options": ["--racerdfix-only", "--starvation", "--no-deduplicate"]
+  "infer_options": ["--racerdfix-only", "--starvation", "--no-deduplicate"],
+  "json_path": "./infer-out/"
 }

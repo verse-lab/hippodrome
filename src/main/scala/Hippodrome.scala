@@ -17,7 +17,9 @@ object Hippodrome {
     val jsonTranslator = new InterpretJson(config)
     val toolConfig = jsonTranslator.getJsonToolConfig()
     /** the `infer` in file-config overwrites the `infer` in the tool-config which overwrites the `Globals.def_infer` */
-    val iConfig = if (config.infer == "")  config.copy(infer = toolConfig.infer) else config
+    val iConfig0 = if (config.infer == "")  config.copy(infer = toolConfig.infer) else config
+    /** the `json_path` in file-config overwrites the `json_path` in the tool-config which overwrites the `Globals.results_out_dir` */
+    val iConfig = if (iConfig0.json_path == "")  iConfig0.copy(json_path = toolConfig.json_path) else iConfig0
     val inferOptions = toolConfig.infer_opt diff iConfig.infer_opt
     if (inferOptions.isEmpty) iConfig else iConfig.copy(infer_opt = iConfig.infer_opt.concat(inferOptions))
   }

@@ -37,7 +37,7 @@ object ConfigProtocol extends DefaultJsonProtocol {
       case JsObject(fields) => {
         val options = fields.get("options").map(w => w.asInstanceOf[JsArray].elements.map(v => jsonToString(v)).toList).getOrElse[List[String]](Nil)
         val files   = fields.get("target_options").map(w => w.asInstanceOf[JsArray].elements.map(v => jsonToString(v)).toList).getOrElse[List[String]](Nil)
-        val prio_files = fields.get("prio_files").map(w => w.asInstanceOf[JsArray].elements.map(f => jsonToString(f)).toList).getOrElse[List[String]](Nil)
+        val prioFiles = fields.get("prio_files").map(w => w.asInstanceOf[JsArray].elements.map(f => jsonToString(f)).toList).getOrElse[List[String]](Nil)
         val iterations = fields.get("iterations") match {
           case None        => Globals.no_iter
           case Some(value) => value.toString().toInt
@@ -46,22 +46,22 @@ object ConfigProtocol extends DefaultJsonProtocol {
           case None => ""
           case Some (JsString(infer)) => infer
         }
-        val json_path = fields.get("json_path") match {
+        val jsonPath = fields.get("json_path") match {
           case None => Globals.results_out_dir
-          case Some (JsString(json_path)) => json_path
+          case Some (JsString(jsonPath)) => jsonPath
         }
-        val racerdfix_config = fields.get("hippodrome_options") match {
+        val racerdfixConfig = fields.get("hippodrome_options") match {
           case None => Seq.empty[String]
           case Some (JsArray(vect)) => vect.map(jsonToString(_))
         }
         new Config(
           infer,
           options,
-          json_path,
+          jsonPath,
           files,
-          prio_files,
+          prioFiles,
           iterations,
-          racerdfix_config)
+          racerdfixConfig)
       }
     }
   }
@@ -79,6 +79,7 @@ object ToolConfigProtocol extends DefaultJsonProtocol {
     JsObject(
       "infer"          -> JsString(configInfer.infer),
       "infer_options"  -> JsArray(configInfer.infer_opt.map(f => JsString(f)).toVector),
+      "json_path"      -> JsString(configInfer.json_path),
     )
   }
 
@@ -96,10 +97,15 @@ object ToolConfigProtocol extends DefaultJsonProtocol {
           case None => Globals.def_infer
           case Some (JsString(infer)) => infer
         }
+        val jsonPath = fields.get("json_path") match {
+          case None => Globals.results_out_dir
+          case Some (JsString(jsonPath)) => jsonPath
+        }
         val options = fields.get("infer_options").map(w => w.asInstanceOf[JsArray].elements.map(v => jsonToString(v)).toList).getOrElse[List[String]](Nil)
         new ToolConfig(
           infer,
-          options)
+          options,
+          jsonPath)
       }
     }
   }
