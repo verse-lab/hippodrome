@@ -118,6 +118,8 @@ ADD RACE EXAMPLE, PATCH AND FIX EXAMPLE
 Solution: makes sure you have installed the infer version we recommended and that you have correctly set the path to this version in your `APP_CONFIG.json` file, or in `CONFIG.json`.
 
 * If a race is not detected:
-- make sure that threads are spawned from non-anonymous classes, since the summaries collected by Infer have to be ascribed to methods of named classes. 
-- In the absence of any evidence of concurrency, e.g usage of the `sychronized` methods or blocks, locks, annotations, etc, you can help the analyzer by annotating with [`@ThreadSafe`](https://mvnrepository.com/artifact/com.facebook.infer.annotation) those classes which contain code intended to be executed in a concurrent context.
+
+  - make sure that threads are spawned from non-anonymous classes, since the summaries collected by Infer have to be ascribed to methods of named classes. 
+
+  - In the absence of any evidence of concurrency, e.g usage of the `sychronized` methods or blocks, locks, annotations, etc, you can help the analyzer by annotating with [`@ThreadSafe`](https://mvnrepository.com/artifact/com.facebook.infer.annotation) those classes which contain code intended to be executed in a concurrent context.
 
