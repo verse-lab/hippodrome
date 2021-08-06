@@ -17,26 +17,42 @@ For each of the above just follow the given instructions.
 * install HIPPODROME:
 `mvn install` (from the project's main directory)
 
-## Run
-HIPPODROME requires a configuration file to indicate which files to analyse and where to find infer. The config file is in json format, as follows:
-
+* set the path to local `infer` (the version recommended earlier) and the options expected to run with in `APP_CONFIG.json`:
 ```json
-{"infer":"<path-to-infer>",
- "options":["--racerdfix-only", "--starvation", <list-of-strings-representing-additional-infer-options>],
- "json_path": "./infer-out/",
- "target_options": ["--", "javac", "<java-files-to-be-analysed>"],
- "prio_file": [],
- "iterations": 10
+{
+  "infer": "<path-to-infer>/infer/infer/bin/infer",
+  "infer_options": ["--racerdfix-only", "--starvation", "--no-deduplicate", <list-of-strings-representing-additional-infer-options>],
+  "json_path": "./infer-out/",
 }
 ```
 where
  * ``infer`` sets the path to the running infer
- * ``options`` are the options passed to the infer process
- * ``json_path`` is the path to the directory where infer writes its reports
- * ``targer_options`` tells how to compile the target files and which files to compile
+ * ``options`` sets the options passed to the infer process
+ * ``json_path`` indicates the path to the directory where infer writes its reports
+ 
+
+## Run
+HIPPODROME requires a configuration file to indicate which files to analyse. The config file is in json format, as follows:
+
+```json
+{
+ "infer": "<path-to-infer>/infer/infer/bin/infer",
+ "infer_options": ["--racerdfix-only", "--starvation", "--no-deduplicate", <list-of-strings-representing-additional-infer-options>],
+ "json_path": "./infer-out/",
+ "target_options": ["--", "javac", "<java-files-to-be-analysed>"],
+ "prio_file": [],
+ "iterations": 10,
+ "hippodrome_options": ["--atomicity=true"]
+}
+```
+where
+ * [optional] ``infer`` sets the path to the running infer (overwrites the corresponding confing set in `APP_CONFIG.json`)
+ * [optional] ``options`` sets the options passed to the infer process (overwrites the corresponding confing set in `APP_CONFIG.json`)
+ * [optional] ``json_path`` indicates the path to the directory where infer writes its reports (overwrites the corresponding confing set in `APP_CONFIG.json`)
+ * ``target_options`` sets the compiler used by infer and the target files
  * ``prio_files`` selects only these files to be fixed. If left empty, HIPPODROME will attempt to fix all the files
- * ``iterations`` the number of iterations allowed to re-analyse and re-patch the target files before stopping the patching process.
- * ``hippodrome_options`` enables other options specific to hippodrome. 
+ * [optional] ``iterations`` sets the max number of iterations to re-analyse and re-patch the target files before stopping the patching process.
+ * [optional] ``hippodrome_options`` enables other options specific to hippodrome. 
 
 See the `CONFIG.json` file in the project's root directory for a config file example.
 
