@@ -1,6 +1,6 @@
 # HIPPODROME
 
-This is an automatic program repair tool for Java programs. It currently detects and fixes _data race conditions_ for small to large scale Java programs. The bug detection part is enabled by a modified version of [Infer](https://fbinfer.com/), while the patch algorithm is detailed in [this technical report](https://arxiv.org/abs/2108.02490).
+This is an automatic program repair tool for Java programs. It statically detects and fixes _data race conditions_ for small to large scale Java programs. The bug detection part is enabled by a modified version of [Infer](https://fbinfer.com/), while the patch algorithm is detailed in [this technical report](https://arxiv.org/abs/2108.02490).
 
 Fixes come in the form of introducing `synchronized` blocks or adding the `volatile` annotation. 
 
