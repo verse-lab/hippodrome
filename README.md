@@ -1,5 +1,9 @@
 # HIPPODROME
 
+This is an automatic program repair tool for Java programs. It currently detects and fixes _data race conditions_ for small to large scale Java programs. The bug detection part is enabled by a modified version of [Infer](https://fbinfer.com/), while the patch algorithm is detailed in [this technical report](https://arxiv.org/abs/2108.02490).
+
+Fixes come in the form of introducing `synchronized` blocks or adding the `volatile` annotation. 
+
 ## Setup and Build
 ### Dependencies:
 * Make sure you have JDK version 1.7 or higher installed on your machine 
@@ -112,4 +116,8 @@ ADD RACE EXAMPLE, PATCH AND FIX EXAMPLE
 ```
 
 Solution: makes sure you have installed the infer version we recommended and that you have correctly set the path to this version in your `APP_CONFIG.json` file, or in `CONFIG.json`.
+
+* If a race is not detected:
+- make sure that threads are spawned from non-anonymous classes, since the summaries collected by Infer have to be ascribed to methods of named classes. 
+- In the absence of any evidence of concurrency, e.g usage of the `sychronized` methods or blocks, locks, annotations, etc, you can help the analyzer by annotating with [`@ThreadSafe`](https://mvnrepository.com/artifact/com.facebook.infer.annotation) those classes which contain code intended to be executed in a concurrent context.
 
