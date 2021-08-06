@@ -13,6 +13,7 @@ object Hippodrome {
 
   private val parser = ArgParser.argsParser
 
+  /* Any modification to this method must be reflected in `RaceUnitTest` too */
   private def mergeConfigurations(config: FixConfig) = {
     val jsonTranslator = new InterpretJson(config)
     val toolConfig = jsonTranslator.getJsonToolConfig()
@@ -24,6 +25,7 @@ object Hippodrome {
     if (inferOptions.isEmpty) iConfig else iConfig.copy(infer_opt = iConfig.infer_opt.concat(inferOptions))
   }
 
+  /* Any modification to this method must be reflected in `RaceUnitTest` too */
   private def handleInput(args: Array[String]): FixConfig = {
     args.foreach( str => println("args: " + str))
     val newConfig = RunConfig(FixConfig(), Globals.def_src_path)
