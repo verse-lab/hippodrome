@@ -101,3 +101,15 @@ Running HIPPPODROME in this setting leads to the following structure:
 
 
 ADD RACE EXAMPLE, PATCH AND FIX EXAMPLE
+
+
+
+## Common execution issues
+
+* If you get bounced back due to options which are not recognized by infer, it could be the case that HIPPODROME makes calls to a version of infer which is different that the recommended one:
+```
+/usr/local/bin/infer: unknown option '--racerdfix-olny'.
+```
+
+Solution: makes sure you have installed the infer version we recommended and that you have correctly set the path to this version in your `APP_CONFIG.json` file, or in `CONFIG.json`.
+
