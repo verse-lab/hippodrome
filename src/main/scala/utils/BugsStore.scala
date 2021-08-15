@@ -47,7 +47,7 @@ class BugsStore {
           key
         }
 
-      val key   = contains_key(true)
+      val key  = contains_key(true)
       val key2 = contains_key(false)
 
       key match {

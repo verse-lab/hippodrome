@@ -85,6 +85,11 @@
   <build>
     <sourceDirectory>src/main/scala</sourceDirectory>
     <testSourceDirectory>src/test/scala</testSourceDirectory>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -116,6 +121,7 @@
         <configuration>
           <archive>
             <manifest>
+              <addClasspath>true</addClasspath>
               <mainClass>org.racerdfix.Hippodrome</mainClass>
             </manifest>
           </archive>
@@ -128,6 +134,9 @@
             <manifest>
               <mainClass>org.racerdfix.Hippodrome</mainClass>
             </manifest>
+        <!--    <manifestEntries>
+              <Class-Path>config/</Class-Path>
+            </manifestEntries> -->
           </archive>
           <descriptorRefs>
             <descriptorRef>jar-with-dependencies</descriptorRef>
@@ -157,6 +166,7 @@
         <version>3.2.2</version>
         <executions>
           <execution>
+            <phase>process-resources</phase>
             <goals>
               <goal>compile</goal>
               <goal>testCompile</goal>

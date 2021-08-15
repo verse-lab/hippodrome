@@ -1,9 +1,10 @@
 package org.racerdfix.utils
 
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io.{BufferedWriter, File, FileNotFoundException, FileWriter, InputStream}
 import java.nio.file.{Files, Paths, StandardCopyOption}
 
 import scala.io.Source
+import scala.util.Try
 
 class FileManipulation {
 
@@ -47,6 +48,25 @@ class FileManipulation {
 
   def fileToString(filename: String) = {
     Source.fromFile(filename).getLines.foldLeft("") { (str, line) => str + " \n " + line.toString }
+  }
+
+  def resourceFileToString(filename: String) = {
+    /*
+     def main(args: Array[String]): Unit = {
+
+    val ipfileStream = getClass.getResourceAsStream("/folder/a-words.txt")
+    val readlines = Source.fromInputStream(ipfileStream).getLines
+    readlines.foreach(readlines => println(readlines))
+
+  }
+    * */
+    //val stream: InputStream = getClass.getResourceAsStream("/" + filename)
+    println(getClass.getResource(filename))
+    println(filename)
+    /*Try(*/
+      Source.fromResource(filename).getLines.foldLeft("") { (str, line) => str + " \n " + line.toString }
+    /*).recover(throw new FileNotFoundException(filename))
+    ""*/
   }
 
   def getFile(path: String, filename: String) = {

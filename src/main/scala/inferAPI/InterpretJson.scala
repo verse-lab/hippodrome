@@ -470,7 +470,7 @@ class InterpretJson(val config: FixConfig) {
   def getJsonToolConfig() = {
     import ToolConfigProtocol._
     val fm  = new FileManipulation
-    val src = fm.fileToString(config.tools_config_file)
+    val src = fm.resourceFileToString(config.tools_config_file)
     val jsonAst = src.parseJson
     val toolsConfigObj = jsonAst.convertTo[ToolConfig]
     toolsConfigObj
