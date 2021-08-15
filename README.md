@@ -14,14 +14,11 @@ Fixes come in the form of introducing `synchronized` blocks or adding the `volat
 For each of the above just follow the given instructions. 
 
 ### Install HIPPODROME:
-* install antlr to your local maven repository:
+1. install antlr to your local maven repository:
 
 `mvn install:install-file -Dfile="<path-to-your-antlr-for-java-jar>" -DgroupId=org.racerdfix.antlr -DartifactId=antlr -Dversion=1.0 -Dpackaging=jar`
 
-* install HIPPODROME:
-`mvn install` (from the project's main directory)
-
-* set the path to local `infer` (the version recommended earlier) and the options expected to run with in `APP_CONFIG.json`:
+2. set the path to local `infer` (the version recommended earlier) and the options expected to run with in `src/main/resources/APP_CONFIG.json`:
 ```json
 {
   "infer": "<path-to-infer>/infer/infer/bin/infer",
@@ -30,9 +27,14 @@ For each of the above just follow the given instructions.
 }
 ```
 where
- * ``infer`` sets the path to the running infer
- * ``options`` sets the options passed to the infer process
- * ``json_path`` indicates the path to the directory where infer writes its reports
+* ``infer`` sets the path to the running infer
+* ``options`` sets the options passed to the infer process
+* ``json_path`` indicates the path to the directory where infer writes its reports
+ 
+
+3. install HIPPODROME:
+`mvn install` (from the project's main directory); 
+use `mvn install -Dmaven.test.skip=true` to skip the testing phase
  
 
 ## Run
