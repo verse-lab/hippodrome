@@ -51,22 +51,7 @@ class FileManipulation {
   }
 
   def resourceFileToString(filename: String) = {
-    /*
-     def main(args: Array[String]): Unit = {
-
-    val ipfileStream = getClass.getResourceAsStream("/folder/a-words.txt")
-    val readlines = Source.fromInputStream(ipfileStream).getLines
-    readlines.foreach(readlines => println(readlines))
-
-  }
-    * */
-    //val stream: InputStream = getClass.getResourceAsStream("/" + filename)
-    println(getClass.getResource(filename))
-    println(filename)
-    /*Try(*/
       Source.fromResource(filename).getLines.foldLeft("") { (str, line) => str + " \n " + line.toString }
-    /*).recover(throw new FileNotFoundException(filename))
-    ""*/
   }
 
   def getFile(path: String, filename: String) = {
