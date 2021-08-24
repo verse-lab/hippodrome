@@ -46,6 +46,12 @@ class PatchCreationUnitTest {
 
     @Test
     @throws[Exception]
+    def runAccount(): Unit = {
+        handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/account/CONFIG.json" ))
+    }
+
+    @Test
+    @throws[Exception]
     def runAlarmClock(): Unit = {
         handleInput(Array("--testing=true", "--config_file="  + "src/test/resources/java-benchmark/alarmclock/CONFIG.json" ))
     }

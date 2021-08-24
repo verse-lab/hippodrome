@@ -21,7 +21,7 @@
         account=new Account(name,amount);  
         i=accNum;
         accounts[i]=account;
-        accNum=(accNum+1)%num; //the next index in a cyclic order //the next index in a cyclic order
+        accNum=(accNum+1)%num; //the next index in a cyclic order
     }  
     
     public void run(){  
@@ -32,33 +32,18 @@
     account.withdraw(20);  
     account.depsite(10);  
     account.transfer(accounts[(i+1)%num],10);  
-    account.withdraw(100);  
+    account.withdraw(100);
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    static public void helper(){
+    
+    public void helper(){
         for (int j=0;j<num;j++){
-            if( ManageAccount.accounts[j]!=null){
-                ManageAccount.accounts[j].print();;//print it
+            if( accounts[j]!=null){
+                accounts[j].print();;//print it
             }
         }
     }
 
-    static public void printAllAccounts(){  
+    public void printAllAccounts(){
             helper();
           }  
     

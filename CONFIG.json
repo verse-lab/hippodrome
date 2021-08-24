@@ -1,5 +1,5 @@
 {
-  "target_options": ["--", "javac", "src/test/java/datarace/CustomerInfo.java","src/test/java/datarace/Account.java", "-d", "target"],
+  "target_options": ["--", "javac", "src/test/java/account/ManageAccount.java", "src/test/java/account/Account.java","src/test/java/account/Main.java","-d", "target"],
   "prio_files":  [],
   "iterations": 5,
   "hippodrome_options": []
