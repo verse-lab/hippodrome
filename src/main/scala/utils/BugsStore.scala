@@ -1,10 +1,9 @@
 package org.racerdfix.utils
 
-import com.sun.tools.doclint.Env.AccessKind
 import org.racerdfix.inferAPI.RacerDAPI
 import org.racerdfix.{FixConfig, Globals}
 import org.racerdfix.language.{AccessKind, EmptyTrace, FBug, FSumm, Lock, RFSumm, Read, Trace, Unk, Variable, Write}
-import sun.tools.jconsole.ProxyClient.Snapshot
+
 
 import scala.collection.mutable
 import scala.collection.mutable.HashMap
