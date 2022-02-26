@@ -122,7 +122,7 @@ object BugsMisc {
       val summary2 = retrieveSummaryFromSnapshot_opt(snapshot2)
 
       /* [(Option[Int,AccessKind,String],Boolean)] */
-      val line1 = bug.bug_trace.foldLeft[(Option[(Int,org.racerdfix.language.AccessKind,Variable)],Boolean)](None,true)((acc:(Option[(Int,org.racerdfix.language.AccessKind,Variable)],Boolean),te) => {
+      val line1 = bug.bug_trace.foldLeft[(Option[(Int,AccessKind,Variable)],Boolean)](None,true)((acc:(Option[(Int,AccessKind,Variable)],Boolean),te) => {
         if (te.level == 0 && acc._2 && !te.description.contains("Write")) {
           val line   = te.line_number
           val access = {
@@ -136,7 +136,7 @@ object BugsMisc {
         } else (acc._1, false)
       })
 
-      val line2 = bug.bug_trace.foldLeft[(Option[(Int,org.racerdfix.language.AccessKind,Variable)],Boolean)](None,true)((acc:(Option[(Int,org.racerdfix.language.AccessKind,Variable)],Boolean),te) => {
+      val line2 = bug.bug_trace.foldLeft[(Option[(Int,AccessKind,Variable)],Boolean)](None,true)((acc:(Option[(Int,AccessKind,Variable)],Boolean),te) => {
         val flag = if(te.description.contains("Write")) false else acc._2
         if(te.level == 0 && !flag) {
           val line   = te.line_number
@@ -179,7 +179,7 @@ object BugsMisc {
               case Some(summ) => summ.locks
             }
             val proc = summary2 match {
-              case None       => bug.proc
+              case None       => ""
               case Some(summ) => summ.procedure
             }
               List(new RFSumm(bug.file,bug.cls,proc,ln._3,ln._2,locks, ln._1,EmptyTrace,""))
