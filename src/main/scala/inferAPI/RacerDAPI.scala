@@ -1,7 +1,7 @@
 package org.racerdfix.inferAPI
 
 import org.racerdfix.Globals
-import org.racerdfix.language.{EmptyTrace, Lock, NonEmptyTrace, Read, Unk, Variable, Write}
+import org.racerdfix.language.{EmptyTrace, Lock, NonEmptyTrace, Read, TraceElemShort, Unk, Variable, Write}
 
 object RacerDAPI {
 
@@ -268,7 +268,16 @@ object RacerDAPI {
     else Unk
   }
 
+  /*
   def traceOfListOfStrings(trace: List[String]) = {
+    trace match {
+      case Nil => EmptyTrace
+      case _  => new NonEmptyTrace(trace)
+    }
+  }
+  */
+
+  def traceOfListOfTraces(trace: List[TraceElemShort]) = {
     trace match {
       case Nil => EmptyTrace
       case _  => new NonEmptyTrace(trace)

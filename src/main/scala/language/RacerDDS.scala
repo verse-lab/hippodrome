@@ -16,10 +16,17 @@ class TraceElem(val level: Int, val filename: String, val line_number: Int,val c
   }
 }
 
+class TraceElemShort(val pname: String, val line_number: Int) {
+  def equals(that:TraceElemShort) = {
+      this.pname == that.pname &&
+      this.line_number == that.line_number
+  }
+}
+
 /* summary */
 class Access(val kind: String, val exp: String)
 class Elem(val access: Access,val thread: String,val locks: List[String],val ownership_pre: String)
-class AccessElem(val elem: Elem, val loc: Int, val trace: List[String], val hash: String)
+class AccessElem(val elem: Elem, val loc: Int, val trace: List[TraceElemShort], val hash: String)
 
 /* RacerD's data structures*/
 sealed trait Bugs
@@ -99,7 +106,7 @@ class SummaryIn(var file: String, val procedure: String, var accesses: List[Acce
           l.resource != ""
         })
         val line = ae.loc
-        val trace = RacerDAPI.traceOfListOfStrings(ae.trace)
+        val trace = RacerDAPI.traceOfListOfTraces(ae.trace)
         val hash = ae.hash
         /* TODO fix id below replace cls and id */
         (new RFSumm(file, cls, proc, resource, access, locks, line, trace, hash)) :: acc2

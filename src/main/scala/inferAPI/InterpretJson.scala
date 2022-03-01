@@ -317,11 +317,18 @@ object SummaryProtocol extends DefaultJsonProtocol {
     )
   }
 
+  def traceElemToJson(ae: TraceElemShort) = {
+      JsObject(
+        "pname"   -> JsString(ae.pname),
+        "line"    -> JsNumber(ae.line_number)
+      )
+    }
+
   def accessElemToJson(ae: AccessElem) = {
     JsObject(
       "elem"    -> elemToJson(ae.elem),
       "loc"     -> JsNumber(ae.loc),
-      "trace"   -> JsArray(ae.trace.map(e => JsString(e)).toVector),
+      "trace"   -> JsArray(ae.trace.map(e => traceElemToJson(e)).toVector),
       "hash"    -> JsString(ae.hash)
     )
   }
@@ -371,6 +378,19 @@ object SummaryProtocol extends DefaultJsonProtocol {
     }
   }
 
+  def jsonToTraceElem(value: JsValue) ={
+    value.asJsObject.getFields(
+      "pname",
+      "line"
+    ) match {
+      case  Seq(
+      JsString(pname),
+      JsNumber(line))
+      => new TraceElemShort(pname,line.toInt)
+      case _ => throw new DeserializationException("ShortTraceElem expected")
+    }
+  }
+
   def jsonToAccessElem(value: JsValue) ={
     value.asJsObject.getFields(
       "elem",
@@ -383,7 +403,7 @@ object SummaryProtocol extends DefaultJsonProtocol {
       JsNumber(loc),
       JsArray(trace),
       JsString(hash))
-      => new AccessElem(jsonToElem(elem),loc.toInt,trace.map(e=>jsonToString(e)).toList,hash)
+      => new AccessElem(jsonToElem(elem),loc.toInt,trace.map(e=>jsonToTraceElem(e)).toList,hash)
       case _ => throw new DeserializationException("AccessElem expected")
     }
   }
