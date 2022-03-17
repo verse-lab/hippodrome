@@ -139,10 +139,10 @@ object RacerDAPI {
       case  _ => resource1
     }
     /* "*iDest1[_]" => iDest1 */
-    val resource3 = try {
-      val pattern3 = "(?<=\\*)[^)\\[]+".r
+    val resource3_ = try {
+      val pattern3_ = "(?<=\\*)[^)\\[]+".r
       val resource_lst = resource2.foldLeft[List[String]](Nil)((acc,res) => {
-        pattern3.findFirstMatchIn(res) match {
+        pattern3_.findFirstMatchIn(res) match {
           case Some(resource) => (classToListOfCls(resource.toString()).head) :: acc
           case None => res ::acc
         }
@@ -150,6 +150,23 @@ object RacerDAPI {
       resource_lst
     } catch  {
       case  _ => resource2
+    }
+
+    /* "iDest1.[_]" => iDest1 */
+    val resource3 = try {
+      val pattern3 = "[^)\\[]+".r
+      val resource_lst = resource3_.foldLeft[List[String]](Nil)((acc,res) => {
+        pattern3.findFirstMatchIn(res) match {
+          case Some(resource) =>
+            val resourceStr = resource.toString()
+            val res = if (resourceStr.endsWith(".")) resourceStr.dropRight(1) else resourceStr
+            (classToListOfCls(res).head) :: acc
+          case None => res ::acc
+        }
+      })
+      resource_lst
+    } catch  {
+      case  _ => resource3_
     }
 
     /* buggyprogram.BuggyProgram.history => history */
